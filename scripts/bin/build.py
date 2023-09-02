@@ -41,9 +41,19 @@ PRESETS = os.listdir(PRESETS_ROOT)
 # def TOOLCHAIN(platform):
 #   return os.path.join(, platform)
 
-def CheckPreset(preset : str):
+# Prints green
+def print_green(text):
+  print(f"\033[32m{text}\033[0m")
+
+# Prints red
+def print_red(text):
+  print(f"\033[91m{text}\033[0m")
+
+def check_preset(preset : str):
   if preset not in PRESETS:
-    raise ValueError(f"Unsupported platform: {preset}. Supported platforms are {PRESETS}.")
+    error = f"Unsupported platform: {preset}. Supported presets are {PRESETS}."
+    print_red(error)
+    raise ValueError(error)
 
 # Context manager for pushd. Example from
 # (https://stackoverflow.com/questions/6194499/pushd-through-os-system)
@@ -55,14 +65,6 @@ def pushd(new_dir):
       yield
   finally:
       os.chdir(previous_dir)
-
-
-# Prints green
-def print_green(text):
-  green = '\033[32m'
-  reset = '\033[0m'
-  print(f"{green}{text}{reset}")
-
 
 # Returns the Release or Debug build dir.
 def BUILD_DIR(debug):
@@ -184,7 +186,7 @@ def main():
   args = parser.parse_args();
 
   # TODO if not presets
-  CheckPreset(args.preset)
+  check_preset(args.preset)
 
   # If no other actions are passed, default to --build.
   if not any([args.clean, args.build, args.runnable]):
