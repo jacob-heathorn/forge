@@ -1,0 +1,16 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Nodeh7 GDB OpenOCD",
+            "type": "cppdbg",
+            "request": "launch",
+            "cwd": "${workspaceRoot}",
+            "program": "{{ executable_fullfile }}",
+            "MIMode": "gdb",
+            "miDebuggerPath": "{{ gdb_path }}",
+            "miDebuggerServerAddress": "localhost:3333",
+            "targetArchitecture": "arm",
+        }
+    ]
+}

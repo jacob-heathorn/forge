@@ -1,0 +1,4 @@
+#!/bin/bash
+
+# Delegate to the python build tool
+build.py "$@"
