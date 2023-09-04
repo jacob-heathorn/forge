@@ -7,25 +7,52 @@
   },
   "configurePresets": [
     {
-      "name": "default",
-      "displayName": "Default Config",
-      "description": "Default build using Ninja generator",
+      "name": "release",
+      "displayName": "Release Config",
+      "description": "Release config shared by all builds",
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/bin/default",
-      "hidden": true
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "YES"
+      }
     },
     {
-      "name": "native",
-      "inherits": "default",
-      "displayName": "Native Ubuntu",
-      "description": "Build for the ntive host platform on ubuntu 22.04",
-      "binaryDir": "${sourceDir}/bin/native"
+      "name": "debug",
+      "displayName": "Debug Config",
+      "description": "Debug config shared by all builds",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/bin/default",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "YES"
+      }
+    },
+    {
+      "name": "native-release",
+      "inherits": "release",
+      "displayName": "Native Ubuntu (release)",
+      "description": "Release build for the ntive host platform on ubuntu 22.04",
+      "binaryDir": "${sourceDir}/bin/native-release"
+    },
+    {
+      "name": "native-debug",
+      "inherits": "debug",
+      "displayName": "Native Ubuntu (debug)",
+      "description": "Debug build for the ntive host platform on ubuntu 22.04",
+      "binaryDir": "${sourceDir}/bin/native-debug"
     }
   ],
   "buildPresets": [
     {
-      "name": "native",
-      "configurePreset": "native"
+      "name": "native-release",
+      "configurePreset": "native-release"
+    },
+    {
+      "name": "native-debug",
+      "configurePreset": "native-debug"
     }
   ]
 }

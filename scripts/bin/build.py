@@ -49,12 +49,6 @@ def print_green(text):
 def print_red(text):
   print(f"\033[91m{text}\033[0m")
 
-# def check_preset(preset : str):
-#   if preset not in PRESETS:
-#     error = f"Unsupported platform: {preset}. Supported presets are {PRESETS}."
-#     print_red(error)
-#     raise ValueError(error)
-
 # Context manager for pushd. Example from
 # (https://stackoverflow.com/questions/6194499/pushd-through-os-system)
 @contextlib.contextmanager
@@ -154,6 +148,10 @@ def build(preset: str, verbose=False):
   with pushd(PROJECT_ROOT):
     # Configure
     args = ['cmake', f'--preset={preset}']
+    
+    if verbose:
+      args.append('-DCMAKE_VERBOSE_MAKEFILE=ON')
+    
     subprocess.check_call(args)
 
     # Build
@@ -192,10 +190,7 @@ def main():
   parser.add_argument('-d', '--debug', action='store_true', default=False, help='Debug')
   parser.add_argument('-r', '--run', dest="runnable", required=False, help='Run the executable with the given name')
   parser.add_argument('-v', '--verbose', action='store_true', default=False, help='Build verbose')
-  args = parser.parse_args();
-
-  # # TODO if not presets
-  # check_preset(args.preset)
+  args = parser.parse_args()
 
   # If no other actions are passed, default to --build.
   if not any([args.clean, args.build, args.runnable]):
