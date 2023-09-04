@@ -49,6 +49,12 @@ def print_green(text):
 def print_red(text):
   print(f"\033[91m{text}\033[0m")
 
+# Prints and raises an exception
+def Error(message: str):
+  print_red(message)
+  raise(Exception(message))
+
+
 # Context manager for pushd. Example from
 # (https://stackoverflow.com/questions/6194499/pushd-through-os-system)
 @contextlib.contextmanager
@@ -61,12 +67,8 @@ def pushd(new_dir):
       os.chdir(previous_dir)
 
 # Returns the Release or Debug build dir.
-def BUILD_DIR(debug):
-  build_dir = os.path
-  if debug:
-    build_dir = os.path.join(BUILD_DIR_ROOT, 'Debug')
-  else:
-    build_dir = os.path.join(BUILD_DIR_ROOT, 'Release')
+def BUILD_DIR(preset: str):
+  build_dir = os.path.join(BUILD_DIR_ROOT, preset)
   return build_dir
 
 
@@ -90,22 +92,25 @@ def BUILD_DIR(debug):
 #     with open(GENERATED_LAUNCH_JSON, 'w') as f:
 #       f.write(rendered_template)
 
-# # Finds the executable in the build directory with the given name.
-# def find_executable(executable_name, extension=".elf", debug=False):
-#   if not executable_name.endswith(extension):
-#     executable_name += extension
+# Finds the executable in the build directory with the given name.
+def find_executable(preset: str, executable_name: str, extension: str):
+  if not executable_name.endswith(extension):
+    executable_name += extension
   
-#   matched_files = []
+  matched_files = []
 
-#   for root, _, files in os.walk(BUILD_DIR(debug)):
-#       for file in files:
-#           if fnmatch.fnmatch(file, executable_name):
-#               matched_files.append(os.path.join(root, file))
+  for root, _, files in os.walk(BUILD_DIR(preset)):
+      for file in files:
+          if fnmatch.fnmatch(file, executable_name):
+              matched_files.append(os.path.join(root, file))
 
-#   if len(matched_files) > 1:
-#       raise Exception(f"More than one executable found with the name '{file_name}'")
+  if len(matched_files) < 1:
+    Error(f"Runnable '{executable_name}' DNE")
+
+  if len(matched_files) > 1:
+    Error(f"More than one executable found with the name '{executable_name}'")
   
-#   return matched_files[0]
+  return matched_files[0]
 
 
 #==================================================================================================
@@ -120,31 +125,7 @@ def clean():
 
 # Builds all targets.
 def build(preset: str, verbose=False):
-  # # Create root build dir.
-  # if not os.path.exists(BUILD_DIR_ROOT):
-  #   os.makedirs(BUILD_DIR_ROOT)
-
-  # # Create debug/release mode build dir
-  # print(f'Building {BUILD_DIR(debug)}')
   
-  # if not os.path.exists(BUILD_DIR(debug)):
-  #   os.makedirs(BUILD_DIR(debug))
-  
-  # with pushd(BUILD_DIR(debug)):
-  #   args = ['cmake', PROJECT_ROOT, f'-DCMAKE_TOOLCHAIN_FILE={TOOLCHAIN_FILE}']
-  #   if debug:
-  #     args.append('-DCMAKE_BUILD_TYPE=Debug')
-  #   else:
-  #     args.append('-DCMAKE_BUILD_TYPE=Release')
-
-  #   if verbose:
-  #     args.append('-DCMAKE_VERBOSE_MAKEFILE=ON')
-
-  #   subprocess.check_call(args)
-
-  #   args = ['cmake', '--build', BUILD_DIR(debug)]
-  #   subprocess.check_call(args)
-
   with pushd(PROJECT_ROOT):
     # Configure
     args = ['cmake', f'--preset={preset}']
@@ -159,13 +140,15 @@ def build(preset: str, verbose=False):
     subprocess.check_call(args)
 
 
-# # Flashes the executable and resets the device
-# def run(executable_fullfile):
-#   print_green(f"Runnig executable {executable_fullfile}")
-#   with OpenOcdServer(OPENOCD_DIR, OPENOCD_CONFIG, OPEN_OCD_LOGFILE) as server:
-#     server.run(executable_fullfile)
-#   time.sleep(.2) # Allows console output to finish
-#   print_green("Success!")
+# TODO need to delegate to platform class for running/debugging
+def run(executable_fullfile):
+  print_green(f"Runnig executable {executable_fullfile}")
+  args = [executable_fullfile]
+  subprocess.check_call(args)
+  # with OpenOcdServer(OPENOCD_DIR, OPENOCD_CONFIG, OPEN_OCD_LOGFILE) as server:
+  #   server.run(executable_fullfile)
+  # time.sleep(.2) # Allows console output to finish
+  print_green("Success!")
 
 
 # # Flashes the executable and puts it in a halted state, then waits. Once we
@@ -187,8 +170,8 @@ def main():
   parser.add_argument('-p', '--preset', dest="preset", required=False, help='CMake build preset')
   parser.add_argument('-c', '--clean', action='store_true', default=False, help='Delete the build folder')
   parser.add_argument('-b', '--build', action='store_true', default=False, help='Compile')
-  parser.add_argument('-d', '--debug', action='store_true', default=False, help='Debug')
   parser.add_argument('-r', '--run', dest="runnable", required=False, help='Run the executable with the given name')
+  parser.add_argument('-d', '--debug', action='store_true', default=False, help='Debug (attach) with gdb')
   parser.add_argument('-v', '--verbose', action='store_true', default=False, help='Build verbose')
   args = parser.parse_args()
 
@@ -204,14 +187,14 @@ def main():
   if args.build:
     build(preset=args.preset, verbose=args.verbose)
 
-  # # Run.
-  # if args.runnable:
-  #   runnable_fullfile = find_executable(args.runnable, debug=args.debug)
+  # Run.
+  if args.runnable:
+    runnable_fullfile = find_executable(preset=args.preset, executable_name=args.runnable, extension="")
     
-  #   if args.debug:
-  #     debug(runnable_fullfile)
-  #   else:
-  #     run(runnable_fullfile)
+    if args.debug:
+      debug(runnable_fullfile)
+    else:
+      run(runnable_fullfile)
 
 
 if __name__ == '__main__':
