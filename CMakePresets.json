@@ -11,31 +11,21 @@
       "displayName": "Default Config",
       "description": "Default build using Ninja generator",
       "generator": "Ninja",
-      "binaryDir": "${sourceDir}/bin/default"
+      "binaryDir": "${sourceDir}/bin/default",
+      "hidden": true
     },
     {
-      "name": "ninja-multi",
+      "name": "native",
       "inherits": "default",
-      "displayName": "Ninja Multi-Config",
-      "description": "Default build using Ninja Multi-Config generator",
-      "generator": "Ninja Multi-Config"
-    },
-    {
-      "name": "windows-only",
-      "inherits": "default",
-      "displayName": "Windows-only configuration",
-      "description": "This build is only available on Windows",
-      "condition": {
-        "type": "equals",
-        "lhs": "${hostSystemName}",
-        "rhs": "Windows"
-      }
+      "displayName": "Native Ubuntu",
+      "description": "Build for the ntive host platform on ubuntu 22.04",
+      "binaryDir": "${sourceDir}/bin/native"
     }
   ],
   "buildPresets": [
     {
-      "name": "default",
-      "configurePreset": "default"
+      "name": "native",
+      "configurePreset": "native"
     }
   ]
 }

@@ -20,8 +20,8 @@ FORGE_ROOT = os.environ.get("FORGE_ROOT")
 PROJECT_ROOT = os.environ.get("PROJECT_ROOT")
 BUILD_DIR_ROOT = os.path.join(PROJECT_ROOT, 'bin')
 
-PRESETS_ROOT = os.path.join(FORGE_ROOT, 'presets')
-PRESETS = os.listdir(PRESETS_ROOT)
+# PRESETS_ROOT = os.path.join(FORGE_ROOT, 'presets')
+# PRESETS = os.listdir(PRESETS_ROOT)
 
 # TOOLCHAIN_FILE = os.path.join(PROJECT_ROOT, 'firmware', 'stm32h743zi2', 'platform', 'cmake', 'toolchain.cmake')
 
@@ -49,11 +49,11 @@ def print_green(text):
 def print_red(text):
   print(f"\033[91m{text}\033[0m")
 
-def check_preset(preset : str):
-  if preset not in PRESETS:
-    error = f"Unsupported platform: {preset}. Supported presets are {PRESETS}."
-    print_red(error)
-    raise ValueError(error)
+# def check_preset(preset : str):
+#   if preset not in PRESETS:
+#     error = f"Unsupported platform: {preset}. Supported presets are {PRESETS}."
+#     print_red(error)
+#     raise ValueError(error)
 
 # Context manager for pushd. Example from
 # (https://stackoverflow.com/questions/6194499/pushd-through-os-system)
@@ -124,32 +124,41 @@ def clean():
     shutil.rmtree(BUILD_DIR_ROOT)
 
 
-# # Builds all targets.
-# def build(debug=False, verbose=False):
-#   # Create root build dir.
-#   if not os.path.exists(BUILD_DIR_ROOT):
-#     os.makedirs(BUILD_DIR_ROOT)
+# Builds all targets.
+def build(preset: str, verbose=False):
+  # # Create root build dir.
+  # if not os.path.exists(BUILD_DIR_ROOT):
+  #   os.makedirs(BUILD_DIR_ROOT)
 
-#   # Create debug/release mode build dir
-#   print(f'Building {BUILD_DIR(debug)}')
+  # # Create debug/release mode build dir
+  # print(f'Building {BUILD_DIR(debug)}')
   
-#   if not os.path.exists(BUILD_DIR(debug)):
-#     os.makedirs(BUILD_DIR(debug))
+  # if not os.path.exists(BUILD_DIR(debug)):
+  #   os.makedirs(BUILD_DIR(debug))
   
-#   with pushd(BUILD_DIR(debug)):
-#     args = ['cmake', PROJECT_ROOT, f'-DCMAKE_TOOLCHAIN_FILE={TOOLCHAIN_FILE}']
-#     if debug:
-#       args.append('-DCMAKE_BUILD_TYPE=Debug')
-#     else:
-#       args.append('-DCMAKE_BUILD_TYPE=Release')
+  # with pushd(BUILD_DIR(debug)):
+  #   args = ['cmake', PROJECT_ROOT, f'-DCMAKE_TOOLCHAIN_FILE={TOOLCHAIN_FILE}']
+  #   if debug:
+  #     args.append('-DCMAKE_BUILD_TYPE=Debug')
+  #   else:
+  #     args.append('-DCMAKE_BUILD_TYPE=Release')
 
-#     if verbose:
-#       args.append('-DCMAKE_VERBOSE_MAKEFILE=ON')
+  #   if verbose:
+  #     args.append('-DCMAKE_VERBOSE_MAKEFILE=ON')
 
-#     subprocess.check_call(args)
+  #   subprocess.check_call(args)
 
-#     args = ['cmake', '--build', BUILD_DIR(debug)]
-#     subprocess.check_call(args)
+  #   args = ['cmake', '--build', BUILD_DIR(debug)]
+  #   subprocess.check_call(args)
+
+  with pushd(PROJECT_ROOT):
+    # Configure
+    args = ['cmake', f'--preset={preset}']
+    subprocess.check_call(args)
+
+    # Build
+    args = ['cmake', '--build', f'--preset={preset}']
+    subprocess.check_call(args)
 
 
 # # Flashes the executable and resets the device
@@ -185,8 +194,8 @@ def main():
   parser.add_argument('-v', '--verbose', action='store_true', default=False, help='Build verbose')
   args = parser.parse_args();
 
-  # TODO if not presets
-  check_preset(args.preset)
+  # # TODO if not presets
+  # check_preset(args.preset)
 
   # If no other actions are passed, default to --build.
   if not any([args.clean, args.build, args.runnable]):
@@ -196,9 +205,9 @@ def main():
   if args.clean:
     clean()
 
-  # # Build
-  # if args.build:
-  #   build(debug=args.debug, verbose=args.verbose)
+  # Build
+  if args.build:
+    build(preset=args.preset, verbose=args.verbose)
 
   # # Run.
   # if args.runnable:
