@@ -1,1 +1,3 @@
-add_executable(hello_world hello_world.cpp)
+include(platform)
+
+App(hello_world hello_world.cpp)

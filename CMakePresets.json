@@ -35,14 +35,20 @@
       "inherits": "release",
       "displayName": "Native Ubuntu (release)",
       "description": "Release build for the ntive host platform on ubuntu 22.04",
-      "binaryDir": "${sourceDir}/bin/native-release"
+      "binaryDir": "${sourceDir}/bin/native-release",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "/home/jacob/evtol/forge/platforms/native/toolchain.cmake"
+      }
     },
     {
       "name": "native-debug",
       "inherits": "debug",
       "displayName": "Native Ubuntu (debug)",
       "description": "Debug build for the ntive host platform on ubuntu 22.04",
-      "binaryDir": "${sourceDir}/bin/native-debug"
+      "binaryDir": "${sourceDir}/bin/native-debug",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "/home/jacob/evtol/forge/platforms/native/toolchain.cmake"
+      }
     }
   ],
   "buildPresets": [
