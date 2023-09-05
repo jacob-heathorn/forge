@@ -29,10 +29,10 @@ BUILD_DIR_ROOT = os.path.join(PROJECT_ROOT, 'bin')
 # OPEN_OCD_LOGFILE = os.path.join(PROJECT_ROOT,'tools', 'logs', 'openocd_output.log')
 # OPENOCD_CONFIG = os.path.join(PROJECT_ROOT, 'tools', 'openocd_server.cfg')
 
-# LAUNCH_JSON_JINJA_TEMPLATE = os.path.join(PROJECT_ROOT, 'tools', 'launch.json.jinja2')
-# GDB_PATH = os.environ.get("GDB_PATH")
-# VSCODE_FOLDER = os.path.join(PROJECT_ROOT, '.vscode')
-# GENERATED_LAUNCH_JSON = os.path.join(VSCODE_FOLDER, 'launch.json')
+LAUNCH_JSON_JINJA_TEMPLATE = os.path.join(PROJECT_ROOT, 'scripts', 'launch.json.jinja2')
+ARM_GDB_PATH = os.environ.get("ARM_GDB_PATH")
+VSCODE_FOLDER = os.path.join(PROJECT_ROOT, '.vscode')
+GENERATED_LAUNCH_JSON = os.path.join(VSCODE_FOLDER, 'launch.json')
 
 #==================================================================================================
 # Helpers
@@ -71,6 +71,9 @@ def BUILD_DIR(preset: str):
   build_dir = os.path.join(BUILD_DIR_ROOT, preset)
   return build_dir
 
+# # Returns the full gdb path, which depends on the preset
+# def GDB_PATH(preset: str):
+  
 
 # # Generates the launch.json file for debugging
 # def generate_vscode_launch_json(executable_fullfile):
