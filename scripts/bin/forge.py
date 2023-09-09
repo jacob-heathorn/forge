@@ -22,6 +22,12 @@ class Preset:
     self.name = name
     self.project_root = project_root
     # TODO verify preset using cmake.
+  
+  def set_debugger(self, debugger: 'GdbDebugger'):
+    self.debugger = debugger
+
+  def debug(self, executable: os.path):
+    self.debugger.debug(executable)
 
 class GdbDebugger:
   def __init__(self, preset: Preset, gdb: os.path, template_file: os.path):

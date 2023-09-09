@@ -152,6 +152,8 @@ def main():
   args = parser.parse_args()
 
   preset = Preset(args.preset, PROJECT_ROOT)
+  if preset.name == "native-debug" or preset.name == "native-release":
+    preset.set_debugger(NativeDebugger(preset, NATIVE_GDB_PATH))
 
   # If no other actions are passed, default to --build.
   if not any([args.clean, args.build, args.runnable]):
@@ -170,12 +172,7 @@ def main():
     runnable_fullfile = find_executable(preset=args.preset, executable_name=args.runnable, extension="")
     
     if args.debug:
-      # debug(runnable_fullfile)
-      if preset.name == "native-debug" or preset.name == "native-release":
-        debugger = NativeDebugger(preset, NATIVE_GDB_PATH)
-        debugger.debug(runnable_fullfile)
-      else:
-        Error(f"bad")
+      preset.debug(runnable_fullfile)
     else:
       run(runnable_fullfile)
 
