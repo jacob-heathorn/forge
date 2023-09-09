@@ -141,6 +141,10 @@ def debug(executable_fullfile):
   #   # Sleep to allow a user to debug. They'll control+c to get out.
   #   time.sleep(60*60*2)
 
+def register_debugger(preset: Preset):
+  if preset.name == "native-release": preset.debugger = NativeDebugger(preset, NATIVE_GDB_PATH)
+  if preset.name == "native-debug": preset.debugger = NativeDebugger(preset, NATIVE_GDB_PATH)
+
 
 def main():
   parser = argparse.ArgumentParser(description='Repository build driver')
@@ -153,8 +157,7 @@ def main():
   args = parser.parse_args()
 
   preset = Preset(args.preset, PROJECT_ROOT)
-  if preset.name == "native-debug" or preset.name == "native-release":
-    preset.set_debugger(NativeDebugger(preset, NATIVE_GDB_PATH))
+  register_debugger(preset)
 
   # If no other actions are passed, default to --build.
   if not any([args.clean, args.build, args.runnable]):

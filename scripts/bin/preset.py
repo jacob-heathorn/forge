@@ -32,10 +32,11 @@ class Preset:
   def __init__(self, name: str, project_root: os.path):
     self.name = name
     self.project_root = project_root
+    self.debugger = None # Needs assignment later
     check_preset(project_root, self.name)
-  
-  def set_debugger(self, debugger):
-    self.debugger = debugger
 
   def debug(self, executable: os.path):
+    if self.debugger is None:
+      Error(f"preset<{self.name}> has not been assigned a debugger")
     self.debugger.debug(executable)
+
