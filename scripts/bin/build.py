@@ -12,7 +12,8 @@ from jinja2 import Template
 import time
 import fnmatch
 
-from forge import Preset, NativeDebugger
+from preset import Preset
+from debugger import NativeDebugger
 from helpers import print_green, print_red, Error, pushd
 
 # # Custom python modules
