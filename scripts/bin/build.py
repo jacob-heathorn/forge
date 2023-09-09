@@ -5,13 +5,15 @@
 # System pythonmodules
 import argparse
 import os
-import contextlib
 import subprocess
 import shutil
 import signal
 from jinja2 import Template
 import time
 import fnmatch
+
+from forge import Preset, NativeDebugger
+from helpers import print_green, print_red, Error, pushd
 
 # # Custom python modules
 # from OpenOcdServer import OpenOcdServer
@@ -31,40 +33,9 @@ BUILD_DIR_ROOT = os.path.join(PROJECT_ROOT, 'bin')
 
 LAUNCH_JSON_JINJA_TEMPLATE = os.path.join(PROJECT_ROOT, 'scripts', 'launch.json.jinja2')
 ARM_GDB_PATH = os.environ.get("ARM_GDB_PATH")
+NATIVE_GDB_PATH = os.environ.get("NATIVE_GDB_PATH")
 VSCODE_FOLDER = os.path.join(PROJECT_ROOT, '.vscode')
 GENERATED_LAUNCH_JSON = os.path.join(VSCODE_FOLDER, 'launch.json')
-
-#==================================================================================================
-# Helpers
-#==================================================================================================
-
-# def TOOLCHAIN(platform):
-#   return os.path.join(, platform)
-
-# Prints green
-def print_green(text):
-  print(f"\033[32m{text}\033[0m")
-
-# Prints red
-def print_red(text):
-  print(f"\033[91m{text}\033[0m")
-
-# Prints and raises an exception
-def Error(message: str):
-  print_red(message)
-  raise(Exception(message))
-
-
-# Context manager for pushd. Example from
-# (https://stackoverflow.com/questions/6194499/pushd-through-os-system)
-@contextlib.contextmanager
-def pushd(new_dir):
-  previous_dir = os.getcwd()
-  os.chdir(new_dir)
-  try:
-      yield
-  finally:
-      os.chdir(previous_dir)
 
 # Returns the Release or Debug build dir.
 def BUILD_DIR(preset: str):
@@ -75,25 +46,25 @@ def BUILD_DIR(preset: str):
 # def GDB_PATH(preset: str):
   
 
-# # Generates the launch.json file for debugging
-# def generate_vscode_launch_json(executable_fullfile):
-#   # Read the template content
-#     with open(LAUNCH_JSON_JINJA_TEMPLATE, 'r') as file:
-#         template_content = file.read()
+# Generates the launch.json file for debugging
+def generate_vscode_launch_json(executable_fullfile, gdb_path):
+  # Read the template content
+    with open(LAUNCH_JSON_JINJA_TEMPLATE, 'r') as file:
+        template_content = file.read()
 
-#     # Create a Jinja Template instance with the content
-#     template = Template(template_content)
+    # Create a Jinja Template instance with the content
+    template = Template(template_content)
 
-#     # Render the template
-#     rendered_template = template.render(executable_fullfile=executable_fullfile, gdb_path=GDB_PATH)
+    # Render the template
+    rendered_template = template.render(executable_fullfile=executable_fullfile, gdb_path=gdb_path)
 
-#     # Create the .vscode directory if it doesn't exist
-#     if not os.path.exists(VSCODE_FOLDER):
-#       os.makedirs(VSCODE_FOLDER)
+    # Create the .vscode directory if it doesn't exist
+    if not os.path.exists(VSCODE_FOLDER):
+      os.makedirs(VSCODE_FOLDER)
 
-#     # Write the rendered template to a file
-#     with open(GENERATED_LAUNCH_JSON, 'w') as f:
-#       f.write(rendered_template)
+    # Write the rendered template to a file
+    with open(GENERATED_LAUNCH_JSON, 'w') as f:
+      f.write(rendered_template)
 
 # Finds the executable in the build directory with the given name.
 def find_executable(preset: str, executable_name: str, extension: str):
@@ -154,18 +125,20 @@ def run(executable_fullfile):
   print_green("Success!")
 
 
-# # Flashes the executable and puts it in a halted state, then waits. Once we
-# # connect with gdb, execution is automatically resumed.
-# def debug(executable_fullfile):
-#   print_green(f"Debugging executable {executable_fullfile}")
-#   with OpenOcdServer(OPENOCD_DIR, OPENOCD_CONFIG, OPEN_OCD_LOGFILE) as server:
-#     server.debug(executable_fullfile)
-#     print_green(f"Generating {GENERATED_LAUNCH_JSON}")
-#     generate_vscode_launch_json(executable_fullfile)
-#     time.sleep(.2) # Allows console output to finish
-#     print_green("Ready, connect with gdb to localhost:3333")
-#     # Sleep to allow a user to debug. They'll control+c to get out.
-#     time.sleep(60*60*2)
+# Flashes the executable and puts it in a halted state, then waits. Once we
+# connect with gdb, execution is automatically resumed.
+def debug(executable_fullfile):
+  print_green(f"Debugging executable {executable_fullfile}")
+  generate_vscode_launch_json(executable_fullfile, NATIVE_GDB_PATH)
+
+  # with OpenOcdServer(OPENOCD_DIR, OPENOCD_CONFIG, OPEN_OCD_LOGFILE) as server:
+  #   server.debug(executable_fullfile)
+  #   print_green(f"Generating {GENERATED_LAUNCH_JSON}")
+  #   generate_vscode_launch_json(executable_fullfile)
+  #   time.sleep(.2) # Allows console output to finish
+  #   print_green("Ready, connect with gdb to localhost:3333")
+  #   # Sleep to allow a user to debug. They'll control+c to get out.
+  #   time.sleep(60*60*2)
 
 
 def main():
@@ -177,6 +150,8 @@ def main():
   parser.add_argument('-d', '--debug', action='store_true', default=False, help='Debug (attach) with gdb')
   parser.add_argument('-v', '--verbose', action='store_true', default=False, help='Build verbose')
   args = parser.parse_args()
+
+  preset = Preset(args.preset, PROJECT_ROOT)
 
   # If no other actions are passed, default to --build.
   if not any([args.clean, args.build, args.runnable]):
@@ -195,7 +170,12 @@ def main():
     runnable_fullfile = find_executable(preset=args.preset, executable_name=args.runnable, extension="")
     
     if args.debug:
-      debug(runnable_fullfile)
+      # debug(runnable_fullfile)
+      if preset.name == "native-debug" or preset.name == "native-release":
+        debugger = NativeDebugger(preset, NATIVE_GDB_PATH)
+        debugger.debug(runnable_fullfile)
+      else:
+        Error(f"bad")
     else:
       run(runnable_fullfile)
 
