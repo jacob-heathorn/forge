@@ -1,5 +1,6 @@
 import os
 from jinja2 import Template
+import subprocess
 
 from helpers import print_green, print_red, Error, pushd
 from preset import Preset
@@ -41,6 +42,12 @@ class NativeDebugger(GdbDebugger):
     native_template_file = os.path.join(FORGE_ROOT, "scripts", "launch-native.json.jinja2")
     super().__init__(preset, gdb=native_gdb, template_file=native_template_file)
 
-  def debug(self, executable: os.path):
-    self._generate_launch_json(executable)
+  def debug(self, fullfile: os.path):
+    self._generate_launch_json(fullfile)
     print_green("Start debugging in VSCode (F5)!")
+
+  def run(self, fullfile: os.path):
+    print_green(f"Runnig executable {fullfile}")
+    args = [fullfile]
+    subprocess.check_call(args)
+    print_green("Success!")
