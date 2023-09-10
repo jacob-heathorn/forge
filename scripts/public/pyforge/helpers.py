@@ -10,9 +10,19 @@ def print_red(text):
   print(f"\033[91m{text}\033[0m")
 
 # Prints and raises an exception
-def Error(message: str):
+def error(message: str):
   print_red(message)
   raise(Exception(message))
+
+# Erros if path/directory DNE
+def ensure_path(path: os.path):
+  if not os.path.exists(path):
+    error(f'path<{path}> DNE!')
+
+# Erros if path/directory DNE
+def ensure_file(fullfile: os.path):
+  if not os.path.exists(fullfile):
+    error(f'file<{fullfile}> DNE!')
 
 
 # Context manager for pushd. Example from

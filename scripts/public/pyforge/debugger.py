@@ -2,7 +2,7 @@ import os
 from jinja2 import Template
 import subprocess
 
-from helpers import print_green
+from helpers import print_green, ensure_file
 
 FORGE_ROOT = os.environ.get("FORGE_ROOT")
 
@@ -38,9 +38,10 @@ class GdbDebugger:
     print(f"Generated {self.generated_launch_json}")
 
 class NativeDebugger(GdbDebugger):
-  def __init__(self, name: str, project_root: str, native_gdb: os.path):
-    native_template_file = os.path.join(FORGE_ROOT, "scripts", "launch-native.json.jinja2")
-    super().__init__(name, project_root, gdb=native_gdb, template_file=native_template_file)
+  def __init__(self, name: str, project_root: str, gdb: os.path):
+    native_template_file = os.path.join(FORGE_ROOT, 'scripts', 'public', 'launch-native.json.jinja2')
+    ensure_file(native_template_file)
+    super().__init__(name, project_root, gdb, native_template_file)
 
   def debug(self, fullfile: os.path):
     self._generate_launch_json(fullfile)

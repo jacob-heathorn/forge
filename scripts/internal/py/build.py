@@ -5,11 +5,12 @@
 # System pythonmodules
 import argparse
 import os
+import shutil
 
 # Pyforge pythonmodules
 from preset import Preset, subset_presets
 from debugger import NativeDebugger
-from helpers import Error
+from helpers import error
 
 # Pull in environment variables
 FORGE_ROOT = os.environ.get("FORGE_ROOT")
@@ -44,8 +45,13 @@ def main():
 
   # Do clean
   if args.clean:
-    for preset in presets:
-      preset.clean()
+    if presets == ALL_PRESETS:
+      if os.path.exists(os.path.join(PROJECT_ROOT, 'bin')):
+        shutil.rmtree(os.path.join(PROJECT_ROOT, 'bin'))
+
+    else:
+      for preset in presets:
+        preset.clean()
 
   # Do build
   if args.build:
@@ -55,7 +61,7 @@ def main():
   # Do run/debug
   if args.runnable:
     if len(presets) != 1:
-      Error(f"Easy now, run one preset at a time!")
+      error(f"Easy now, run one preset at a time!")
 
     for preset in presets:
       if args.debug:

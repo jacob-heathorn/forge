@@ -4,7 +4,7 @@ import subprocess
 import shutil
 import fnmatch
 
-from helpers import Error, pushd
+from helpers import error, pushd
 
 # =================================================================================================
 # Preset helpers
@@ -25,10 +25,10 @@ def find_runnable(runnable_name: str, dir: os.path):
               matched_files.append(os.path.join(root, file))
 
   if len(matched_files) < 1:
-    Error(f"Runnable '{runnable_name}' DNE")
+    error(f"Runnable '{runnable_name}' DNE")
 
   if len(matched_files) > 1:
-    Error(f"More than one runnable found with the name '{runnable_name}'")
+    error(f"More than one runnable found with the name '{runnable_name}'")
   
   return matched_files[0]
 
@@ -66,11 +66,6 @@ class Preset:
     # Remove the release build directory if it exists
     if os.path.exists(self._preset_build_root(debug=False)):
       shutil.rmtree(self._preset_build_root(debug=False))
-    
-    # If the root build directory is empty, remove it
-    if os.path.exists(self.top_build_root):
-      if not bool(os.listdir(self.top_build_root)):
-        shutil.rmtree(self.top_build_root)
 
   def build(self, debug: bool, verbose: bool):
     with pushd(self._preset_build_root(debug)):
@@ -109,4 +104,4 @@ class Preset:
   
   def _check_debugger(self):
     if self.debugger is None:
-      Error(f"preset<{self.name}> has not been assigned a debugger")
+      error(f"preset<{self.name}> has not been assigned a debugger")
