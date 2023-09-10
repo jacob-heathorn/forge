@@ -1,0 +1,4 @@
+{
+  "python.autoComplete.extraPaths": ["${env:FORGE_ROOT}/scripts/public/pyforge"],
+  "python.analysis.extraPaths": ["${env:FORGE_ROOT}/scripts/public/pyforge"]
+}
