@@ -1,4 +1,0 @@
-{
-  "python.autoComplete.extraPaths": ["${env:FORGE_ROOT}/scripts"],
-  "python.analysis.extraPaths": ["${env:FORGE_ROOT}/scripts"]
-}
