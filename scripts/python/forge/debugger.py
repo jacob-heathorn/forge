@@ -2,7 +2,7 @@ import os
 from jinja2 import Template
 import subprocess
 
-from helpers import print_green, ensure_file
+from forge.helpers import print_green, ensure_file
 
 FORGE_ROOT = os.environ.get("FORGE_ROOT")
 
@@ -39,7 +39,7 @@ class GdbDebugger:
 
 class NativeDebugger(GdbDebugger):
   def __init__(self, name: str, project_root: str, gdb: os.path):
-    native_template_file = os.path.join(FORGE_ROOT, 'scripts', 'public', 'launch-native.json.jinja2')
+    native_template_file = os.path.join(FORGE_ROOT, 'scripts', 'launch-native.json.jinja2')
     ensure_file(native_template_file)
     super().__init__(name, project_root, gdb, native_template_file)
 

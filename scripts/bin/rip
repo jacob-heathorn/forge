@@ -1,4 +1,4 @@
 #!/bin/bash
 
 # Delegate to the python build tool
-$PROJECT_ROOT/scripts/internal/py/build.py "$@"
+$PROJECT_ROOT/scripts/python/build.py "$@"

@@ -7,10 +7,10 @@ import argparse
 import os
 import shutil
 
-# Pyforge pythonmodules
-from preset import Preset, subset_presets
-from debugger import NativeDebugger
-from helpers import error
+# Custom imports
+from forge.preset import Preset, subset_presets
+from forge.debugger import NativeDebugger
+from forge.helpers import error
 
 # Pull in environment variables
 FORGE_ROOT = os.environ.get("FORGE_ROOT")
