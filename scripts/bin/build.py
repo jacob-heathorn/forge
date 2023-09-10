@@ -36,7 +36,7 @@ def main():
   if args.presets is None:
     presets = ALL_PRESETS
   else:
-    presets = subset_presets(args.presets)
+    presets = subset_presets(args.presets, ALL_PRESETS)
 
   # If no other actions are passed, default to --build.
   if not any([args.clean, args.build, args.runnable]):
