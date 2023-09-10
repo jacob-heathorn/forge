@@ -2,17 +2,17 @@ import os
 from jinja2 import Template
 import subprocess
 
-from helpers import print_green, print_red, Error, pushd
-from preset import Preset
+from helpers import print_green
 
 FORGE_ROOT = os.environ.get("FORGE_ROOT")
 
 class GdbDebugger:
-  def __init__(self, preset: Preset, gdb: os.path, template_file: os.path):
-    self.preset = preset
+  def __init__(self, name: str, project_root: str, gdb: os.path, template_file: os.path):
+    self.name = name
+    self.project_root = project_root
     self.gdb = gdb
     self.template_file = template_file
-    self.vscode_folder = os.path.join(preset.project_root, ".vscode")
+    self.vscode_folder = os.path.join(project_root, ".vscode")
     self.generated_launch_json = os.path.join(self.vscode_folder, "launch.json")
   
   def _generate_launch_json(self, executable: os.path):
@@ -24,7 +24,7 @@ class GdbDebugger:
     template = Template(template_content)
 
     # Render the template
-    display_name = f"{self.preset.name} (gdb)"
+    display_name = f"{self.name} (gdb)"
     rendered_template = template.render(name=display_name, executable=executable, gdb_path=self.gdb)
 
     # Create the .vscode directory if it doesn't exist
@@ -38,9 +38,9 @@ class GdbDebugger:
     print(f"Generated {self.generated_launch_json}")
 
 class NativeDebugger(GdbDebugger):
-  def __init__(self, preset: Preset, native_gdb: os.path):
+  def __init__(self, name: str, project_root: str, native_gdb: os.path):
     native_template_file = os.path.join(FORGE_ROOT, "scripts", "launch-native.json.jinja2")
-    super().__init__(preset, gdb=native_gdb, template_file=native_template_file)
+    super().__init__(name, project_root, gdb=native_gdb, template_file=native_template_file)
 
   def debug(self, fullfile: os.path):
     self._generate_launch_json(fullfile)

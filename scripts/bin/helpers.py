@@ -20,6 +20,11 @@ def Error(message: str):
 @contextlib.contextmanager
 def pushd(new_dir):
   previous_dir = os.getcwd()
+  
+  # Create the directoy if it doesn't exsits (not exactly pushd)
+  if not os.path.exists(new_dir):
+    os.makedirs(new_dir)
+  
   os.chdir(new_dir)
   try:
       yield

@@ -6,7 +6,7 @@
 import argparse
 import os
 
-from preset import Preset, list_presets
+from preset import Preset
 from debugger import NativeDebugger
 from helpers import Error
 
@@ -15,10 +15,25 @@ PROJECT_ROOT = os.environ.get("PROJECT_ROOT")
 NATIVE_GDB_PATH = os.environ.get("NATIVE_GDB_PATH")
 
 
-def register_debugger(preset: Preset):
-  if preset.name == "native-release": preset.debugger = NativeDebugger(preset, NATIVE_GDB_PATH)
-  if preset.name == "native-debug": preset.debugger = NativeDebugger(preset, NATIVE_GDB_PATH)
+def define_presets():
+  presets = []
+  # Native
+  native = Preset("native", PROJECT_ROOT)
+  native.cmake_toolchain_file = os.path.join(FORGE_ROOT, 'platforms','native','toolchain.cmake')
+  native.debugger = NativeDebugger(native.name, native.project_root, NATIVE_GDB_PATH)
+  presets.append(native)
+  return presets
 
+ALL_PRESETS = define_presets()
+
+def subset_presets(subset_names):
+
+  subset = []
+  for preset in ALL_PRESETS:
+    if preset.name in subset_names:
+      subset.append(preset)
+  
+  return subset
 
 def main():
   parser = argparse.ArgumentParser(description='Repository build driver')
@@ -26,22 +41,15 @@ def main():
   parser.add_argument('-c', '--clean', action='store_true', default=False, help='Delete the build folder')
   parser.add_argument('-b', '--build', action='store_true', default=False, help='Compile')
   parser.add_argument('-r', '--run', dest="runnable", required=False, help='Run the executable with the given name')
-  parser.add_argument('-d', '--debug', action='store_true', required=False, help='Debug the executable specified by -r')
+  parser.add_argument('-d', '--debug', action='store_true', default=False, help='Debug the executable specified by -r')
   parser.add_argument('-v', '--verbose', action='store_true', default=False, help='Build verbose')
   args = parser.parse_args()
 
   # Don't require a preset, default to all presets if one is not specified
   if args.presets is None:
-    args.presets = list_presets(PROJECT_ROOT)
-
-  # Create the preset objects
-  presets = []
-  for name in args.presets:
-    presets.append(Preset(name, PROJECT_ROOT))
-
-  # Register debuggers
-  for preset in presets:
-    register_debugger(preset)
+    presets = ALL_PRESETS
+  else:
+    presets = subset_presets(args.presets)
 
   # If no other actions are passed, default to --build.
   if not any([args.clean, args.build, args.runnable]):
@@ -55,7 +63,7 @@ def main():
   # Do build
   if args.build:
     for preset in presets:
-      preset.build(args.verbose)
+      preset.build(args.debug, args.verbose)
 
   # Do run/debug
   if args.runnable:
