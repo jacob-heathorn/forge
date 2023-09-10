@@ -6,6 +6,9 @@ import fnmatch
 
 from helpers import Error, pushd
 
+# =================================================================================================
+# Preset helpers
+
 def cmake_build_type(debug: bool):
   if debug:
     return "Debug"
@@ -13,21 +16,33 @@ def cmake_build_type(debug: bool):
     return "Release"
 
 
-def find_executable(executable_name: str, dir: os.path):
+def find_runnable(runnable_name: str, dir: os.path):
   matched_files = []
 
   for root, _, files in os.walk(dir):
       for file in files:
-          if fnmatch.fnmatch(file, executable_name):
+          if fnmatch.fnmatch(file, runnable_name):
               matched_files.append(os.path.join(root, file))
 
   if len(matched_files) < 1:
-    Error(f"Runnable '{executable_name}' DNE")
+    Error(f"Runnable '{runnable_name}' DNE")
 
   if len(matched_files) > 1:
-    Error(f"More than one executable found with the name '{executable_name}'")
+    Error(f"More than one runnable found with the name '{runnable_name}'")
   
   return matched_files[0]
+
+def subset_presets(subset_names, superset_presets):
+
+  subset = []
+  for preset in superset_presets:
+    if preset.name in subset_names:
+      subset.append(preset)
+  
+  return subset
+
+# =================================================================================================
+# Preset - Encapsulates a cmake preset
 
 class Preset:
   def __init__(self, name: str, project_root: os.path):
@@ -76,12 +91,12 @@ class Preset:
       subprocess.check_call(args)
 
   def run(self, executable: str):
-    fullfile = find_executable(executable, self._preset_build_root(debug=False))
+    fullfile = find_runnable(executable, self._preset_build_root(debug=False))
     self.debugger.run(fullfile)
 
   def debug(self, executable: str):
     self._check_debugger()
-    fullfile = find_executable(executable, self._preset_build_root(debug=True))
+    fullfile = find_runnable(executable, self._preset_build_root(debug=True))
     self.debugger.debug(fullfile)
 
   # Private methods

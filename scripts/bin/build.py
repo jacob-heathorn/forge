@@ -6,34 +6,20 @@
 import argparse
 import os
 
-from preset import Preset
+from preset import Preset, subset_presets
 from debugger import NativeDebugger
 from helpers import Error
 
+# Pull in environment variables
 FORGE_ROOT = os.environ.get("FORGE_ROOT")
 PROJECT_ROOT = os.environ.get("PROJECT_ROOT")
 NATIVE_GDB_PATH = os.environ.get("NATIVE_GDB_PATH")
 
-
-def define_presets():
-  presets = []
-  # Native
-  native = Preset("native", PROJECT_ROOT)
-  native.cmake_toolchain_file = os.path.join(FORGE_ROOT, 'platforms','native','toolchain.cmake')
-  native.debugger = NativeDebugger(native.name, native.project_root, NATIVE_GDB_PATH)
-  presets.append(native)
-  return presets
-
-ALL_PRESETS = define_presets()
-
-def subset_presets(subset_names):
-
-  subset = []
-  for preset in ALL_PRESETS:
-    if preset.name in subset_names:
-      subset.append(preset)
-  
-  return subset
+# Define presets
+native = Preset("native", PROJECT_ROOT)
+native.cmake_toolchain_file = os.path.join(FORGE_ROOT, 'platforms','native','toolchain.cmake')
+native.debugger = NativeDebugger(native.name, native.project_root, NATIVE_GDB_PATH)
+ALL_PRESETS = [native]
 
 def main():
   parser = argparse.ArgumentParser(description='Repository build driver')
