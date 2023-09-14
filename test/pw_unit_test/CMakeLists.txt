@@ -1,13 +1,19 @@
 include(FetchContent)
+
 FetchContent_Declare(
   pw_unit_test_repository
   GIT_REPOSITORY git@github.com:jheathor-k/pw_unit_test.git
-  GIT_TAG        b0ff210f6508890a0484c08e04d00c80387404b6
-  # SOURCE_SUBDIR  cmake
+  GIT_TAG        cf2d788a2bac265f4ec263aa24a1e0fd3f48361a
 )
 
-FetchContent_MakeAvailable(pw_unit_test_repository)
-platformify(pw_unit_test)
+FetchContent_GetProperties(pw_unit_test_repository)
+if(NOT pw_unit_test_repository_POPULATED)
+  FetchContent_Populate(pw_unit_test_repository)
+  # Pull in firmware
+  add_subdirectory(${pw_unit_test_repository_SOURCE_DIR}/firmware ${pw_unit_test_repository_BINARY_DIR}/firmware)
+  # Pull in tests (includes pw-ut-framework)
+  add_subdirectory(${pw_unit_test_repository_SOURCE_DIR}/test ${pw_unit_test_repository_BINARY_DIR}/test)
+endif()
 
-# Test the framework
-add_pw_test(simple-test.elf simple_test.cpp)
+# Add my own simple test using the function provided by pw_unit_test/firmware
+add_pw_test(pw-ut-simple pw_ut_simple.cpp)
