@@ -19,10 +19,14 @@ def cmake_build_type(debug: bool):
 def find_runnable(runnable_name: str, dir: os.path):
   matched_files = []
 
+  # Create patterns to match both with and without .elf extension
+  patterns = [runnable_name, f"{runnable_name}.elf"]
+
   for root, _, files in os.walk(dir):
       for file in files:
-          if fnmatch.fnmatch(file, runnable_name):
-              matched_files.append(os.path.join(root, file))
+          for pattern in patterns:
+              if fnmatch.fnmatch(file, pattern):
+                  matched_files.append(os.path.join(root, file))
 
   if len(matched_files) < 1:
     error(f"Runnable '{runnable_name}' DNE")
