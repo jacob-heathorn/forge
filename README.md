@@ -10,3 +10,6 @@ Ninja:
   `sudo apt update`
   `sudo apt install ninja-build`
   `ninja --version`
+
+
+python3 -m pip install gitpython
