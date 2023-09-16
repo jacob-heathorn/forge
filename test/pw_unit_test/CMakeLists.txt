@@ -3,7 +3,7 @@ include(FetchContent)
 FetchContent_Declare(
   pw_unit_test_repository
   GIT_REPOSITORY git@github.com:jheathor-k/pw_unit_test.git
-  GIT_TAG        cf2d788a2bac265f4ec263aa24a1e0fd3f48361a
+  GIT_TAG        1b4ffff7a3601b438b2d254c446b07ad36d1eb1a
 )
 
 FetchContent_GetProperties(pw_unit_test_repository)
