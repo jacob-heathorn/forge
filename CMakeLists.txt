@@ -7,8 +7,10 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Make modules accessible. This module extension must be done at
-# the top level in order to be visible to the whole source tree.
+# Make the platform module accessible from anywhere in the tree.
 list(APPEND CMAKE_MODULE_PATH ${PLATFORM_PATH})
+
+# Add the platform module here at the root of the tree.
+include(platform)
 
 add_subdirectory(test)

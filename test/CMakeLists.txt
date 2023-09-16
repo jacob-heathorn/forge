@@ -1,3 +1,4 @@
-include(platform)
+add_subdirectory(pw_unit_test)
 
-App(hello-world hello_world.cpp)
+add_executable(hello-world hello_world.cpp)
+platformify(hello-world)
