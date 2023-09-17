@@ -47,23 +47,19 @@ def find_semver(args):
 # =================================================================================================
 # Apt Installer
 
-class AptInstaller:
-  def __init__(self):
+class PackageInstaller:
+  def __init__(self, update_args):
+    self.update_args = update_args
     self.updated = False
-    self.prepend_args = ['sudo', 'apt']
 
   def update_only_once(self):
     if not self.updated:
-      args = self.prepend_args + ['update']
-      subprocess.check_call(args)
-      self.updated = True
+      if self.update_args:
+        subprocess.check_call(self.update_args)
 
-
-
-  def install(self, name: str, command: str, range: str):
+  def install(self, name: str, version_args: [], install_args: [], range: str):
     print(f"Checking {name} install...")
 
-    version_args = self.prepend_args + [command, '--version']
     installed_ver = find_semver(version_args)
     if installed_ver:
       # Check if a version is compatible with a range
@@ -75,10 +71,18 @@ class AptInstaller:
     else:
       print(f"Installing {name}...")
       self.update_only_once()
-      install_args = self.prepend_args + ['install', name]
       subprocess.check_call(install_args)
       installed_ver = find_semver(version_args)
       if installed_ver:
         print(f" - Installed version {installed_ver}")
       else:
-        error("Failed to install ninja")
+        error(f"Failed to install {name}")
+
+
+class AptInstaller(PackageInstaller):
+  def __init__(self):
+    super().__init__(update_args = ['sudo', 'apt', 'update'])
+
+  def install(self, name: str, version_args: [], install_args: [], range: str):
+    install_args = ['sudo', 'apt', 'install'] + install_args
+    super().install(name, version_args, install_args, range)

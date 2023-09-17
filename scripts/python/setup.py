@@ -203,9 +203,8 @@ def main():
   if args.install:
     setup_googletest()
 
-    installer = AptInstaller()
-    installer.install(name='ninja-build', command='ninja', range=">=1.10.0")
-    installer(version="1.0.1", range=">=1.10.0")
+    apt = AptInstaller()
+    apt.install(name='ninja', version_args = ['ninja', '--version'], install_args = ['install', 'ninja-build'], range=">=1.10.0")
 
 
   # print()
