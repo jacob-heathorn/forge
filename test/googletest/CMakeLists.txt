@@ -1,5 +1,5 @@
 # Add this line to help CMake find Google Test installed in a local folder
-list(APPEND CMAKE_PREFIX_PATH "/home/jacob/evtol/googletest-install") # $ENV{FORGE_ROOT}
+list(APPEND CMAKE_PREFIX_PATH "$ENV{FORGE_ROOT}/cache/googletest-install")
 
 find_package(GTest REQUIRED)
 
