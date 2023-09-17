@@ -13,7 +13,7 @@ import re
 
 # Custom imports
 from forge.helpers import error, pushd
-from forge.apt_installer import AptInstaller
+from forge.apt_installer import AptInstaller, SnapInstaller
 
 # Pull in environment variables
 FORGE_ROOT = os.environ.get("FORGE_ROOT")
@@ -204,8 +204,13 @@ def main():
     setup_googletest()
 
     apt = AptInstaller()
-    apt.install(name='ninja', version_args = ['ninja', '--version'], install_args = ['install', 'ninja-build'], range=">=1.10.0")
+    apt.install(name='ninja', version_args=['ninja', '--version'], install_args=['ninja-build'], range=">=1.10.0")
+    apt.install(name='snap', version_args=['snap', '--version'], install_args=['snap'], range=">=2.60.0")
 
+    snap = SnapInstaller()
+    snap.install(name='cmake', version_args=['cmake', '--version'], install_args=['cmake', '--classic'], range=">=3.27.0")
+
+    # apt.install(name)
 
   # print()
   # print(find_semver(command_get_output(['cmake', '--version'])))

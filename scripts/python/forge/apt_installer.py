@@ -8,6 +8,8 @@ import re
 # Custom imports
 from forge.helpers import error, pushd
 
+GREEN_CHECK = "\033[32m\u2713\033[0m"
+
 def command_get_output(args):
   try:
     output = subprocess.check_output(args, text=True)
@@ -45,7 +47,7 @@ def find_semver(args):
       return None
 
 # =================================================================================================
-# Apt Installer
+# Package Installer
 
 class PackageInstaller:
   def __init__(self, update_args):
@@ -58,13 +60,13 @@ class PackageInstaller:
         subprocess.check_call(self.update_args)
 
   def install(self, name: str, version_args: [], install_args: [], range: str):
-    print(f"Checking {name} install...")
+    print(f"\nChecking {name} install...")
 
     installed_ver = find_semver(version_args)
     if installed_ver:
       # Check if a version is compatible with a range
       if semver.match(installed_ver, range):
-        print(f" - Installed version {installed_ver} is compatible with range {range}")
+        print(f" - Installed version {installed_ver} is compatible with range {range} {GREEN_CHECK}")
       else:
         error(f" - Installed version {installed_ver} is incompatible with range {range}")
     
@@ -74,7 +76,7 @@ class PackageInstaller:
       subprocess.check_call(install_args)
       installed_ver = find_semver(version_args)
       if installed_ver:
-        print(f" - Installed version {installed_ver}")
+        print(f" - Successfully installed version {installed_ver} {GREEN_CHECK}")
       else:
         error(f"Failed to install {name}")
 
@@ -85,4 +87,12 @@ class AptInstaller(PackageInstaller):
 
   def install(self, name: str, version_args: [], install_args: [], range: str):
     install_args = ['sudo', 'apt', 'install'] + install_args
+    super().install(name, version_args, install_args, range)
+
+class SnapInstaller(PackageInstaller):
+  def __init__(self):
+    super().__init__(update_args = [])
+
+  def install(self, name: str, version_args: [], install_args: [], range: str):
+    install_args = ['sudo', 'snap', 'install'] + install_args
     super().install(name, version_args, install_args, range)
