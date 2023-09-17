@@ -4,17 +4,16 @@
 
 # System pythonmodules
 import argparse
-import subprocess
 import git
 import os
 import shutil
-import subprocess
 import semver
 import re
 
 
 # Custom imports
 from forge.helpers import error, pushd
+from forge.apt_installer import AptInstaller
 
 # Pull in environment variables
 FORGE_ROOT = os.environ.get("FORGE_ROOT")
@@ -173,6 +172,8 @@ def install_ninja(version: str, range: str):
       error("Failed to install ninja")
 
 
+
+
 def main():
   parser = argparse.ArgumentParser(description='Repository build driver')
   parser.add_argument('-c', '--clean', action='store_true', default=False, help='Clean/uninstall')
@@ -201,7 +202,10 @@ def main():
   # Googletest
   if args.install:
     setup_googletest()
-    install_ninja(version="1.0.1", range=">=1.10.0")
+
+    installer = AptInstaller()
+    installer.install(name='ninja-build', command='ninja', range=">=1.10.0")
+    installer(version="1.0.1", range=">=1.10.0")
 
 
   # print()
