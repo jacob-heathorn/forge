@@ -8,6 +8,9 @@ import subprocess
 import git
 import os
 import shutil
+import subprocess
+import semver
+
 
 # Custom imports
 from forge.helpers import error, pushd
@@ -110,17 +113,33 @@ def is_ninja_installed():
     except FileNotFoundError:
         return False
 
+def command_get_output(args):
+  try:
+    output = subprocess.check_output(args, text=True)
+    output = output.strip()
+    return output
+  except subprocess.CalledProcessError as e:
+    error(f"Command failed with error {e.returncode}")
+  except FileNotFoundError:
+    error("Command not found")
 
-def install_ninja():
-  if not is_ninja_installed():
+def install_ninja(version: str, range: str):
+  print("Checking ninja install...")
+  if is_ninja_installed():
+    installed_ver = command_get_output(['ninja', '--version'])
+
+    # Check if a version is compatible with a range
+    if not installed_ver or semver.match(installed_ver, range):
+      print(f" - Installed version {installed_ver} is compatible with range {range}")
+    else:
+      error(f" - Installed version {installed_ver} is incompatible with range {range}")
+  
+  else:
     print("Installing ninja...")
     subprocess.check_call(['sudo', 'apt', 'update'])
     subprocess.check_call(['sudo', 'apt', 'install', 'ninja-build'])
     if not is_ninja_installed():
       error("Failed to install ninja")
-  else:
-    print("Ninja is installed.")
-
 
 
 def main():
@@ -151,7 +170,7 @@ def main():
   # Googletest
   if args.install:
     setup_googletest()
-    install_ninja()
+    install_ninja(version="1.0.1", range=">=1.10.0")
 
 
   # Ninja
