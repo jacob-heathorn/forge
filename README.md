@@ -13,3 +13,5 @@ Ninja:
 
 
 python3 -m pip install gitpython
+python3-venv
+apt install python3.10-venv

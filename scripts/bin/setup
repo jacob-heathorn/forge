@@ -1,4 +1,10 @@
 #!/bin/bash
 
-# Delegate to the python build tool
+# Install python requirements
+python3 -m venv $PROJECT_ROOT/cache/venv
+source $PROJECT_ROOT/cache/venv/bin/activate
+python3 -m pip install --upgrade pip
+python3 -m pip install -r $PROJECT_ROOT/scripts/python/requirements.txt
+
+# Delegate to the python setup tool
 $PROJECT_ROOT/scripts/python/setup.py "$@"
