@@ -10,6 +10,7 @@ import os
 import shutil
 import subprocess
 import semver
+import re
 
 
 # Custom imports
@@ -104,6 +105,7 @@ def setup_googletest():
       subprocess.check_call(['make', 'install'])
       print(" - success")
 
+
 def is_ninja_installed():
     try:
         subprocess.check_call(["ninja", "--version"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -123,13 +125,39 @@ def command_get_output(args):
   except FileNotFoundError:
     error("Command not found")
 
+def check_installed(args):
+  try:
+    output = subprocess.check_output(args, text=True)
+    output = output.strip()
+    return output
+  except subprocess.CalledProcessError as e:
+    return False
+  except FileNotFoundError:
+    return False
+
+def find_semver(args):
+    # The regex pattern for semantic versioning
+    pattern = r'\b\d+\.\d+\.\d+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?\b'
+
+    if not check_installed(args):
+      return None
+    
+    # Search for the pattern
+    match = re.search(pattern, command_get_output(args))
+    
+    if match:
+        # Return the first found semantic version
+        return match.group(0)
+    else:
+        return None
+
 def install_ninja(version: str, range: str):
   print("Checking ninja install...")
-  if is_ninja_installed():
-    installed_ver = command_get_output(['ninja', '--version'])
 
+  installed_ver = find_semver(['ninja', '--version'])
+  if installed_ver:
     # Check if a version is compatible with a range
-    if not installed_ver or semver.match(installed_ver, range):
+    if semver.match(installed_ver, range):
       print(f" - Installed version {installed_ver} is compatible with range {range}")
     else:
       error(f" - Installed version {installed_ver} is incompatible with range {range}")
@@ -138,7 +166,10 @@ def install_ninja(version: str, range: str):
     print("Installing ninja...")
     subprocess.check_call(['sudo', 'apt', 'update'])
     subprocess.check_call(['sudo', 'apt', 'install', 'ninja-build'])
-    if not is_ninja_installed():
+    installed_ver = find_semver(['ninja', '--version'])
+    if installed_ver:
+      print(f" - Installed version {installed_ver}")
+    else:
       error("Failed to install ninja")
 
 
@@ -173,7 +204,8 @@ def main():
     install_ninja(version="1.0.1", range=">=1.10.0")
 
 
-  # Ninja
+  # print()
+  # print(find_semver(command_get_output(['cmake', '--version'])))
   
      
 
