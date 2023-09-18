@@ -6,7 +6,7 @@ import semver
 import re
 
 # Custom imports
-from forge.helpers import error, pushd
+from forge.helpers import error, pushd, GREEN_CHECK
 
 GREEN_CHECK = "\033[32m\u2713\033[0m"
 

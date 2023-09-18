@@ -1,6 +1,8 @@
 import contextlib
 import os
 
+GREEN_CHECK = "\033[32m\u2713\033[0m"
+
 # Prints green
 def print_green(text):
   print(f"\033[32m{text}\033[0m")

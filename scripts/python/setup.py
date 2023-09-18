@@ -9,10 +9,11 @@ import os
 import shutil
 import semver
 import re
+import subprocess
 
 
 # Custom imports
-from forge.helpers import error, pushd
+from forge.helpers import error, pushd, GREEN_CHECK
 from forge.apt_installer import AptInstaller, SnapInstaller
 
 # Pull in environment variables
@@ -56,22 +57,22 @@ def clone_and_checkout(repo_url, local_path, tag):
     for tag_ref in repo.tags:
       if tag_ref.name == tag:
         if tag_ref.commit.hexsha == head_commit:
-          print(f" - {tag} already checked out")
+          print(f" - {tag} already checked out {GREEN_CHECK}")
           return False
         else:
           repo.git.checkout('tags/' + tag)
-          print(f" - Checked out {tag}")
+          print(f" - Checked out {tag} {GREEN_CHECK}")
 
     repo.git.checkout('tags/' + tag)
   else:
     # If it doesn't exist, clone and navigate into it
     print(f" - Cloning {repo_url}...")
     repo = git.Repo.clone_from(repo_url, local_path)
-    print(" - Clone complete.")
+    print(" - Clone complete. {GREEN_CHECK}")
 
     # Check out the specified tag
-    print(f" - Checking out tag {tag}...")
     repo.git.checkout('tags/' + tag)
+    print(f" - Checked out tag {tag} {GREEN_CHECK}")
   
   return True
 
@@ -81,7 +82,7 @@ def setup_googletest():
   clone_dir = f'{FORGE_CACHE}/googletest'
   build_dir = f'{FORGE_CACHE}/googletest/build'
   install_dir = f'{FORGE_CACHE}/googletest-install'
-  did_something = clone_and_checkout('https://github.com/google/googletest', clone_dir, 'v1.13.0')
+  did_something = clone_and_checkout('https://github.com/google/googletest', clone_dir, 'v1.14.0')
 
   if did_something:
     print(f" - Installing to {install_dir}...")
@@ -102,7 +103,7 @@ def setup_googletest():
       subprocess.check_call(args)
       subprocess.check_call('make')
       subprocess.check_call(['make', 'install'])
-      print(" - success")
+      print(" - success {GREEN_CHECK}")
 
 
 def is_ninja_installed():
