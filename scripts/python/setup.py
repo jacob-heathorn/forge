@@ -103,7 +103,7 @@ def setup_googletest():
       subprocess.check_call(args)
       subprocess.check_call('make')
       subprocess.check_call(['make', 'install'])
-      print(" - success {GREEN_CHECK}")
+      print(f" - success {GREEN_CHECK}")
 
 
 def is_ninja_installed():
