@@ -7,12 +7,11 @@ import argparse
 import git
 import os
 import shutil
-import re
 import subprocess
 
 # Custom imports
 from forge.helpers import error, pushd, GREEN_CHECK
-from forge.apt_installer import AptInstaller, SnapInstaller
+from forge.package_installer import AptInstaller, SnapInstaller
 
 # Pull in environment variables
 FORGE_ROOT = os.environ.get("FORGE_ROOT")
@@ -103,76 +102,6 @@ def setup_googletest():
       subprocess.check_call(['make', 'install'])
       print(f" - success {GREEN_CHECK}")
 
-
-def is_ninja_installed():
-    try:
-        subprocess.check_call(["ninja", "--version"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        return True
-    except subprocess.CalledProcessError:
-        return False
-    except FileNotFoundError:
-        return False
-
-def command_get_output(args):
-  try:
-    output = subprocess.check_output(args, text=True)
-    output = output.strip()
-    return output
-  except subprocess.CalledProcessError as e:
-    error(f"Command failed with error {e.returncode}")
-  except FileNotFoundError:
-    error("Command not found")
-
-def check_installed(args):
-  try:
-    output = subprocess.check_output(args, text=True)
-    output = output.strip()
-    return output
-  except subprocess.CalledProcessError as e:
-    return False
-  except FileNotFoundError:
-    return False
-
-def find_semver(args):
-    # The regex pattern for semantic versioning
-    pattern = r'\b\d+\.\d+\.\d+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?\b'
-
-    if not check_installed(args):
-      return None
-    
-    # Search for the pattern
-    match = re.search(pattern, command_get_output(args))
-    
-    if match:
-        # Return the first found semantic version
-        return match.group(0)
-    else:
-        return None
-
-def install_ninja(version: str, range: str):
-  print("Checking ninja install...")
-
-  installed_ver = find_semver(['ninja', '--version'])
-  if installed_ver:
-    # Check if a version is compatible with a range
-    if semver.match(installed_ver, range):
-      print(f" - Installed version {installed_ver} is compatible with range {range}")
-    else:
-      error(f" - Installed version {installed_ver} is incompatible with range {range}")
-  
-  else:
-    print("Installing ninja...")
-    subprocess.check_call(['sudo', 'apt', 'update'])
-    subprocess.check_call(['sudo', 'apt', 'install', 'ninja-build'])
-    installed_ver = find_semver(['ninja', '--version'])
-    if installed_ver:
-      print(f" - Installed version {installed_ver}")
-    else:
-      error("Failed to install ninja")
-
-
-
-
 def main():
   parser = argparse.ArgumentParser(description='Repository build driver')
   parser.add_argument('-c', '--clean', action='store_true', default=False, help='Clean/uninstall')
@@ -180,10 +109,6 @@ def main():
 
 
   args = parser.parse_args()
-  # print("gello")
-  # download_file()
-  # Repo.clone_from('https://github.com/google/googletest', f'{FORGE_ROOT}/cache/')
-  # clone_and_checkout(repo_url, local_path, tag)
 
   # If no args, assume install
   if not args.clean:
@@ -209,12 +134,6 @@ def main():
     snap = SnapInstaller()
     snap.install(name='cmake', version_args=['cmake', '--version'], install_args=['cmake', '--classic'], range=">=3.27.0")
 
-    # apt.install(name)
-
-  # print()
-  # print(find_semver(command_get_output(['cmake', '--version'])))
-  
-     
 
 if __name__ == '__main__':
   main()

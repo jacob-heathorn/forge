@@ -1,7 +1,5 @@
 # System pythonmodules
 import subprocess
-import os
-import shutil
 import semver
 import re
 
