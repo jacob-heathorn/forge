@@ -4,14 +4,35 @@ Tooling for forging embedded projects
 
 # Setup
 
-`git clone git@github.com:jheathor-k/forge.git`
+Clone the repo:
+```
+git clone git@github.com:jheathor-k/forge.git
+```
 
-Ninja:
-  `sudo apt update`
-  `sudo apt install ninja-build`
-  `ninja --version`
+You at least need python my broh
+```
+  sudo apt install python3
+  sudo apt install python3-pip
+  python3 -m pip install virtualenv
+```
 
+Run the setup script to install dependencies: 
+```
+setup -i
+```
 
-python3 -m pip install gitpython
-python3-venv
-apt install python3.10-venv
+# Build/run cpp tests
+
+```
+rip -b -r hello-world
+
+cd /bin/native-release/
+ctest
+
+```
+
+# Clean
+```
+setup -c
+rip -c
+```
