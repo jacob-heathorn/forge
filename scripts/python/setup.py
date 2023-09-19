@@ -7,10 +7,8 @@ import argparse
 import git
 import os
 import shutil
-import semver
 import re
 import subprocess
-
 
 # Custom imports
 from forge.helpers import error, pushd, GREEN_CHECK
@@ -18,7 +16,7 @@ from forge.apt_installer import AptInstaller, SnapInstaller
 
 # Pull in environment variables
 FORGE_ROOT = os.environ.get("FORGE_ROOT")
-FORGE_CACHE = os.path.join(FORGE_ROOT, 'cache')
+FORGE_CACHE = os.path.join(FORGE_ROOT, '.cache')
 
 # def download_file(url, local_path):
 #   # Check if the file exists
