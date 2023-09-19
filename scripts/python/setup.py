@@ -68,7 +68,7 @@ def clone_and_checkout(repo_url, local_path, tag):
     # If it doesn't exist, clone and navigate into it
     print(f" - Cloning {repo_url}...")
     repo = git.Repo.clone_from(repo_url, local_path)
-    print(" - Clone complete. {GREEN_CHECK}")
+    print(f" - Clone complete. {GREEN_CHECK}")
 
     # Check out the specified tag
     repo.git.checkout('tags/' + tag)
