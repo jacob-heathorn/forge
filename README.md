@@ -9,14 +9,21 @@ Clone the repo:
 git clone git@github.com:jheathor-k/forge.git
 ```
 
-You at least need python my broh
+Install python3
 ```
   sudo apt install python3
   sudo apt install python3-pip
   python3 -m pip install virtualenv
 ```
 
-Run the setup script to install dependencies: 
+Install direnv
+1. `sudo apt install direnv`
+2. Add the following to your .bashrc: `eval "$(direnv hook bash)"`
+3. Open a new terminal and change directory to here
+4. `direnv allow .`
+
+
+Run the setup script to install other dependencies: 
 ```
 setup -i
 ```
