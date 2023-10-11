@@ -1,4 +1,5 @@
 #!/bin/bash
 
 # Delegate to the python build tool
+source $PROJECT_ROOT/.venv/bin/activate
 $PROJECT_ROOT/scripts/python/build.py "$@"

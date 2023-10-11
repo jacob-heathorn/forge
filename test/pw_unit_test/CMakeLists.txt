@@ -15,5 +15,13 @@ if(NOT pw_unit_test_repository_POPULATED)
   add_subdirectory(${pw_unit_test_repository_SOURCE_DIR}/test ${pw_unit_test_repository_BINARY_DIR}/test)
 endif()
 
-# Add my own simple test using the function provided by pw_unit_test/firmware
+# Compiles a pigweed unit test executable
+function(add_pw_test)
+  add_executable(${ARGV})
+  platformify(${ARGV0})
+  target_link_libraries(${ARGV0} pw_unit_test)
+  add_test(NAME ${ARGV0} COMMAND ${ARGV0})
+endfunction()
+
+# Add a simple test to verify the framework
 add_pw_test(pw-ut-simple pw_ut_simple.cpp)

@@ -7,6 +7,9 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Enable testing with ctest
+enable_testing()
+
 # Make the platform module accessible from anywhere in the tree.
 list(APPEND CMAKE_MODULE_PATH ${PLATFORM_PATH})
 
