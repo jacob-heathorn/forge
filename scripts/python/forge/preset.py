@@ -45,6 +45,11 @@ def subset_presets(subset_names, superset_presets):
   
   return subset
 
+def print_size(fullfile):
+  print(f'\nSize information:')
+  subprocess.check_call(['size', fullfile])
+  print()
+
 # =================================================================================================
 # Preset - Encapsulates a cmake preset
 
@@ -92,10 +97,12 @@ class Preset:
   def run(self, executable: str):
     fullfile = find_runnable(executable, self._preset_build_root(debug=False))
     self.debugger.run(fullfile)
+    print_size(fullfile)
 
   def debug(self, executable: str):
     self._check_debugger()
     fullfile = find_runnable(executable, self._preset_build_root(debug=True))
+    print_size(fullfile)
     self.debugger.debug(fullfile)
 
   # Private methods
