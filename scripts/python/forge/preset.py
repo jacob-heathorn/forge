@@ -58,7 +58,9 @@ class Preset:
     self.name = name
     self.project_root = project_root
     self.top_build_root = os.path.join(project_root, 'bin')
-    self.debugger = None # Needs assignment later
+    # These are optionally assigned.
+    self.debugger = None
+    self.flasher = None
 
     # CMake generator (-G)
     self.generator = "Ninja"
@@ -68,20 +70,20 @@ class Preset:
     self.cmake_export_compile_commands = "YES"
 
   def clean(self):
-    # Remove the debug build directory if it exists
-    if os.path.exists(self._preset_build_root(debug=True)):
-      shutil.rmtree(self._preset_build_root(debug=True))
-
     # Remove the release build directory if it exists
-    if os.path.exists(self._preset_build_root(debug=False)):
-      shutil.rmtree(self._preset_build_root(debug=False))
+    if os.path.exists(self.bin_dir(release=True)):
+      shutil.rmtree(self.bin_dir(release=True))
 
-  def build(self, debug: bool, verbose: bool):
-    with pushd(self._preset_build_root(debug)):
+    # Remove the debug build directory if it exists
+    if os.path.exists(self.bin_dir(release=False)):
+      shutil.rmtree(self.bin_dir(release=False))
+
+  def build(self, release: bool, verbose: bool):
+    with pushd(self.bin_dir(release)):
       # Configure
       args = ['cmake', '-G', self.generator, self.project_root
               , f'-DCMAKE_TOOLCHAIN_FILE={self.cmake_toolchain_file}'
-              , f'-DCMAKE_BUILD_TYPE={cmake_build_type(debug)}'
+              , f'-DCMAKE_BUILD_TYPE={cmake_build_type(release)}'
               , f'-DCMAKE_EXPORT_COMPILE_COMMANDS={self.cmake_export_compile_commands}'
              ]
       
@@ -91,28 +93,31 @@ class Preset:
       subprocess.check_call(args)
 
       # Build
-      args = ['cmake', '--build', self._preset_build_root(debug)]
+      args = ['cmake', '--build', self.bin_dir(release)]
       subprocess.check_call(args)
 
-  def run(self, executable: str):
-    fullfile = find_runnable(executable, self._preset_build_root(debug=False))
-    self.debugger.run(fullfile)
-    print_size(fullfile)
-
-  def debug(self, executable: str):
-    self._check_debugger()
-    fullfile = find_runnable(executable, self._preset_build_root(debug=True))
-    print_size(fullfile)
-    self.debugger.debug(fullfile)
-
-  # Private methods
-  # 
-  def _preset_build_root(self, debug: bool):
-    if debug:
-      return os.path.join(self.top_build_root, f"{self.name}-debug")
-    else:
+  def bin_dir(self, release: bool):
+    if release:
       return os.path.join(self.top_build_root, f"{self.name}-release")
+    else:
+      return os.path.join(self.top_build_root, f"{self.name}-debug")
+
+
+  # def run(self, executable: str, release: bool):
+  #   fullfile = find_runnable(executable, self._preset_build_root(release))
+  #   self.debugger.run(fullfile)
+  #   print_size(fullfile)
+  #   print
+
+  # def debug(self, executable: str):
+  #   self._check_debugger()
+  #   fullfile = find_runnable(executable, self._preset_build_root(debug=True))
+  #   print_size(fullfile)
+  #   self.debugger.debug(fullfile)
   
-  def _check_debugger(self):
-    if self.debugger is None:
-      error(f"preset<{self.name}> has not been assigned a debugger")
+  # def flash(self, binary: str, debug: bool):
+  #   if self.flasher is None:
+  #     error(f"dude, preset<{self.name}> has not been assigned a flasher.")
+  #   fullfile = find_runnable(binary, self._preset_build_root(debug))
+  #   self.flasher.flash(fullfile)
+
