@@ -16,11 +16,11 @@ def cmake_build_type(debug: bool):
     return "Release"
 
 
-def find_runnable(runnable_name: str, dir: os.path):
+def find_application(application_name: str, dir: os.path):
   matched_files = []
 
   # Create patterns to match both with and without .elf extension
-  patterns = [runnable_name, f"{runnable_name}.elf"]
+  patterns = [application_name, f"{application_name}.elf"]
 
   for root, _, files in os.walk(dir):
       for file in files:
@@ -29,10 +29,10 @@ def find_runnable(runnable_name: str, dir: os.path):
                   matched_files.append(os.path.join(root, file))
 
   if len(matched_files) < 1:
-    error(f"Runnable '{runnable_name}' DNE")
+    error(f"Runnable '{application_name}' DNE")
 
   if len(matched_files) > 1:
-    error(f"More than one runnable found with the name '{runnable_name}'")
+    error(f"More than one runnable found with the name '{application_name}'")
   
   return matched_files[0]
 
@@ -57,10 +57,6 @@ class Preset:
   def __init__(self, name: str, project_root: os.path):
     self.name = name
     self.project_root = project_root
-    self.top_build_root = os.path.join(project_root, 'bin')
-    # These are optionally assigned.
-    self.debugger = None
-    self.flasher = None
 
     # CMake generator (-G)
     self.generator = "Ninja"
@@ -79,13 +75,14 @@ class Preset:
       shutil.rmtree(self.bin_dir(release=False))
 
   def build(self, release: bool, verbose: bool):
-    with pushd(self.bin_dir(release)):
+    # Create a new directory with this preset name wherver we are right now.
+    with pushd(self.name):
       # Configure
       args = ['cmake', '-G', self.generator, self.project_root
               , f'-DCMAKE_TOOLCHAIN_FILE={self.cmake_toolchain_file}'
               , f'-DCMAKE_BUILD_TYPE={cmake_build_type(release)}'
               , f'-DCMAKE_EXPORT_COMPILE_COMMANDS={self.cmake_export_compile_commands}'
-             ]
+              ]
       
       if verbose:
         args.append('-DCMAKE_VERBOSE_MAKEFILE=ON')
@@ -93,14 +90,14 @@ class Preset:
       subprocess.check_call(args)
 
       # Build
-      args = ['cmake', '--build', self.bin_dir(release)]
+      args = ['cmake', '--build', '.']
       subprocess.check_call(args)
 
-  def bin_dir(self, release: bool):
-    if release:
-      return os.path.join(self.top_build_root, f"{self.name}-release")
-    else:
-      return os.path.join(self.top_build_root, f"{self.name}-debug")
+  # def bin_dir(self, release: bool):
+  #   if release:
+  #     return os.path.join(self.top_build_root, f"{self.name}-release")
+  #   else:
+  #     return os.path.join(self.top_build_root, f"{self.name}-debug")
 
 
   # def run(self, executable: str, release: bool):
