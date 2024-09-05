@@ -1,4 +1,6 @@
 semver>=3.0.1
 gitpython
 jinja2
+json5
+argcomplete
 -e 'git+https://github.com/posborne/cmsis-svd.git#egg=cmsis-svd&subdirectory=python'
