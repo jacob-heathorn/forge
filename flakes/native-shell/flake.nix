@@ -1,0 +1,26 @@
+{
+  description = "Default native development shell flake";
+
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
+
+  outputs = { self, nixpkgs }: {
+    devShells = {
+      x86_64-linux = {
+        default = with import nixpkgs { system = "x86_64-linux"; };
+        mkShell {
+          buildInputs = [
+          pkgs.python310
+          pkgs.python310Packages.pip
+          pkgs.ansible
+          pkgs.cmake
+          pkgs.poetry
+        ];
+
+        shellHook = ''
+          echo -e "\033[1;32mWelcome to your linux development shell!\033[0m"
+        '';
+        };
+      };
+    };
+  };
+}
