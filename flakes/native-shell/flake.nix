@@ -9,8 +9,6 @@
         default = with import nixpkgs { system = "x86_64-linux"; };
         mkShell {
           buildInputs = [
-          pkgs.python310
-          pkgs.python310Packages.pip
           pkgs.ansible
           pkgs.cmake
           pkgs.poetry
