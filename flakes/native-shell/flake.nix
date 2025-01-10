@@ -12,6 +12,7 @@
           pkgs.ansible
           pkgs.cmake
           pkgs.poetry
+          pkgs.glibcLocales
         ];
 
         shellHook = ''
