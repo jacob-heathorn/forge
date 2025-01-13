@@ -16,7 +16,7 @@ def cmake_build_type(debug: bool):
     return "Release"
 
 
-def find_runnable(runnable_name: str, dir: os.path):
+def find_application(runnable_name: str, dir: os.path):
   matched_files = []
 
   # Create patterns to match both with and without .elf extension
