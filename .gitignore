@@ -1,5 +1,6 @@
 /bin/
 __pycache__
 /.vscode/launch.json
-/.cache/
-/.venv/
+/scripts/package/.venv
+/scripts/package/poetry.lock
+/scripts/package/pyproject.toml

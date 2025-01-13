@@ -1,5 +1,0 @@
-semver>=3.0.1
-gitpython
-jinja2
-json5
--e 'git+https://github.com/posborne/cmsis-svd.git#egg=cmsis-svd&subdirectory=python'

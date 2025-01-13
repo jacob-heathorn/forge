@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "forge"
+version = "0.1.0"
+description = ""
+authors = ["Jacob <jacob.heathorn@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10" # TODO 3.12?
+semver = ">=3.0.1"
+gitpython = "*"
+jinja2 = "*"
+json5 = "*"
+# cmsis-svd = { git = "https://github.com/posborne/cmsis-svd.git", subdirectory = "python" }
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
