@@ -13,6 +13,7 @@
           pkgs.cmake
           pkgs.poetry
           pkgs.glibcLocales
+          pkgs.gtest
         ];
 
         shellHook = ''
