@@ -1,5 +1,5 @@
 #!/bin/bash
+set -e
 
-# Delegate to the python build tool
-source $PROJECT_ROOT/.venv/bin/activate
-$PROJECT_ROOT/scripts/python/build.py "$@"
+poetry --directory $PROJECT_ROOT/scripts/package \
+  run python $PROJECT_ROOT/scripts/package/rip.py "$@"
