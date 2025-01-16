@@ -1,19 +1,8 @@
-include(FetchContent)
-
-FetchContent_Declare(
-  pw_unit_test_repository
-  GIT_REPOSITORY git@github.com:jheathor-k/pw_unit_test.git
-  GIT_TAG        1b4ffff7a3601b438b2d254c446b07ad36d1eb1a
-)
-
-FetchContent_GetProperties(pw_unit_test_repository)
-if(NOT pw_unit_test_repository_POPULATED)
-  FetchContent_Populate(pw_unit_test_repository)
-  # Pull in firmware
-  add_subdirectory(${pw_unit_test_repository_SOURCE_DIR}/firmware ${pw_unit_test_repository_BINARY_DIR}/firmware)
-  # Pull in tests (includes pw-ut-framework)
-  add_subdirectory(${pw_unit_test_repository_SOURCE_DIR}/test ${pw_unit_test_repository_BINARY_DIR}/test)
-endif()
+# Create a library to contain the pw_unit_test framwork
+add_library(pw_unit_test STATIC)
+add_subdirectory(src)
+add_subdirectory(include)
+platformify(pw_unit_test)
 
 # Compiles a pigweed unit test executable
 function(add_pw_test)
