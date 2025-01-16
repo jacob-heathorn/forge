@@ -2,7 +2,7 @@
 # across the tree.
 
 # Include the common platform cmake.
-include($ENV{FORGE_ROOT}/platforms/common/platform.cmake)
+include($ENV{FORGE_ROOT}/cmake/common/platform.cmake)
 
 # Adds platform-specific libraries and options to the target.
 function(platformify target)

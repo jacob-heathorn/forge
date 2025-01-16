@@ -19,7 +19,7 @@ NATIVE_GDB_PATH = os.environ.get("NATIVE_GDB_PATH")
 
 # Define presets
 native = Preset("native", PROJECT_ROOT)
-native.cmake_toolchain_file = os.path.join(FORGE_ROOT, 'platforms', 'native', 'toolchain.cmake')
+native.cmake_toolchain_file = os.path.join(FORGE_ROOT, 'cmake', 'native', 'toolchain.cmake')
 native.debugger = NativeDebugger(native.name, native.project_root, NATIVE_GDB_PATH)
 ALL_PRESETS = [native]
 
