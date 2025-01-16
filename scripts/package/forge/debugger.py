@@ -6,6 +6,7 @@ from forge.helpers import print_green, ensure_file
 
 FORGE_ROOT = os.environ.get("FORGE_ROOT")
 
+
 class GdbDebugger:
   def __init__(self, name: str, project_root: str, gdb: os.path, template_file: os.path):
     self.name = name
@@ -14,11 +15,11 @@ class GdbDebugger:
     self.template_file = template_file
     self.vscode_folder = os.path.join(project_root, ".vscode")
     self.generated_launch_json = os.path.join(self.vscode_folder, "launch.json")
-  
+
   def _generate_launch_json(self, executable: os.path):
     # Read the template content
     with open(self.template_file, 'r') as file:
-        template_content = file.read()
+      template_content = file.read()
 
     # Create a Jinja Template instance with the content
     template = Template(template_content)
@@ -34,12 +35,17 @@ class GdbDebugger:
     # Write the rendered template to a file
     with open(self.generated_launch_json, 'w') as f:
       f.write(rendered_template)
-    
+
     print(f"Generated {self.generated_launch_json}")
+
 
 class NativeDebugger(GdbDebugger):
   def __init__(self, name: str, project_root: str, gdb: os.path):
-    native_template_file = os.path.join(FORGE_ROOT, 'scripts', 'templates', 'launch-native.json.jinja2')
+    native_template_file = os.path.join(
+        FORGE_ROOT,
+        'scripts',
+        'templates',
+        'launch-native.json.jinja2')
     ensure_file(native_template_file)
     super().__init__(name, project_root, gdb, native_template_file)
 

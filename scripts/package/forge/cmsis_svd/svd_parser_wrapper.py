@@ -14,15 +14,18 @@ SVD_DATA_DIR = os.path.join(FORGE_ROOT, '.venv', 'src', 'cmsis-svd', 'data')
 # Helpers
 
 # Deletes all the header files in a directory
+
+
 def clean_headers(dir: str):
   for filename in os.listdir(dir):
     file_path = os.path.join(dir, filename)
     if file_path.endswith('.hpp'):
       os.remove(file_path)
 
+
 def format_comment(comment, width=100, indent_width=0):
   words = comment.split()
-  
+
   # The line starts with indent, then "// " which takes up 3 characters
   line_width = 3 + indent_width
   lines = []
@@ -47,6 +50,7 @@ def format_comment(comment, width=100, indent_width=0):
 # =================================================================================================
 # CMSIS-SVD parser wrapper
 
+
 class SVDParserWrapper:
   def __init__(self, vendor: str, svd_filename: str):
     self.svd_parser = SVDParser.for_packaged_svd(SVD_DATA_DIR, vendor, svd_filename)
@@ -58,7 +62,7 @@ class SVDParserWrapper:
   def generate(self, output_dir: str):
     # First clean the outpud dir
     clean_headers(output_dir)
-    
+
     # Read the template content
     template_file = os.path.join(FORGE_ROOT, 'scripts', 'templates', 'cmsis_svd_registers.jinja2')
     with open(template_file, 'r') as file:
@@ -73,7 +77,7 @@ class SVDParserWrapper:
             print(f"Skipping {peripheral.name}")
             skip = True
             break
-        
+
         if skip:
           continue
 
@@ -86,5 +90,11 @@ class SVDParserWrapper:
           f.write(rendered_template)
 
     # Copy base Register source
-    shutil.copy(os.path.join(FORGE_ROOT, 'scripts', 'templates', 'register_bit_manipulation.hpp'), output_dir)
+    shutil.copy(
+        os.path.join(
+            FORGE_ROOT,
+            'scripts',
+            'templates',
+            'register_bit_manipulation.hpp'),
+        output_dir)
     shutil.copy(os.path.join(FORGE_ROOT, 'scripts', 'templates', 'register32.hpp'), output_dir)

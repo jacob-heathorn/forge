@@ -19,17 +19,31 @@ NATIVE_GDB_PATH = os.environ.get("NATIVE_GDB_PATH")
 
 # Define presets
 native = Preset("native", PROJECT_ROOT)
-native.cmake_toolchain_file = os.path.join(FORGE_ROOT, 'platforms','native','toolchain.cmake')
+native.cmake_toolchain_file = os.path.join(FORGE_ROOT, 'platforms', 'native', 'toolchain.cmake')
 native.debugger = NativeDebugger(native.name, native.project_root, NATIVE_GDB_PATH)
 ALL_PRESETS = [native]
 
+
 def main():
   parser = argparse.ArgumentParser(description='Repository build driver')
-  parser.add_argument('-p', '--presets', dest="presets", required=False, nargs='+', help='CMake build preset(s)')
-  parser.add_argument('-c', '--clean', action='store_true', default=False, help='Delete the build folder')
+  parser.add_argument(
+      '-p',
+      '--presets',
+      dest="presets",
+      required=False,
+      nargs='+',
+      help='CMake build preset(s)')
+  parser.add_argument(
+      '-c',
+      '--clean',
+      action='store_true',
+      default=False,
+      help='Delete the build folder')
   parser.add_argument('-b', '--build', action='store_true', default=False, help='Compile')
-  parser.add_argument('-r', '--run', dest="runnable", required=False, help='Run the executable with the given name')
-  parser.add_argument('-d', '--debug', action='store_true', default=False, help='Debug the executable specified by -r')
+  parser.add_argument('-r', '--run', dest="runnable", required=False,
+                      help='Run the executable with the given name')
+  parser.add_argument('-d', '--debug', action='store_true', default=False,
+                      help='Debug the executable specified by -r')
   parser.add_argument('-v', '--verbose', action='store_true', default=False, help='Build verbose')
   args = parser.parse_args()
 
@@ -61,13 +75,14 @@ def main():
   # Do run/debug
   if args.runnable:
     if len(presets) != 1:
-      error(f"Easy now, run one preset at a time!")
+      error("Easy now, run one preset at a time!")
 
     for preset in presets:
       if args.debug:
         preset.debug(args.runnable)
       else:
         preset.run(args.runnable)
+
 
 if __name__ == '__main__':
   main()
