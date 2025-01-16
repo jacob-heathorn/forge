@@ -30,7 +30,8 @@ setup -i
 # Build/run cpp tests
 
 ```
-rip -c -b -r hello-world
+rip -c && cmake --workflow --preset native-debug && \
+rip -r hello-world
 
 cd /bin/native-release/
 ctest

@@ -67,12 +67,10 @@ function(add_common_c_cxx_flags target)
 
   # Debug mode flags
   #
-  # -O0: No optimization. Speeds up compilation and allows for effective debugging.
+  # -O0: Optimized for debugging.
   # -ggdb: Produces debugging information for use by GDB debugger.
   target_compile_options(${target} PRIVATE
-    # "-O0": No optimizations. TODO consider "-Og"
-    # "-ggdb": Generate debug symbols optimized for gdb
-    $<$<CONFIG:Debug>:-O0 -ggdb>
+    $<$<CONFIG:Debug>:-Og -ggdb>
   )
 
 endfunction()
