@@ -30,7 +30,7 @@ setup -i
 # Build/run cpp tests
 
 ```
-rip -b -r hello-world
+rip -c -b -r hello-world
 
 cd /bin/native-release/
 ctest
