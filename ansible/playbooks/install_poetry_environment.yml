@@ -1,7 +1,7 @@
 ---
 # Creates the poetry virtual environment from the {{ package_path }}
 #
-# Expects the {{ package_path }} and {{ clean_environemtn }} to be set.
+# Expects the {{ package_path }} and {{ clean_environment }} to be set.
 
 - name: Install poetry environment
   hosts: all
