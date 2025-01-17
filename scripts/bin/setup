@@ -18,8 +18,6 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# poetry env remove --all --directory ./scripts/package
-
 export ANSIBLE_CONFIG=$FORGE_ROOT/ansible/ansible.cfg
 
 ansible-playbook -i ${FORGE_ROOT}/ansible/local.ini \
