@@ -17,6 +17,7 @@
         ];
 
         shellHook = ''
+          export PYTHONPYCACHEPREFIX=/nix/var/tmp/python_cache
           echo -e "\033[1;32mWelcome to your linux development shell!\033[0m"
         '';
         };
