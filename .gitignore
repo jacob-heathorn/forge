@@ -1,6 +1,5 @@
 /bin/
 __pycache__
 /.vscode/launch.json
-/scripts/package/.venv
 /scripts/package/pyproject.toml
 /.direnv/

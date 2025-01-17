@@ -22,6 +22,6 @@ done
 
 export ANSIBLE_CONFIG=$FORGE_ROOT/ansible/ansible.cfg
 
-ansible-playbook -i ${PROJECT_ROOT}/ansible/local.ini \
-  ${PROJECT_ROOT}/ansible/playbooks/install_poetry_environment.yml \
+ansible-playbook -i ${FORGE_ROOT}/ansible/local.ini \
+  ${FORGE_ROOT}/ansible/playbooks/install_poetry_environment.yml \
   -e "package_path=${PROJECT_ROOT}/scripts/package clean_environment=${clean_environment}"
