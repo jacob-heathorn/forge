@@ -1,9 +1,8 @@
 [tool.poetry]
 name = "forge"
 version = "0.1.0"
-description = ""
+description = "Embedded tooling"
 authors = ["Jacob <jacob.heathorn@gmail.com>"]
-readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.10" # TODO 3.12?

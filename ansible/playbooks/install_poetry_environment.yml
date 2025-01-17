@@ -1,7 +1,7 @@
 ---
 # Creates the poetry virtual environment from the {{ package_path }}
 #
-# Expects the {{ package_path to be set}}.
+# Expects the {{ package_path }} and {{ clean_environemtn }} to be set.
 
 - name: Install poetry environment
   hosts: all
@@ -10,10 +10,11 @@
 
   tasks:
 
-    - name: Expand  pyproject.in.toml -> pyproject.toml
-      command: gordion --generate-pyproject-toml {{ package_path }}
-      register: generate_output
-      changed_when: "'Writing' in generate_output.stdout"
+    - name: Remove Poetry environment
+      ansible.builtin.command:
+        cmd: poetry env remove --all --directory {{ package_path }}
+      when: clean_environment | default(false) | bool
+      register: poetry_remove_result
 
     - name: Get current 'virtualenvs.in-project' setting
       command: poetry config virtualenvs.in-project
@@ -22,9 +23,14 @@
       failed_when: false
       ignore_errors: true
 
-    - name: Set 'virtualenvs.in-project' to true if not already set
-      command: poetry config virtualenvs.in-project true
-      when: poetry_config.stdout != 'true'
+    - name: Set 'virtualenvs.in-project' to false if not already set
+      command: poetry config virtualenvs.in-project false
+      when: poetry_config.stdout == 'true'
+
+    - name: Expand  pyproject.in.toml -> pyproject.toml
+      command: gordion --generate-pyproject-toml {{ package_path }}
+      register: generate_output
+      changed_when: "'Writing' in generate_output.stdout"
 
     - name: Generate poetry lock file
       command: poetry lock --directory {{ package_path }}
@@ -37,4 +43,3 @@
       changed_when: "'Creating virtualenv' in poetry_install.stdout or 'Package operations:' in poetry_install.stdout"
       vars:
         show_stdout: true
-
