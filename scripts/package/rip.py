@@ -32,8 +32,11 @@ def main():
 
   # Do run
   if args.run:
-    forge.run(args.run)
-
+    forge.Application(args.run).run()
+  
+  # Do debug
+  if args.debug:
+    forge.Application(args.debug).debug()
 
 
 if __name__ == '__main__':

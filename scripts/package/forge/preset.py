@@ -2,8 +2,6 @@
 import os
 import subprocess
 import shutil
-import fnmatch
-
 from forge.helpers import error, pushd
 
 # =================================================================================================
@@ -16,26 +14,6 @@ def cmake_build_type(debug: bool):
   else:
     return "Release"
 
-
-def find_application(runnable_name: str, dir: os.path):
-  matched_files = []
-
-  # Create patterns to match both with and without .elf extension
-  patterns = [runnable_name, f"{runnable_name}.elf"]
-
-  for root, _, files in os.walk(dir):
-    for file in files:
-      for pattern in patterns:
-        if fnmatch.fnmatch(file, pattern):
-          matched_files.append(os.path.join(root, file))
-
-  if len(matched_files) < 1:
-    error(f"Runnable '{runnable_name}' DNE")
-
-  if len(matched_files) > 1:
-    error(f"More than one runnable found with the name '{runnable_name}'")
-
-  return matched_files[0]
 
 
 def subset_presets(subset_names, superset_presets):
