@@ -36,8 +36,10 @@ def ensure_file(fullfile: os.path):
   if not os.path.exists(fullfile):
     error(f'file<{fullfile}> DNE!')
 
+
 def remove_file(fullfile):
-  if os.path.exists(fullfile): os.remove(fullfile)
+  if os.path.exists(fullfile):
+    os.remove(fullfile)
 
 
 # Context manager for pushd. Example from

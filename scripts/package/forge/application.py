@@ -9,19 +9,48 @@ PROJECT_ROOT = os.environ.get("PROJECT_ROOT")
 CMAKE_PRESETS_JSON = os.path.join(PROJECT_ROOT, "CMakePresets.json")
 
 
+def check_preset(preset_name):
+  with forge.pushd(PROJECT_ROOT):
+    try:
+      # Run the 'cmake --list-presets' command
+      result = subprocess.run(
+          ["cmake", "--list-presets"],
+          text=True,  # Ensures output is returned as a string
+          capture_output=True,  # Captures stdout and stderr
+          check=True  # Raises CalledProcessError if the command fails
+      )
+      # Check if the preset_name is in the output
+      if preset_name in result.stdout:
+        return True
+      else:
+        forge.error(f"Preset '{preset_name}' does not exist.\n{result.stdout}")
+
+    except subprocess.CalledProcessError as e:
+      forge.error(f"Error running cmake: {e.stderr}")
+  return False
+
+
 def split_preset_application(preset_application: str):
   # Split the string into two parts at the first colon
   parts = preset_application.split(':', 1)  # '1' is the maxsplit argument
 
-  # Assign the parts to respective variables
-  preset = parts[0]  # The part before the colon
-  # The part after the colon, or None if no colon
-  application = parts[1] if len(parts) > 1 else None
+  if len(parts) != 2:
+    forge.error(f"Incorrect formatting <{preset_application}>, expected <preset:application>.")
+
+  preset = parts[0]       # The part before the colon
+  application = parts[1]  # The part after the colon
 
   return preset, application
 
 
 def resolve_bin_dir(preset_name: str) -> str:
+
+  # First verify existence of CMakePresets.json.
+  if not os.path.exists(CMAKE_PRESETS_JSON):
+    forge.error(f"{CMAKE_PRESETS_JSON} does not exist!")
+
+  # Then verify preset_name is a valid preset.
+  check_preset(preset_name)
 
   with open(CMAKE_PRESETS_JSON, "r") as f:
     data = json.load(f)
@@ -31,6 +60,9 @@ def resolve_bin_dir(preset_name: str) -> str:
        for preset in data["configurePresets"] if preset["name"] == preset_name),
       None,
   )
+
+  if binary_dir is None:
+    forge.error(f"CMakePresets.json:{preset_name} does not set <binaryDir>!")
 
   # Expand cmake environment variables.
   binary_dir = binary_dir.replace("${sourceDir}", os.path.dirname(CMAKE_PRESETS_JSON))
