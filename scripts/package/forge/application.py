@@ -3,6 +3,7 @@ import json
 import fnmatch
 import forge
 import subprocess
+from abc import ABC, abstractmethod
 
 PROJECT_ROOT = os.environ.get("PROJECT_ROOT")
 NATIVE_GDB_PATH = os.environ.get("NATIVE_GDB_PATH")
@@ -60,13 +61,24 @@ def find_application(application_name: str, dir: os.path) -> str:
 def print_size(fullfile):
   subprocess.check_call(['size', fullfile])
 
-class Application:
+class Application(ABC):
   def __init__(self, preset_application: str):
     self.preset_name, self.application_name = split_preset_application(preset_application)
     self.bin_dir = resolve_bin_dir(self.preset_name)
     self.application_fullfile = find_application(self.application_name, self.bin_dir)
 
-  # TODO make run/debug virtual
+  @abstractmethod
+  def run(self):
+    pass
+
+  @abstractmethod
+  def debug(self):
+    pass
+
+class NativeApplication(Application):
+  def __init__(self, preset_application: str):
+    super().__init__(preset_application)
+
   def run(self):
     forge.print_green(f"Runnig application {self.application_fullfile}")
     print_size(self.application_fullfile)

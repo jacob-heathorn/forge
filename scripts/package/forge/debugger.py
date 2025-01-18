@@ -49,12 +49,12 @@ class NativeDebugger(GdbDebugger):
     ensure_file(native_template_file)
     super().__init__(name, project_root, gdb, native_template_file)
 
-  def debug(self, fullfile: os.path):
-    self._generate_launch_json(fullfile)
-    print_green("Start debugging in VSCode (F5)!")
-
   def run(self, fullfile: os.path):
     print_green(f"Runnig executable {fullfile}")
     args = [fullfile]
     subprocess.check_call(args)
     print_green("Success!")
+
+  def debug(self, fullfile: os.path):
+    self._generate_launch_json(fullfile)
+    print_green("Start debugging in VSCode (F5)!")
