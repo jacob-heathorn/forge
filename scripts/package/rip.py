@@ -29,11 +29,12 @@ def main():
   # Do clean
   if args.clean:
     shutil.rmtree(os.path.join(PROJECT_ROOT, 'bin'), ignore_errors=True)
+    forge.remove_file(os.path.join(PROJECT_ROOT, '.vscode', 'launch.json'))
 
   # Do run
   if args.run:
     forge.NativeApplication(args.run).run()
-  
+
   # Do debug
   if args.debug:
     forge.NativeApplication(args.debug).debug()

@@ -31,7 +31,8 @@ setup -i
 
 ```
 rip -c && cmake --workflow --preset native-debug && \
-rip -r hello-world
+rip -r native-debug:hello-world && \
+rip -d native-debug:hello-world
 
 cd /bin/native-release/
 ctest

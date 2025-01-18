@@ -1,60 +1,31 @@
 import os
-from jinja2 import Template
-import subprocess
+import forge
 
-from forge.helpers import print_green, ensure_file
-
+PROJECT_ROOT = os.environ.get("PROJECT_ROOT")
 FORGE_ROOT = os.environ.get("FORGE_ROOT")
+VSCODE_DIR = os.path.join(PROJECT_ROOT, ".vscode")
+LAUNCH_JSON = os.path.join(VSCODE_DIR, "launch.json")
+NATIVE_LAUNCH_TEMPLATE = os.path.join(
+    FORGE_ROOT,
+    'scripts',
+    'templates',
+    'native_launch_config.jinja2')
+NATIVE_GDB_PATH = os.environ.get("NATIVE_GDB_PATH")
 
 
-class GdbDebugger:
-  def __init__(self, name: str, project_root: str, gdb: os.path, template_file: os.path):
+class NativeDebugger():
+  def __init__(self, name: str,):
     self.name = name
-    self.project_root = project_root
-    self.gdb = gdb
-    self.template_file = template_file
-    self.vscode_folder = os.path.join(project_root, ".vscode")
-    self.generated_launch_json = os.path.join(self.vscode_folder, "launch.json")
-
-  def _generate_launch_json(self, executable: os.path):
-    # Read the template content
-    with open(self.template_file, 'r') as file:
-      template_content = file.read()
-
-    # Create a Jinja Template instance with the content
-    template = Template(template_content)
-
-    # Render the template
-    display_name = f"{self.name} (gdb)"
-    rendered_template = template.render(name=display_name, executable=executable, gdb_path=self.gdb)
-
-    # Create the .vscode directory if it doesn't exist
-    if not os.path.exists(self.vscode_folder):
-      os.makedirs(self.vscode_folder)
-
-    # Write the rendered template to a file
-    with open(self.generated_launch_json, 'w') as f:
-      f.write(rendered_template)
-
-    print(f"Generated {self.generated_launch_json}")
-
-
-class NativeDebugger(GdbDebugger):
-  def __init__(self, name: str, project_root: str, gdb: os.path):
-    native_template_file = os.path.join(
-        FORGE_ROOT,
-        'scripts',
-        'templates',
-        'launch-native.json.jinja2')
-    ensure_file(native_template_file)
-    super().__init__(name, project_root, gdb, native_template_file)
-
-  def run(self, fullfile: os.path):
-    print_green(f"Runnig executable {fullfile}")
-    args = [fullfile]
-    subprocess.check_call(args)
-    print_green("Success!")
 
   def debug(self, fullfile: os.path):
-    self._generate_launch_json(fullfile)
-    print_green("Start debugging in VSCode (F5)!")
+    launch_manager = forge.vscode.LaunchManager(LAUNCH_JSON)
+
+    # Define the context for your template rendering
+    context = {
+        'name': self.name,
+        'executable': fullfile,
+        'gdb_path': NATIVE_GDB_PATH
+    }
+
+    launch_manager.update(NATIVE_LAUNCH_TEMPLATE, context)
+    forge.print_green(f"In VSCode use run config: {self.name}")

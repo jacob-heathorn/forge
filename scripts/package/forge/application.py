@@ -6,7 +6,6 @@ import subprocess
 from abc import ABC, abstractmethod
 
 PROJECT_ROOT = os.environ.get("PROJECT_ROOT")
-NATIVE_GDB_PATH = os.environ.get("NATIVE_GDB_PATH")
 CMAKE_PRESETS_JSON = os.path.join(PROJECT_ROOT, "CMakePresets.json")
 
 
@@ -21,13 +20,15 @@ def split_preset_application(preset_application: str):
 
   return preset, application
 
+
 def resolve_bin_dir(preset_name: str) -> str:
 
   with open(CMAKE_PRESETS_JSON, "r") as f:
     data = json.load(f)
 
   binary_dir = next(
-      (preset.get("binaryDir") for preset in data["configurePresets"] if preset["name"] == preset_name),
+      (preset.get("binaryDir")
+       for preset in data["configurePresets"] if preset["name"] == preset_name),
       None,
   )
 
@@ -36,6 +37,7 @@ def resolve_bin_dir(preset_name: str) -> str:
   binary_dir = binary_dir.replace("${presetName}", preset_name)
 
   return binary_dir
+
 
 def find_application(application_name: str, dir: os.path) -> str:
   matched_files = []
@@ -58,8 +60,10 @@ def find_application(application_name: str, dir: os.path) -> str:
   application_fullfile = matched_files[0]
   return application_fullfile
 
+
 def print_size(fullfile):
   subprocess.check_call(['size', fullfile])
+
 
 class Application(ABC):
   def __init__(self, preset_application: str):
@@ -75,6 +79,7 @@ class Application(ABC):
   def debug(self):
     pass
 
+
 class NativeApplication(Application):
   def __init__(self, preset_application: str):
     super().__init__(preset_application)
@@ -87,6 +92,5 @@ class NativeApplication(Application):
     forge.print_green("Success!")
 
   def debug(self):
-    debugger = forge.NativeDebugger(name=f"{self.preset_name}:{self.application_name}",
-                                    project_root=PROJECT_ROOT, gdb=NATIVE_GDB_PATH)
+    debugger = forge.NativeDebugger(name=f"{self.preset_name}:{self.application_name}")
     debugger.debug(self.application_fullfile)
