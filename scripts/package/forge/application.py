@@ -4,6 +4,8 @@ import fnmatch
 import forge
 import subprocess
 from abc import ABC, abstractmethod
+from pathlib import Path
+import re
 
 PROJECT_ROOT = os.environ.get("PROJECT_ROOT")
 CMAKE_PRESETS_JSON = os.path.join(PROJECT_ROOT, "CMakePresets.json")
@@ -43,6 +45,61 @@ def split_preset_application(preset_application: str):
   return preset, application
 
 
+def expand_penv_variables(path):
+  """
+  Expand environment variables in the form of $penv{VAR_NAME}.
+
+  :param path: The input path string with $penv{...} placeholders.
+  :return: The expanded path with environment variables replaced.
+  """
+  # Regular expression to find $penv{VAR_NAME}
+  pattern = re.compile(r"\$penv\{(.*?)\}")
+
+  # Function to replace each match with its environment variable value
+  def replace_var(match):
+    var_name = match.group(1)  # Extract the variable name
+    return os.environ.get(var_name, "")  # Get the value or use an empty string if undefined
+
+  # Substitute all occurrences of the pattern
+  return pattern.sub(replace_var, path)
+
+
+def expand_cmake_presets(presets_path):
+  """
+  Recursively expand and merge CMakePresets.json files.
+
+  :param presets_path: Path to the initial CMakePresets.json file.
+  :return: Merged dictionary of all included CMakePresets.json files.
+  """
+  presets_path = Path(presets_path)
+  if not presets_path.exists():
+    raise FileNotFoundError(f"Presets file not found: {presets_path}")
+
+  with presets_path.open("r") as f:
+    data = json.load(f)
+
+  # Handle `include` field if present
+  includes = data.get("include", [])
+  merged_data = {
+      "version": data.get("version", None),
+      "cmakeMinimumRequired": data.get("cmakeMinimumRequired", {}),
+      "configurePresets": data.get("configurePresets", []),
+      "buildPresets": data.get("buildPresets", []),
+  }
+
+  for include_path in includes:
+    resolved_path = expand_penv_variables(include_path)
+
+    # Recursively expand the included file
+    included_data = expand_cmake_presets(resolved_path)
+
+    # Merge included presets into the main dictionary
+    merged_data["configurePresets"].extend(included_data.get("configurePresets", []))
+    merged_data["buildPresets"].extend(included_data.get("buildPresets", []))
+
+  return merged_data
+
+
 def resolve_bin_dir(preset_name: str) -> str:
 
   # First verify existence of CMakePresets.json.
@@ -52,17 +109,18 @@ def resolve_bin_dir(preset_name: str) -> str:
   # Then verify preset_name is a valid preset.
   check_preset(preset_name)
 
-  with open(CMAKE_PRESETS_JSON, "r") as f:
-    data = json.load(f)
-
-  binary_dir = next(
-      (preset.get("binaryDir")
-       for preset in data["configurePresets"] if preset["name"] == preset_name),
-      None,
-  )
+  try:
+    merged_presets = expand_cmake_presets(CMAKE_PRESETS_JSON)
+    binary_dir = next(
+        (preset.get("binaryDir")
+         for preset in merged_presets["configurePresets"] if preset["name"] == preset_name),
+        None,
+    )
+  except Exception as e:
+    forge.error(f"Error: {e}")
 
   if binary_dir is None:
-    forge.error(f"CMakePresets.json:{preset_name} does not set <binaryDir>!")
+    forge.error(f"Preset<{preset_name}> does not set \"binaryDir\"!")
 
   # Expand cmake environment variables.
   binary_dir = binary_dir.replace("${sourceDir}", os.path.dirname(CMAKE_PRESETS_JSON))
