@@ -23,9 +23,9 @@
       failed_when: false
       ignore_errors: true
 
-    - name: Set 'virtualenvs.in-project' to false if not already set
-      command: poetry config virtualenvs.in-project false
-      when: poetry_config.stdout == 'true'
+    - name: Set 'virtualenvs.in-project' to true if not already set
+      command: poetry config virtualenvs.in-project true
+      when: poetry_config.stdout == 'false'
 
     - name: Expand  pyproject.in.toml -> pyproject.toml
       command: gordion --generate-pyproject-toml {{ package_path }}

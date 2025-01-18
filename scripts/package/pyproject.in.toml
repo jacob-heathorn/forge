@@ -5,7 +5,7 @@ description = "Embedded tooling"
 authors = ["Jacob <jacob.heathorn@gmail.com>"]
 
 [tool.poetry.dependencies]
-python = "^3.10" # TODO 3.12?
+python = "^3.12"
 semver = ">=3.0.1"
 gitpython = "*"
 jinja2 = "*"
