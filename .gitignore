@@ -4,3 +4,6 @@
 /scripts/package/pyproject.toml
 /scripts/package/.venv
 /.direnv/
+/.tox
+/.pytest_cache
+__pycache__
