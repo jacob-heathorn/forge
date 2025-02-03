@@ -41,7 +41,7 @@ ctest
 
 # Tests
 ```
-poetry --directory ./scripts/package run pytest {posargs}
+poetry --directory ./scripts/package run pytest -s
 ```
 
 

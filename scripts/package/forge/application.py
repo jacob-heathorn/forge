@@ -175,11 +175,12 @@ class NativeApplication(Application):
     super().__init__(preset_application)
 
   def run(self):
-    forge.print_green(f"Runnig application {self.application_fullfile}")
+    print("\n\nApplication information:")
     print_size(self.application_fullfile)
+    print("Running locally...")
     args = [self.application_fullfile]
     subprocess.check_call(args)
-    forge.print_green("Success!")
+    forge.print_green("Complete!")
 
   def debug(self):
     debugger = forge.NativeDebugger(name=f"{self.preset_name}:{self.application_name}")
