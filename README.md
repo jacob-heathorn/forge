@@ -39,6 +39,12 @@ ctest
 
 ```
 
+# Tests
+```
+poetry --directory ./scripts/package run pytest {posargs}
+```
+
+
 # Clean
 ```
 setup -c

@@ -14,7 +14,6 @@
           pkgs.poetry
           pkgs.glibcLocales
           pkgs.gtest
-          pkgs.python312Packages.tox
         ];
 
         shellHook = ''
