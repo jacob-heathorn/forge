@@ -14,6 +14,7 @@
           pkgs.poetry
           pkgs.glibcLocales
           pkgs.gtest
+          pkgs.gcc-arm-embedded-13
         ];
 
         shellHook = ''
