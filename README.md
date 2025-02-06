@@ -2,30 +2,18 @@
 
 Tooling for forging embedded projects
 
-# Setup
+# Setup Instructions
 
-Clone the repo:
-```
-git clone git@github.com:jheathor-k/forge.git
-```
-
-Install direnv:
-1. `sudo apt install direnv`
-2. Add the following to your .bashrc: `eval "$(direnv hook bash)"`
-3. Open a new terminal and change directory to here
-4. `direnv allow .`
-
-Install nix:
-```
-sh <(curl -L https://nixos.org/nix/install) --daemon
-```
-TODO: Enable nix-direnv I forgot.
-
-
-Run the setup script: 
-```
-setup
-```
+1) Clone this repository: `git clone https://github.com/jacob-heathorn/forge.git`
+2) Install direnv:
+  * `sudo apt install direnv`
+  * Add the following to your .bashrc: `eval "$(direnv hook bash)"`
+  * Open a new terminal and change directory to here.
+  * `direnv allow .`
+3) Install nix:
+  * `sh <(curl -L https://nixos.org/nix/install) --daemon`
+  * TODO: enable nix-direnv (I forgot)
+4) Run the setup script `setup`
 
 # Repository tests
 `pytest`
