@@ -24,29 +24,27 @@ TODO: Enable nix-direnv I forgot.
 
 Run the setup script: 
 ```
-setup -i
+setup
 ```
 
-# Build/run cpp tests
-
-```
-rip -c && cmake --workflow --preset native-debug && \
-rip -r native-debug:hello-world && \
-rip -d native-debug:hello-world
-
-cd /bin/native-release/
-ctest
-
-```
-
-# Tests
-```
-pytest -s
-```
-
+# Repository tests
+`pytest`
 
 # Clean
+`rip -c`
+
+# Build
+`cmake --workflow --preset native-debug`
+`cmake --workflow --preset native-release`
+
+# Run
+`rip -r native-debug:hello-world`
+
+# Debug
+`rip -d native-debug:hello-world`
+
+# ctest
 ```
-setup -c
-rip -c
+cd /.bin/native-release/
+ctest
 ```

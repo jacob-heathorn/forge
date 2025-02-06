@@ -1,4 +1,7 @@
 {
-  "python.defaultInterpreterPath": "./scripts/package/.venv/bin/python"
+  "python.defaultInterpreterPath": "./scripts/package/.venv/bin/python",
+  "files.associations": {
+    "iostream": "cpp"
+  }
 }
 
