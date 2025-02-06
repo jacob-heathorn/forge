@@ -1,4 +1,4 @@
-/bin/
+/.bin/
 /.pycache/
 /.vscode/launch.json
 /scripts/package/pyproject.toml
