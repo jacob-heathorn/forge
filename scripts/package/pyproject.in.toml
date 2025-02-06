@@ -13,6 +13,9 @@ json5 = "*"
 pytest = "*"
 # cmsis-svd = { git = "https://github.com/posborne/cmsis-svd.git", subdirectory = "python" }
 
+[tool.pytest.ini_options]
+cache_dir = "../../.pycache"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

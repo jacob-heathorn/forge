@@ -1,5 +1,5 @@
 #!/bin/bash
 set -e
 
-poetry --directory $PROJECT_ROOT/scripts/package \
-  run python $PROJECT_ROOT/scripts/package/rip.py "$@"
+pushd $PROJECT_ROOT/scripts/package
+poetry run python $PROJECT_ROOT/scripts/package/rip.py "$@"
