@@ -3,28 +3,29 @@
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
 
-  outputs = { self, nixpkgs }: {
-    devShells = {
-      x86_64-linux = {
-        default = with import nixpkgs { system = "x86_64-linux"; };
-        mkShell {
-          buildInputs = [
-          pkgs.ansible
-          pkgs.cmake
-          pkgs.poetry
-          pkgs.glibcLocales
-          pkgs.gtest
-          pkgs.gcc-arm-embedded-13
-          pkgs.python312Packages.flake8
-          pkgs.python312Packages.tox
-        ];
+  outputs = { self, nixpkgs }: let
+    system = "x86_64-linux";
+    pkgs = import nixpkgs { inherit system; };
+    gtestPath = builtins.toString pkgs.gtest.dev.outPath;  # ✅ Get full GTest path
+  in {
+    devShells.${system}.default = pkgs.mkShell {
+      buildInputs = [
+        pkgs.ansible
+        pkgs.cmake
+        pkgs.poetry
+        pkgs.glibcLocales
+        pkgs.gtest
+        pkgs.gcc-arm-embedded-13
+        pkgs.python312Packages.flake8
+        pkgs.python312Packages.tox
+      ];
 
-        shellHook = ''
-          export PYTHONPYCACHEPREFIX=$PROJECT_ROOT/.pycache
-          echo -e "\033[1;32mWelcome to the forge development shell!\033[0m"
-        '';
-        };
-      };
+      shellHook = ''
+        export CMAKE_PREFIX_PATH=${gtestPath}
+        export GTEST_INCLUDE_DIR=${gtestPath}/include  # ✅ Explicitly set include path
+        export PYTHONPYCACHEPREFIX=$PROJECT_ROOT/.pycache
+        echo -e "\033[1;32mWelcome to the forge development shell!\033[0m"
+      '';
     };
   };
 }

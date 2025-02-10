@@ -3,3 +3,5 @@
 /scripts/package/.venv
 /.direnv/
 .pycache
+.tox
+__pycache__

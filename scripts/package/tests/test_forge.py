@@ -23,14 +23,14 @@ def test_build_debug():
   with forge.pushd(PROJECT_ROOT):
     args = ['cmake', '--workflow', '--preset', 'native-debug']
     subprocess.run(args, capture_output=True, text=True)
-  assert os.path.exists(
-      os.path.join(
-          PROJECT_ROOT,
-          '.bin',
-          'native-debug',
-          'forge',
-          'test',
-          'hello-world'))
+    assert os.path.exists(
+        os.path.join(
+            PROJECT_ROOT,
+            '.bin',
+            'native-debug',
+            'forge',
+            'test',
+            'hello-world'))
 
 
 def test_build_release():
