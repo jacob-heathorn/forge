@@ -128,7 +128,7 @@ def resolve_bin_dir(preset_name: str) -> str:
     return binary_dir
 
 
-def find_application(application_name: str, dir: os.path) -> str:
+def find_application(application_name: str, dir: str) -> str:
   matched_files = []
 
   # Create patterns to match both with and without .elf extension
