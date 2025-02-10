@@ -9,8 +9,8 @@ import shutil
 import forge
 
 # Pull in environment variables
-FORGE_ROOT = os.environ.get("FORGE_ROOT")
-PROJECT_ROOT = os.environ.get("PROJECT_ROOT")
+FORGE_ROOT = os.environ.get("FORGE_ROOT", "")
+PROJECT_ROOT = os.environ.get("PROJECT_ROOT", "")
 NATIVE_GDB_PATH = os.environ.get("NATIVE_GDB_PATH")
 
 

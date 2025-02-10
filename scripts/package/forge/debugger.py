@@ -1,8 +1,8 @@
 import os
 import forge
 
-PROJECT_ROOT = os.environ.get("PROJECT_ROOT")
-FORGE_ROOT = os.environ.get("FORGE_ROOT")
+PROJECT_ROOT = os.environ.get("PROJECT_ROOT", "")
+FORGE_ROOT = os.environ.get("FORGE_ROOT", "")
 VSCODE_DIR = os.path.join(PROJECT_ROOT, ".vscode")
 LAUNCH_JSON = os.path.join(VSCODE_DIR, "launch.json")
 NATIVE_LAUNCH_TEMPLATE = os.path.join(
@@ -17,7 +17,7 @@ class NativeDebugger():
   def __init__(self, name: str,):
     self.name = name
 
-  def debug(self, fullfile: os.path):
+  def debug(self, fullfile: str):
     launch_manager = forge.vscode.LaunchManager(LAUNCH_JSON)
 
     # Define the context for your template rendering

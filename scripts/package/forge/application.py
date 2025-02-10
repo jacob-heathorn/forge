@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 import re
 
-PROJECT_ROOT = os.environ.get("PROJECT_ROOT")
+PROJECT_ROOT = os.environ.get("PROJECT_ROOT", "")
 CMAKE_PRESETS_JSON = os.path.join(PROJECT_ROOT, "CMakePresets.json")
 
 
@@ -120,13 +120,12 @@ def resolve_bin_dir(preset_name: str) -> str:
     forge.error(f"Error: {e}")
 
   if binary_dir is None:
-    forge.error(f"Preset<{preset_name}> does not set \"binaryDir\"!")
-
-  # Expand cmake environment variables.
-  binary_dir = binary_dir.replace("${sourceDir}", os.path.dirname(CMAKE_PRESETS_JSON))
-  binary_dir = binary_dir.replace("${presetName}", preset_name)
-
-  return binary_dir
+    return forge.error(f"Preset<{preset_name}> does not set \"binaryDir\"!")
+  else:
+    # Expand cmake environment variables.
+    binary_dir = binary_dir.replace("${sourceDir}", os.path.dirname(CMAKE_PRESETS_JSON))
+    binary_dir = binary_dir.replace("${presetName}", preset_name)
+    return binary_dir
 
 
 def find_application(application_name: str, dir: os.path) -> str:

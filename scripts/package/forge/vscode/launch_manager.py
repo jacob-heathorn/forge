@@ -1,12 +1,13 @@
 import json5
 import os
 from jinja2 import Template
+from typing import Dict, List, Any
 
 PROJECT_ROOT = os.environ.get("PROJECT_ROOT")
 
 
 class LaunchManager:
-  def __init__(self, file: os.path):
+  def __init__(self, file: str):
     self.file = file
     self.data = self._load_or_create_default()
 
@@ -32,7 +33,7 @@ class LaunchManager:
         return data
 
   def _create_default_file(self):
-    default_data = {
+    default_data: Dict[str, List[Any]] = {
         "configurations": []
     }
     with open(self.file, 'w') as file:

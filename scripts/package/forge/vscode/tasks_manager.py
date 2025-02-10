@@ -6,7 +6,7 @@ PROJECT_ROOT = os.environ.get("PROJECT_ROOT")
 
 
 class TasksManager:
-  def __init__(self, file: os.path):
+  def __init__(self, file: str):
     self.file = file
     self.data = self._load_or_create_default()
 

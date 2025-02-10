@@ -25,14 +25,14 @@ def error(message: str):
 # Erros if path/directory DNE
 
 
-def ensure_path(path: os.path):
+def ensure_path(path: str):
   if not os.path.exists(path):
     error(f'path<{path}> DNE!')
 
 # Erros if path/directory DNE
 
 
-def ensure_file(fullfile: os.path):
+def ensure_file(fullfile: str):
   if not os.path.exists(fullfile):
     error(f'file<{fullfile}> DNE!')
 
