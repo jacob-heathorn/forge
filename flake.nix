@@ -20,7 +20,7 @@
         ];
 
         shellHook = ''
-          export PYTHONPYCACHEPREFIX=$FORGE_ROOT/.pycache
+          export PYTHONPYCACHEPREFIX=./.pycache
           echo -e "\033[1;32mWelcome to the forge development shell!\033[0m"
         '';
         };

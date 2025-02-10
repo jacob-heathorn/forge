@@ -2,4 +2,4 @@
 /.vscode/launch.json
 /scripts/package/.venv
 /.direnv/
-/.pycache
+.pycache
