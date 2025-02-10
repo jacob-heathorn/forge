@@ -1,5 +1,5 @@
 {
-  description = "Default native development shell flake";
+  description = "Forge native development shell flake";
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
 
@@ -15,11 +15,12 @@
           pkgs.glibcLocales
           pkgs.gtest
           pkgs.gcc-arm-embedded-13
+          pkgs.python312Packages.flake8
         ];
 
         shellHook = ''
           export PYTHONPYCACHEPREFIX=$FORGE_ROOT/.pycache
-          echo -e "\033[1;32mWelcome to your linux development shell!\033[0m"
+          echo -e "\033[1;32mWelcome to the forge development shell!\033[0m"
         '';
         };
       };
