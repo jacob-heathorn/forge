@@ -6,7 +6,7 @@
   outputs = { self, nixpkgs }: let
     system = "x86_64-linux";
     pkgs = import nixpkgs { inherit system; };
-    gtestPath = builtins.toString pkgs.gtest.dev.outPath;  # ✅ Get full GTest path
+    gtestPath = builtins.toString pkgs.gtest.dev.outPath;
   in {
     devShells.${system}.default = pkgs.mkShell {
       buildInputs = [
@@ -22,7 +22,7 @@
 
       shellHook = ''
         export CMAKE_PREFIX_PATH=${gtestPath}
-        export GTEST_INCLUDE_DIR=${gtestPath}/include  # ✅ Explicitly set include path
+        export GTEST_INCLUDE_DIR=${gtestPath}/include
         export PYTHONPYCACHEPREFIX=$PROJECT_ROOT/.pycache
         echo -e "\033[1;32mWelcome to the forge development shell!\033[0m"
       '';
