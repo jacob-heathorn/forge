@@ -16,7 +16,7 @@ Tooling for forging embedded projects
 4) Run the setup script `setup`
 
 # Repository tests
-`pytest`
+`tox`
 
 # Clean
 `rip -c`
