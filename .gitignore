@@ -2,6 +2,5 @@
 /.vscode/launch.json
 /scripts/package/.venv
 /.direnv/
-.pycache
-.tox
-__pycache__
+/.pycache
+/.tox
