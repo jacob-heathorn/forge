@@ -10,7 +10,6 @@ semver = ">=3.0.1"
 gitpython = "*"
 jinja2 = "*"
 json5 = "*"
-pytest = "*"
 # cmsis-svd = { git = "https://github.com/posborne/cmsis-svd.git", subdirectory = "python" }
 
 [tool.pytest.ini_options]
