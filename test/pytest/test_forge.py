@@ -30,6 +30,7 @@ def test_build_debug():
             'native-debug',
             'forge',
             'test',
+            'native',
             'hello-world'))
 
 
@@ -47,6 +48,7 @@ def test_build_release():
           'native-release',
           'forge',
           'test',
+          'native',
           'hello-world'))
 
 
