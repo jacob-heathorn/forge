@@ -14,6 +14,10 @@ NATIVE_GDB_PATH = os.environ.get("NATIVE_GDB_PATH")
 
 
 class NativeDebugger():
+  """
+  Provides the interface to generate a native launch configuration for vscode.
+  """
+
   def __init__(self, name: str,):
     self.name = name
 

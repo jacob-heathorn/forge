@@ -2,15 +2,20 @@ import json5
 import os
 from jinja2 import Template
 
-PROJECT_ROOT = os.environ.get("PROJECT_ROOT")
-
 
 class TasksManager:
+  """
+  Provides an interface to manage the .vscode/tasks.json file.
+  """
+
   def __init__(self, file: str):
     self.file = file
     self.data = self._load_or_create_default()
 
   def _load_or_create_default(self):
+    """
+    Loads the tasks.json file or creates a default file.
+    """
     if not os.path.exists(self.file):
       # File does not exist, create it with default task
       return self._create_default_file()
@@ -32,6 +37,9 @@ class TasksManager:
         return data
 
   def _create_default_file(self):
+    """
+    Generates a default tasks.json file.
+    """
     default_data = {
         "version": "2.0.0",
         "tasks": []
@@ -41,6 +49,9 @@ class TasksManager:
     return default_data
 
   def update(self, template_fullfile, context):
+    """
+    Adds a new configuration to the tasks.json file.
+    """
     # Read the template file
     with open(template_fullfile, 'r') as file:
       template_content = file.read()

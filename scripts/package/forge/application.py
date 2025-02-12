@@ -12,6 +12,10 @@ CMAKE_PRESETS_JSON = os.path.join(PROJECT_ROOT, "CMakePresets.json")
 
 
 def check_preset(preset_name):
+  """
+  Verifies that a preset exists in the CMakePresets.json file.
+  """
+
   with forge.pushd(PROJECT_ROOT):
     try:
       # Run the 'cmake --list-presets' command
@@ -33,6 +37,10 @@ def check_preset(preset_name):
 
 
 def split_preset_application(preset_application: str):
+  """
+  Separates and returns the preset and application from a string.
+  """
+
   # Split the string into two parts at the first colon
   parts = preset_application.split(':', 1)  # '1' is the maxsplit argument
 
@@ -101,6 +109,9 @@ def expand_cmake_presets(presets_path):
 
 
 def resolve_bin_dir(preset_name: str) -> str:
+  """
+  Resolves the binary directory from the provided preset name.
+  """
 
   # First verify existence of CMakePresets.json.
   if not os.path.exists(CMAKE_PRESETS_JSON):
@@ -129,6 +140,9 @@ def resolve_bin_dir(preset_name: str) -> str:
 
 
 def find_application(application_name: str, dir: str) -> str:
+  """
+  Finds the application in the provided directory.
+  """
   matched_files = []
 
   # Create patterns to match both with and without .elf extension
@@ -155,6 +169,10 @@ def print_size(fullfile):
 
 
 class Application(ABC):
+  """
+  Provides an interface to run/debug applications on various platforms.
+  """
+
   def __init__(self, preset_application: str):
     self.preset_name, self.application_name = split_preset_application(preset_application)
     self.bin_dir = resolve_bin_dir(self.preset_name)
@@ -170,6 +188,10 @@ class Application(ABC):
 
 
 class NativeApplication(Application):
+  """
+  Provides the interface to run/debug applications on the native platform.
+  """
+
   def __init__(self, preset_application: str):
     super().__init__(preset_application)
 
