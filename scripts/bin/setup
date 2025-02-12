@@ -1,25 +1,8 @@
 #!/bin/bash
 set -e
 
-# Default values
-clean_environment=false
-
-# Parse command-line arguments
-while [[ $# -gt 0 ]]; do
-  case "$1" in
-    -c|--clean)
-      clean_environment=true
-      shift # Move to the next argument
-      ;;
-    *)
-      echo "Unknown option: $1"
-      exit 1
-      ;;
-  esac
-done
-
 export ANSIBLE_CONFIG=$FORGE_ROOT/ansible/ansible.cfg
 
 ansible-playbook -i ${FORGE_ROOT}/ansible/local.ini \
   ${FORGE_ROOT}/ansible/playbooks/install_poetry_environment.yml \
-  -e "package_path=${PROJECT_ROOT}/scripts/package clean_environment=${clean_environment}"
+  -e "package_path=${PROJECT_ROOT}/scripts/package"

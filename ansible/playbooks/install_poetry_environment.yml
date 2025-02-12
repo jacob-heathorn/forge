@@ -1,7 +1,7 @@
 ---
 # Creates the poetry virtual environment from the {{ package_path }}
 #
-# Expects the {{ package_path }} and {{ clean_environment }} to be set.
+# Expects the {{ package_path }} to be set.
 
 - name: Install poetry environment
   hosts: all
@@ -9,12 +9,6 @@
   gather_facts: no
 
   tasks:
-
-    - name: Remove Poetry environment
-      ansible.builtin.command:
-        cmd: poetry env remove --all --directory {{ package_path }}
-      when: clean_environment | default(false) | bool
-      register: poetry_remove_result
 
     - name: Get current 'virtualenvs.in-project' setting
       command: poetry config virtualenvs.in-project
