@@ -13,7 +13,15 @@ Tooling for forging embedded projects
 3) Install nix:
   * `sh <(curl -L https://nixos.org/nix/install) --daemon`
   * TODO: enable nix-direnv (I forgot)
-4) Run the setup script `setup`
+4) Install vscode extensions:
+  * autopep8
+  * Better Jinja
+  * C/C++
+  * Flake8
+  * Nix
+  * Pylance
+  * Python
+5) Run the setup script `setup`
 
 # Repository tests
 `tox`
