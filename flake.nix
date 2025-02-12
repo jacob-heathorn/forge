@@ -8,6 +8,7 @@
     pkgs = import nixpkgs { inherit system; };
     gtestPath = builtins.toString pkgs.gtest.dev.outPath;
     gccArmPath = builtins.toString pkgs.gcc-arm-embedded-13;
+    repo = builtins.toString ./.;
   in {
     devShells.${system}.default = pkgs.mkShell {
       buildInputs = [
@@ -28,6 +29,7 @@
         export PYTHONPYCACHEPREFIX=$PROJECT_ROOT/.pycache
         export ARM_GCC_TOOLCHAIN_PATH=${gccArmPath}/bin
         echo -e "\033[1;32mWelcome to the forge development shell!\033[0m"
+        source ${repo}/scripts/common.envrc
       '';
     };
   };
