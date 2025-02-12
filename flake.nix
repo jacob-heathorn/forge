@@ -18,6 +18,7 @@
         pkgs.gtest
         pkgs.gcc-arm-embedded-13
         pkgs.python312Packages.flake8
+        pkgs.python312Packages.mypy
         pkgs.python312Packages.tox
       ];
 
