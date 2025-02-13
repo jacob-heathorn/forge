@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "forge"
+version = "0.1.0"
+description = "Embedded tooling"
+authors = ["Jacob <jacob.heathorn@gmail.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+semver = ">=3.0.1"
+gitpython = "*"
+jinja2 = "*"
+json5 = "*"
+# cmsis-svd = { git = "https://github.com/posborne/cmsis-svd.git", subdirectory = "python" }
+
+[tool.pytest.ini_options]
+cache_dir = "../../.pycache"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

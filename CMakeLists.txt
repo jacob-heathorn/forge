@@ -15,5 +15,4 @@ list(APPEND CMAKE_MODULE_PATH ${PLATFORM_PATH})
 
 # Add the platform module here at the root of the tree.
 include(platform)
-
-add_subdirectory(test)
+include(subdirectories)

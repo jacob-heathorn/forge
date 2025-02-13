@@ -1,5 +1,6 @@
-/bin/
-__pycache__
+/.bin/
 /.vscode/launch.json
-/.cache/
-/.venv/
+/scripts/package/.venv
+/.direnv/
+/.pycache
+/.tox

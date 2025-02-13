@@ -2,44 +2,45 @@
 
 Tooling for forging embedded projects
 
-# Setup
+# Setup Instructions
 
-Clone the repo:
-```
-git clone git@github.com:jheathor-k/forge.git
-```
+1) Clone this repository: `git clone https://github.com/jacob-heathorn/forge.git`
+2) Install direnv:
+  * `sudo apt install direnv`
+  * Add the following to your .bashrc: `eval "$(direnv hook bash)"`
+  * Open a new terminal and change directory to here.
+  * `direnv allow .`
+3) Install nix:
+  * `sh <(curl -L https://nixos.org/nix/install) --daemon`
+  * TODO: enable nix-direnv (I forgot)
+4) Install vscode extensions:
+  * autopep8
+  * Better Jinja
+  * C/C++
+  * Flake8
+  * Nix
+  * Pylance
+  * Python
+5) Run the setup script `setup`
 
-Install python3
-```
-  sudo apt install python3
-  sudo apt install python3-pip
-  python3 -m pip install virtualenv
-```
-
-Install direnv
-1. `sudo apt install direnv`
-2. Add the following to your .bashrc: `eval "$(direnv hook bash)"`
-3. Open a new terminal and change directory to here
-4. `direnv allow .`
-
-
-Run the setup script to install other dependencies: 
-```
-setup -i
-```
-
-# Build/run cpp tests
-
-```
-rip -b -r hello-world
-
-cd /bin/native-release/
-ctest
-
-```
+# Repository tests
+`tox`
 
 # Clean
+`rip -c`
+
+# Build
+`cmake --workflow --preset native-debug`
+`cmake --workflow --preset native-release`
+
+# Run
+`rip -r native-debug:hello-world`
+
+# Debug
+`rip -d native-debug:hello-world`
+
+# ctest
 ```
-setup -c
-rip -c
+cd /.bin/native-release/
+ctest
 ```

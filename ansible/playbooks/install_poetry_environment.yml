@@ -1,0 +1,39 @@
+---
+# Creates the poetry virtual environment from the {{ package_path }}
+#
+# Expects the {{ package_path }} to be set.
+
+- name: Install poetry environment
+  hosts: all
+  become: no
+  gather_facts: no
+
+  tasks:
+
+    - name: Get current 'virtualenvs.in-project' setting
+      command: poetry config virtualenvs.in-project
+      register: poetry_config
+      changed_when: false
+      failed_when: false
+      ignore_errors: true
+
+    - name: Set 'virtualenvs.in-project' to true if not already set
+      command: poetry config virtualenvs.in-project true
+      when: poetry_config.stdout == 'false'
+
+    - name: Expand  pyproject.in.toml -> pyproject.toml
+      command: gordion --generate-pyproject-toml {{ package_path }}
+      register: generate_output
+      changed_when: "'Writing' in generate_output.stdout"
+
+    - name: Generate poetry lock file
+      command: poetry lock --directory {{ package_path }}
+      register: poetry_lock
+      changed_when: "'writing lock file' in poetry_lock.stdout"
+
+    - name: Install the environment with Poetry
+      command: poetry install --directory {{ package_path }} --sync
+      register: poetry_install
+      changed_when: "'Creating virtualenv' in poetry_install.stdout or 'Package operations:' in poetry_install.stdout"
+      vars:
+        show_stdout: true
