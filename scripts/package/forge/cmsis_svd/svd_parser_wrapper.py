@@ -56,7 +56,9 @@ def format_comment(comment, width=100, indent_width=0):
 
 class SVDParserWrapper:
   def __init__(self, vendor: str, svd_filename: str):
-    self.svd_parser = SVDParser.for_packaged_svd(SVD_DATA_DIR, vendor, svd_filename)
+    # self.svd_parser = SVDParser.for_packaged_svd(SVD_DATA_DIR, vendor, svd_filename)
+    file = '/home/jacob/evtol/nxp/repos/mcux-sdk/svd/MIMXRT1176/MIMXRT1176_cm7.xml'
+    self.svd_parser = SVDParser.for_xml_file(file)
     self.skip_patterns = []
 
   def skip(self, pattern):
