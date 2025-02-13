@@ -24,14 +24,14 @@ struct {{ register.name }}_t : public Register {
   {%- if field.is_enumerated_type %}
     TODO handle enumerated type!
   {%- else %}
-  {%- if "write" in field.access %}
+  {%- if SVDAccessType.WRITE_ONLY == field.access or SVDAccessType.WRITE_ONCE == field.access or SVDAccessType.READ_WRITE_ONCE == field.access %}
   {%- if field.bit_width==1 %}
   void Set{{ field.name }}(bool value) { SetBit({{field.bit_offset}}, value); }
   {%- else %}
   void Set{{ field.name }}(uint32_t value) { SetBits<{{field.bit_width}}>({{field.bit_offset}}, value); }
   {%- endif %}
   {%- endif %}
-  {%- if "read" in field.access %}
+  {%- if SVDAccessType.READ_ONLY == field.access or SVDAccessType.READ_WRITE == field.access or SVDAccessType.READ_WRITE_ONCE == field.access  %}
   {%- if field.bit_width==1 %}
   bool Get{{ field.name }}() const { return GetBit({{field.bit_offset}}); }
   void WaitFor{{ field.name }}(bool value) { WaitForBit({{field.bit_offset}}, value); }
