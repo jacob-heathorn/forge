@@ -55,56 +55,24 @@ def format_comment(comment, width=100, indent_width=0):
 
 
 class SVDParserWrapper:
-  def __init__(self, vendor: str, svd_filename: str):
-    # self.svd_parser = SVDParser.for_packaged_svd(SVD_DATA_DIR, vendor, svd_filename)
+  def __init__(self, svd_file, output_dir):
     file = '/home/jacob/evtol/nxp/repos/mcux-sdk/svd/MIMXRT1176/MIMXRT1176_cm7.xml'
-    self.svd_parser = SVDParser.for_xml_file(file)
-    self.skip_patterns = []
+    self.svd_parser = SVDParser.for_xml_file(svd_file)
+    self.output_dir = output_dir
+    print("here1")
+    self.device = self.svd_parser.get_device()
+    print("here2")
+    self.clean()
 
-  def skip(self, pattern):
-    self.skip_patterns.append(pattern)
-
-  def generate(self, output_dir: str):
-    # First clean the outpud dir
-    clean_headers(output_dir)
-
-    # Read the template content
     template_file = os.path.join(FORGE_ROOT, 'scripts', 'templates', 'cmsis_svd_registers.jinja2')
     with open(template_file, 'r') as file:
       template_content = file.read()
-      template = Template(template_content)
+      self.template = Template(template_content)
 
-      for peripheral in self.svd_parser.get_device().peripherals:
-        # Execute skip logic
-        skip = False
-        for pattern in self.skip_patterns:
-          if fnmatch.fnmatch(peripheral.name.lower(), pattern.lower()):
-            print(f"Skipping {peripheral.name}")
-            skip = True
-            break
+    # Start clean.
+    self.clean()
 
-        if skip:
-          continue
-
-        # TODO delete was using for debugging.
-        # for register in peripheral.registers:
-        #   for field in register.fields:
-        #     if field.access == SVDAccessType.WRITE_ONLY:
-        #       print("write only")
-          # print(field.)
-
-        # Create a Jinja Template instance with the content
-        rendered_template = template.render(
-            peripheral=peripheral,
-            format_comment=format_comment,
-            SVDAccessType=SVDAccessType)
-
-        # Write the rendered template to a .hpp file
-        peripheral_hpp = os.path.join(output_dir, f'{peripheral.name}.hpp'.lower())
-        with open(peripheral_hpp, 'w') as f:
-          f.write(rendered_template)
-
-    # Copy base Register source
+    # Copy base Register source.
     shutil.copy(
         os.path.join(
             FORGE_ROOT,
@@ -113,3 +81,42 @@ class SVDParserWrapper:
             'register_bit_manipulation.hpp'),
         output_dir)
     shutil.copy(os.path.join(FORGE_ROOT, 'scripts', 'templates', 'register32.hpp'), output_dir)
+
+  def clean(self):
+    clean_headers(self.output_dir)
+
+  def generate_peripheral(self, peripheral_name: str):
+    generated = False
+    all_names = []
+    # Find the peripheral
+    for peripheral in self.device.peripherals:
+      all_names.append(peripheral.name)
+      if peripheral.name == peripheral_name:
+        # Create a Jinja Template instance with the content
+        rendered_template = self.template.render(
+            peripheral=peripheral,
+            format_comment=format_comment,
+            SVDAccessType=SVDAccessType)
+
+        # Write the rendered template to a .hpp file
+        peripheral_hpp = os.path.join(self.output_dir, f'{peripheral.name}.hpp'.lower())
+        with open(peripheral_hpp, 'w') as f:
+          f.write(rendered_template)
+
+        generated = True
+
+    if generated is False:
+      print(f"Could not find peripheral, possible options include:\n{all_names}")
+
+  def generate(self):
+    for peripheral in self.device.peripherals:
+      # Create a Jinja Template instance with the content
+      rendered_template = self.template.render(
+          peripheral=peripheral,
+          format_comment=format_comment,
+          SVDAccessType=SVDAccessType)
+
+      # Write the rendered template to a .hpp file
+      peripheral_hpp = os.path.join(self.output_dir, f'{peripheral.name}.hpp'.lower())
+      with open(peripheral_hpp, 'w') as f:
+        f.write(rendered_template)
