@@ -1,8 +1,8 @@
 # System pythonmodules
+import pickle
 import os
 import shutil
 from jinja2 import Template
-import fnmatch
 
 # https://github.com/cmsis-svd/cmsis-svd
 from cmsis_svd.parser import SVDParser
@@ -50,8 +50,13 @@ def format_comment(comment, width=100, indent_width=0):
 
   return "\n".join(lines)
 
+
 # =================================================================================================
 # CMSIS-SVD parser wrapper
+
+# TODO just for debugging
+save = False
+load = True
 
 
 class SVDParserWrapper:
@@ -59,9 +64,20 @@ class SVDParserWrapper:
     file = '/home/jacob/evtol/nxp/repos/mcux-sdk/svd/MIMXRT1176/MIMXRT1176_cm7.xml'
     self.svd_parser = SVDParser.for_xml_file(svd_file)
     self.output_dir = output_dir
-    print("here1")
-    self.device = self.svd_parser.get_device()
-    print("here2")
+
+    # TODO just for debugging
+    if load:
+      print("Loading device from cache.")
+      with open(os.path.join('.bin', 'device_cache.pkl'), 'rb') as f:
+        self.device = pickle.load(f)
+        print("done loading.")
+    if save:
+      print("Parsing and saving device to cache")
+      self.device = self.svd_parser.get_device()
+      with open(os.path.join('.bin', 'device_cache.pkl'), 'wb') as f:
+        pickle.dump(self.device, f)
+      print("done saving.")
+
     self.clean()
 
     template_file = os.path.join(FORGE_ROOT, 'scripts', 'templates', 'cmsis_svd_registers.jinja2')
@@ -92,6 +108,26 @@ class SVDParserWrapper:
     for peripheral in self.device.peripherals:
       all_names.append(peripheral.name)
       if peripheral.name == peripheral_name:
+
+        for register in peripheral.registers:
+          for field in register.fields:
+            # TODO: in jinja, I am accessing [0] assuming there is only one set of
+            # enum types for a field. This assumption could be wrong.
+            if field.is_enumerated_type:
+              print(f"field: {field.name}")
+              if field.enumerated_values:
+                list_enumerated_values = field.enumerated_values
+                for enumerated_values in list_enumerated_values:
+                  print(f"name: {enumerated_values.name}")
+                  print(f"usage: {enumerated_values.usage}")
+                  print(f"derived from: {enumerated_values.derived_from}")
+                  print(f"header_enum_name: {enumerated_values.header_enum_name}")
+
+                  for enumerated_value in enumerated_values.enumerated_values:
+                    print(f"  {enumerated_value.name}")
+                    print(f"  {enumerated_value.description}")
+                    print(f"  {enumerated_value.value}")
+
         # Create a Jinja Template instance with the content
         rendered_template = self.template.render(
             peripheral=peripheral,
