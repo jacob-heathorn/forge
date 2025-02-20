@@ -55,8 +55,7 @@ def format_comment(comment, width=100, indent_width=0):
 # CMSIS-SVD parser wrapper
 
 # TODO just for debugging
-save = False
-load = True
+save_cache = False
 
 
 class SVDParserWrapper:
@@ -66,17 +65,17 @@ class SVDParserWrapper:
     self.output_dir = output_dir
 
     # TODO just for debugging
-    if load:
-      print("Loading device from cache.")
-      with open(os.path.join('.bin', 'device_cache.pkl'), 'rb') as f:
-        self.device = pickle.load(f)
-        print("done loading.")
-    if save:
+    if save_cache:
       print("Parsing and saving device to cache")
       self.device = self.svd_parser.get_device()
       with open(os.path.join('.bin', 'device_cache.pkl'), 'wb') as f:
         pickle.dump(self.device, f)
       print("done saving.")
+    else:
+      print("Loading device from cache.")
+      with open(os.path.join('.bin', 'device_cache.pkl'), 'rb') as f:
+        self.device = pickle.load(f)
+        print("done loading.")
 
     self.clean()
 
