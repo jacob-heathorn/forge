@@ -21,8 +21,8 @@ struct {{ register.name }}_t : public Register {
   {% for field in register.fields %}
 {{format_comment(field.description, width=100, indent_width=2)}}
   //
-  {# Handle enumerated fields -#}
-  {%- if field.is_enumerated_type %}
+  {#- Handle enumerated fields -#}
+  {% if field.is_enumerated_type %}
   {%- if field.enumerated_values %}
   {#- There could be more than one enumerated values set -#}
   {% for enumerated_values in field.enumerated_values %}
@@ -42,7 +42,24 @@ struct {{ register.name }}_t : public Register {
     k{{ value.name }}={{ value.value }}, // {{ value.description.strip() }}
   {%- endfor %}
   };
-  {#- TODO: generate getters/setters for this enum definition. -#}
+  {#- Generate getters/setters for this enum definition. -#}
+  {%- if SVDAccessType.WRITE_ONLY == field.access or SVDAccessType.WRITE_ONCE == field.access or SVDAccessType.READ_WRITE_ONCE == field.access %}
+  {%- if field.bit_width==1 %}
+  void Set{{ field.name }}({{ field.name }} value) { SetBit({{field.bit_offset}}, value); }
+  {%- else %}
+  void Set{{ field.name }}({{ field.name }} value) { SetBits<{{field.bit_width}}>({{field.bit_offset}}, value); }
+  {%- endif %}
+  {%- endif %}
+  {%- if SVDAccessType.READ_ONLY == field.access or SVDAccessType.READ_WRITE == field.access or SVDAccessType.READ_WRITE_ONCE == field.access  %}
+  {%- if field.bit_width==1 %}
+  {{ field.name }} Get{{ field.name }}() const { return GetBit({{field.bit_offset}}); }
+  void WaitFor{{ field.name }}({{ field.name }} value) { WaitForBit({{field.bit_offset}}, value); }
+  {%- else %}
+  {{ field.name }} Get{{ field.name }}() const { return GetBits<{{field.bit_width}}>({{field.bit_offset}}).to_ulong(); }
+  void WaitFor{{ field.name }}({{ field.name }} value) { WaitForBits<{{field.bit_width}}>({{field.bit_offset}}, value); }
+  {%- endif %}
+  {%- endif %}
+  {#- End generate getters/setters for this enum definition. -#}
   {%- endif %}
   {%- endfor %}
   {%- else %}
