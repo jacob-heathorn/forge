@@ -12,7 +12,7 @@
 //
 // NOTE: This file was generated from the forge CMSIS-svd wrapper tool.
 
-namespace {{peripheral.name}} {
+namespace n{{peripheral.name}} {
 {% for register in peripheral.registers %}
 {{format_comment(register.description, width=100, indent_width=0)}}
 struct {{ register.name }}_t : public Register {
@@ -29,34 +29,34 @@ struct {{ register.name }}_t : public Register {
   {#- Generate enum definition -#}
   {#- If there is enum name, use it. -#}
   {%- if enumerated_values.name %}
-  enum class {{ enumerated_values.name }} : uint32_t {
+  enum class e{{ enumerated_values.name }} : uint32_t {
   {%- for value in enumerated_values.enumerated_values %}
-    k{{ value.name }}={{ value.value }}, // {{ value.description.strip() }}
+    e{{ value.name }}={{ value.value }}, // {{ value.description.strip() }}
   {%- endfor %}
   };
   {#- TODO: generate getters/setters for this enum definition. -#}
   {#- If there is no enum name, use the field name. -#}
   {%- else %}
-  enum class {{ field.name }} : uint32_t {
+  enum class e{{ field.name }} : uint32_t {
   {%- for value in enumerated_values.enumerated_values %}
-    k{{ value.name }}={{ value.value }}, // {{ value.description.strip() }}
+    e{{ value.name }}={{ value.value }}, // {{ value.description.strip() }}
   {%- endfor %}
   };
   {#- Generate getters/setters for this enum definition. -#}
   {%- if SVDAccessType.WRITE_ONLY == field.access or SVDAccessType.WRITE_ONCE == field.access or SVDAccessType.READ_WRITE_ONCE == field.access %}
   {%- if field.bit_width==1 %}
-  void Set{{ field.name }}({{ field.name }} value) { SetBit({{field.bit_offset}}, value); }
+  void Set{{ field.name }}(e{{ field.name }} value) { SetBit({{field.bit_offset}}, value); }
   {%- else %}
-  void Set{{ field.name }}({{ field.name }} value) { SetBits<{{field.bit_width}}>({{field.bit_offset}}, value); }
+  void Set{{ field.name }}(e{{ field.name }} value) { SetBits<{{field.bit_width}}>({{field.bit_offset}}, value); }
   {%- endif %}
   {%- endif %}
   {%- if SVDAccessType.READ_ONLY == field.access or SVDAccessType.READ_WRITE == field.access or SVDAccessType.READ_WRITE_ONCE == field.access  %}
   {%- if field.bit_width==1 %}
-  {{ field.name }} Get{{ field.name }}() const { return GetBit({{field.bit_offset}}); }
-  void WaitFor{{ field.name }}({{ field.name }} value) { WaitForBit({{field.bit_offset}}, value); }
+  e{{ field.name }} Get{{ field.name }}() const { return static_cast<e{{ field.name }}>(GetBit({{field.bit_offset}})); }
+  void WaitFor{{ field.name }}(e{{ field.name }} value) { WaitForBit({{field.bit_offset}}, static_cast<uint32_t>(value)); }
   {%- else %}
-  {{ field.name }} Get{{ field.name }}() const { return GetBits<{{field.bit_width}}>({{field.bit_offset}}).to_ulong(); }
-  void WaitFor{{ field.name }}({{ field.name }} value) { WaitForBits<{{field.bit_width}}>({{field.bit_offset}}, value); }
+  e{{ field.name }} Get{{ field.name }}() const { return static_cast<e{{ field.name }}>(GetBits<{{field.bit_width}}>({{field.bit_offset}}).to_ulong()); }
+  void WaitFor{{ field.name }}(e{{ field.name }} value) { WaitForBits<{{field.bit_width}}>({{field.bit_offset}}, static_cast<uint32_t>(value)); }
   {%- endif %}
   {%- endif %}
   {#- End generate getters/setters for this enum definition. -#}
