@@ -43,11 +43,11 @@ struct {{ register.name }}_t : public Register {
   {%- endfor %}
   };
   {#- Generate getters/setters for this enum definition. -#}
-  {%- if SVDAccessType.WRITE_ONLY == field.access or SVDAccessType.WRITE_ONCE == field.access or SVDAccessType.READ_WRITE_ONCE == field.access %}
+  {%- if SVDAccessType.WRITE_ONLY == field.access or SVDAccessType.READ_WRITE == field.access or SVDAccessType.WRITE_ONCE == field.access or SVDAccessType.READ_WRITE_ONCE == field.access %}
   {%- if field.bit_width==1 %}
-  void Set{{ field.name }}(e{{ field.name }} value) { SetBit({{field.bit_offset}}, value); }
+  void Set{{ field.name }}(e{{ field.name }} value) { SetBit({{field.bit_offset}}, static_cast<uint32_t>(value)); }
   {%- else %}
-  void Set{{ field.name }}(e{{ field.name }} value) { SetBits<{{field.bit_width}}>({{field.bit_offset}}, value); }
+  void Set{{ field.name }}(e{{ field.name }} value) { SetBits<{{field.bit_width}}>({{field.bit_offset}}, static_cast<uint32_t>(value)); }
   {%- endif %}
   {%- endif %}
   {%- if SVDAccessType.READ_ONLY == field.access or SVDAccessType.READ_WRITE == field.access or SVDAccessType.READ_WRITE_ONCE == field.access  %}
@@ -67,7 +67,7 @@ struct {{ register.name }}_t : public Register {
   {%- endif %}
   {#- Handle non-enumerated fields -#}
   {%- else %}
-  {%- if SVDAccessType.WRITE_ONLY == field.access or SVDAccessType.WRITE_ONCE == field.access or SVDAccessType.READ_WRITE_ONCE == field.access %}
+  {%- if SVDAccessType.WRITE_ONLY == field.access or SVDAccessType.READ_WRITE == field.access or SVDAccessType.WRITE_ONCE == field.access or SVDAccessType.READ_WRITE_ONCE == field.access %}
   {%- if field.bit_width==1 %}
   void Set{{ field.name }}(bool value) { SetBit({{field.bit_offset}}, value); }
   {%- else %}
