@@ -87,16 +87,6 @@ class SVDParserWrapper:
     # Start clean.
     self.clean()
 
-    # Copy base Register source.
-    shutil.copy(
-        os.path.join(
-            FORGE_ROOT,
-            'scripts',
-            'templates',
-            'register_bit_manipulation.hpp'),
-        output_dir)
-    shutil.copy(os.path.join(FORGE_ROOT, 'scripts', 'templates', 'register32.hpp'), output_dir)
-
   def clean(self):
     clean_headers(self.output_dir)
 
