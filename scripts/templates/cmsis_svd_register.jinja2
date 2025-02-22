@@ -12,7 +12,7 @@ union {{ register.name }} {
   };
   {% endfor %}
   {%- endfor %}
-  {% set ns = namespace(last_bit=0) %}  {#- Workaround to persist variables -#}
+  {% set ns = namespace(last_bit=0, reserved_counter=0) %}  {#- Persist variables -#}
   {%- set ns.current_bit = 0 %}  {#- Track the current bit position -#}
   // Bit field definition.
   struct {
@@ -20,7 +20,8 @@ union {{ register.name }} {
     
     {#- Generate reserved bits to fill in the gaps. -#}
     {%- if field.bit_offset > ns.current_bit %}
-    uint32_t _reserved_{{ loop.index0 }} : {{ field.bit_offset - ns.current_bit }};
+    uint32_t _reserved_{{ ns.reserved_counter }} : {{ field.bit_offset - ns.current_bit }};
+    {%- set ns.reserved_counter = ns.reserved_counter + 1 %}
     {%- endif %}
     
     {#- Use enum only if there is exactly one enum definition for this field -#}
@@ -37,7 +38,7 @@ union {{ register.name }} {
     
     {#- Insert final reserved bits if there are gaps left -#}
     {%- if ns.current_bit < 32 %}
-    uint32_t _reserved_end : {{ 32 - ns.current_bit }};
+    uint32_t _reserved_{{ ns.reserved_counter }} : {{ 32 - ns.current_bit }};
     {%- endif %}
   } bits;
   
