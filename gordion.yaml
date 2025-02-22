@@ -1,4 +1,0 @@
-repositories:
-  cmsis-svd-data:
-    tag: c65f8551e57c770344d229dcaa0bf838fa29aff4
-    url: https://github.com/cmsis-svd/cmsis-svd-data.git
