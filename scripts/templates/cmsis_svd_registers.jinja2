@@ -14,51 +14,55 @@
 namespace n{{peripheral.name}} {
 
 {% for register in peripheral.registers %}
-
 {{ format_comment(register.description, width=100, indent_width=0) }}
-
+//
 union {{ register.name }} {
-    {# Generate all enumerations before the struct definition -#}
-    {%- for field in register.fields | sort(attribute='bit_offset') if field.is_enumerated_type and field.enumerated_values %}
-    {%- set enum_name = field.enumerated_values[0].name if field.enumerated_values[0].name else field.name %}
-    enum class e{{ enum_name }} : uint32_t {
-        {%- for value in field.enumerated_values[0].enumerated_values %}
-        e{{ value.name }} = {{ value.value }}, // {{ value.description.strip() }}
-        {%- endfor %}
-    };
-    {% endfor %}
-    struct {
-        {%- set ns = namespace(last_bit=0) %}  {#- Workaround to persist variables -#}
-        {%- set ns.current_bit = 0 %}  {#- Track the current bit position -#}
-        {%- for field in register.fields | sort(attribute='bit_offset') %}  {#- Ensure sorted order -#}
-        {#- Generate reserved bits to fill in the gaps. -#}
-        {%- if field.bit_offset > ns.current_bit %}
-        uint32_t _reserved_{{ loop.index0 }} : {{ field.bit_offset - ns.current_bit }};
-        {% endif %}
-        {#- Use the previously generated enum if available -#}
-        {% if field.is_enumerated_type and field.enumerated_values %}
-        e{{ field.enumerated_values[0].name if field.enumerated_values[0].name else field.name }} {{ field.name }} : {{ field.bit_width }};
-        {% else %}
-        uint32_t {{ field.name }} : {{ field.bit_width }};
-        {% endif %}
-        {#- Update current bit position -#}
-        {%- set ns.current_bit = field.bit_offset + field.bit_width %}
-        {%- endfor %}
-        {#- Insert final reserved bits if there are gaps left -#}
-        {%- if ns.current_bit < 32 %}
-        uint32_t _reserved_end : {{ 32 - ns.current_bit }};
-        {%- endif %}
-    } bits;          // Bit-field struct (auto-filling reserved gaps)
-    uint32_t value;  // Full 32-bit register access
+  {# Generate all enumerations before the struct definition -#}
+  {%- for field in register.fields | sort(attribute='bit_offset') if field.is_enumerated_type and field.enumerated_values %}
+  {%- set enum_name = field.enumerated_values[0].name if field.enumerated_values[0].name else field.name %}
+  enum class e{{ enum_name }} : uint32_t {
+      {%- for value in field.enumerated_values[0].enumerated_values %}
+      e{{ value.name }} = {{ value.value }}, // {{ value.description.strip() }}
+      {%- endfor %}
+  };
+  {% endfor %}
 
-    {{ register.name }}() = delete;
+  {% set ns = namespace(last_bit=0) %}  {#- Workaround to persist variables -#}
+  {%- set ns.current_bit = 0 %}  {#- Track the current bit position -#}
+  struct {
+    {%- for field in register.fields | sort(attribute='bit_offset') %}  {#- Ensure sorted order -#}
+    
+    {#- Generate reserved bits to fill in the gaps. -#}
+    {%- if field.bit_offset > ns.current_bit %}
+    uint32_t _reserved_{{ loop.index0 }} : {{ field.bit_offset - ns.current_bit }};
+    {%- endif %}
+    
+    {#- Use the previously generated enum if available -#}
+    {%- if field.is_enumerated_type and field.enumerated_values %}
+    e{{ field.enumerated_values[0].name if field.enumerated_values[0].name else field.name }} {{ field.name }} : {{ field.bit_width }};
+    {%- else %}
+    uint32_t {{ field.name }} : {{ field.bit_width }};
+    {%- endif %}
+    
+    {#- Update current bit position -#}
+    {%- set ns.current_bit = field.bit_offset + field.bit_width %}
+    {%- endfor %}
+    
+    {#- Insert final reserved bits if there are gaps left -#}
+    {%- if ns.current_bit < 32 %}
+    uint32_t _reserved_end : {{ 32 - ns.current_bit }};
+    {%- endif %}
+  } bits;          // Bit-field struct (auto-filling reserved gaps)
+  
+  uint32_t value;  // Full 32-bit register access
 
-    static inline volatile {{ register.name }} &Instance() {
-        return *reinterpret_cast<volatile {{ register.name }}*>(0x{{ "%08X" % (register.parent.base_address + register.address_offset) }});
-    }
+  {{ register.name }}() = delete;
 
-    inline void Reset() volatile { this->value = 0x{{ "%08X" % register.reset_value }}; }
+  static inline volatile {{ register.name }} &Instance() {
+    return *reinterpret_cast<volatile {{ register.name }}*>(0x{{ "%08X" % (register.parent.base_address + register.address_offset) }});
+  }
+
+  inline void Reset() volatile { this->value = 0x{{ "%08X" % register.reset_value }}; }
 };
-
 {% endfor %}
 } // namespace n{{peripheral.name}}
