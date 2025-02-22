@@ -98,24 +98,25 @@ class SVDParserWrapper:
       all_names.append(peripheral.name)
       if peripheral.name == peripheral_name:
 
-        for register in peripheral.registers:
-          for field in register.fields:
-            # TODO: in jinja, I am accessing [0] assuming there is only one set of
-            # enum types for a field. This assumption could be wrong.
-            if field.is_enumerated_type:
-              print(f"field: {field.name}")
-              if field.enumerated_values:
-                list_enumerated_values = field.enumerated_values
-                for enumerated_values in list_enumerated_values:
-                  print(f"name: {enumerated_values.name}")
-                  print(f"usage: {enumerated_values.usage}")
-                  print(f"derived from: {enumerated_values.derived_from}")
-                  print(f"header_enum_name: {enumerated_values.header_enum_name}")
+        # TODO for debugging only
+        # for register in peripheral.registers:
+        #   for field in register.fields:
+        #     # TODO: in jinja, I am accessing [0] assuming there is only one set of
+        #     # enum types for a field. This assumption could be wrong.
+        #     if field.is_enumerated_type:
+        #       print(f"field: {field.name}")
+        #       if field.enumerated_values:
+        #         list_enumerated_values = field.enumerated_values
+        #         for enumerated_values in list_enumerated_values:
+        #           print(f"name: {enumerated_values.name}")
+        #           print(f"usage: {enumerated_values.usage}")
+        #           print(f"derived from: {enumerated_values.derived_from}")
+        #           print(f"header_enum_name: {enumerated_values.header_enum_name}")
 
-                  for enumerated_value in enumerated_values.enumerated_values:
-                    print(f"  {enumerated_value.name}")
-                    print(f"  {enumerated_value.description}")
-                    print(f"  {enumerated_value.value}")
+        #           for enumerated_value in enumerated_values.enumerated_values:
+        #             print(f"  {enumerated_value.name}")
+        #             print(f"  {enumerated_value.description}")
+        #             print(f"  {enumerated_value.value}")
 
         # Create a Jinja Template instance with the content
         rendered_template = self.template.render(
