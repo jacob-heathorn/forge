@@ -1,13 +1,20 @@
 {{ format_comment(register.description, width=100, indent_width=0) }}
-//
 union {{ register.name }} {
   {# Generate all enumerations before the struct definition -#}
   {%- for field in register.fields | sort(attribute='bit_offset') if field.is_enumerated_type and field.enumerated_values %}
   {%- for enum_set in field.enumerated_values %}
+  {#- Generate doxygen comment -#}
+  {%- set description_comment = field.description if field.description else '' %}
+  {%- if description_comment %}
+  // {% if description_comment %}{{ description_comment }}{% endif %}
+  {%- endif -%}
+  {#- Generate the enum -#}
   {%- set enum_name = enum_set.name if enum_set.name else field.name %}
   enum class e{{ enum_name }} : uint32_t {
     {%- for value in enum_set.enumerated_values %}
-    e{{ value.name }} = {{ value.value }}, // {{ value.description.strip() }}
+    {%- set description_comment = value.description if value.description else '' %}
+    // {{ description_comment }}
+    e{{ value.name }} = {{ value.value }},
     {%- endfor %}
   };
   {% endfor %}
@@ -28,7 +35,7 @@ union {{ register.name }} {
     {%- set access_comment = field.access.value %}
     {%- set description_comment = field.description if field.description else '' %}
     {%- if access_comment or description_comment %}
-    /// {{ access_comment }}{% if description_comment %} - {{ description_comment }}{% endif %}
+    // {{ access_comment }}{% if description_comment %} - {{ description_comment }}{% endif %}
     {%- endif -%}
     {#- Use enum only if there is exactly one enum definition for this field -#}
     {%- if field.is_enumerated_type and field.enumerated_values|length == 1 %}
