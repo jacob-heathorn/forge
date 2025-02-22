@@ -1,17 +1,15 @@
 # System pythonmodules
 import pickle
 import os
-import shutil
 from jinja2 import Environment, FileSystemLoader
 
 # https://github.com/cmsis-svd/cmsis-svd
 from cmsis_svd.parser import SVDParser
 from cmsis_svd.model import SVDAccessType
-# import cmsis_svd
 
 FORGE_ROOT = os.environ.get("FORGE_ROOT", "")
-CMSIS_SVD_DATA_ROOT = os.environ.get("CMSIS_SVD_DATA_ROOT", "")
-SVD_DATA_DIR = os.path.join(CMSIS_SVD_DATA_ROOT, 'data')
+PROJECT_ROOT = os.environ.get("PROJECT_ROOT", "")
+BIN_DIR = os.path.join(PROJECT_ROOT, '.bin')
 
 # =================================================================================================
 # Helpers
@@ -54,30 +52,37 @@ def format_comment(comment, width=100, indent_width=0):
 # =================================================================================================
 # CMSIS-SVD parser wrapper
 
-# TODO just for debugging
-save_cache = False
-
 
 class SVDParserWrapper:
+  """
+  Provides an interface to the cmsis_svd parser to generate peripheral register header files.
+  """
+
   def __init__(self, svd_file, output_dir):
-    file = '/home/jacob/evtol/nxp/repos/mcux-sdk/svd/MIMXRT1176/MIMXRT1176_cm7.xml'
     self.svd_parser = SVDParser.for_xml_file(svd_file)
     self.output_dir = output_dir
 
-    # TODO just for debugging
-    if save_cache:
-      print("Parsing and saving device to cache")
-      self.device = self.svd_parser.get_device()
-      with open(os.path.join('.bin', 'device_cache.pkl'), 'wb') as f:
-        pickle.dump(self.device, f)
-      print("done saving.")
-    else:
-      print("Loading device from cache.")
-      with open(os.path.join('.bin', 'device_cache.pkl'), 'rb') as f:
-        self.device = pickle.load(f)
-        print("done loading.")
+    # Extract just the filename from the full path (without extension)
+    svd_filename = os.path.splitext(os.path.basename(svd_file))[0]
+    cache_path = os.path.join(BIN_DIR, f"{svd_filename}.pkl")  # Cached file path
 
-    self.clean()
+    # Save the devide object to the .bin directory and reload from there to save time during
+    # rapid iterative developent.
+    if os.path.exists(cache_path):
+      print(f"Loading device from: {cache_path}")
+      with open(cache_path, 'rb') as f:
+        self.device = pickle.load(f)
+      print("Done loading from cache.")
+    else:
+      print(f"Parsing and saving device to {cache_path}")
+      self.svd_parser = SVDParser.for_xml_file(svd_file)
+      self.device = self.svd_parser.get_device()
+
+      os.makedirs(BIN_DIR, exist_ok=True)
+
+      with open(cache_path, 'wb') as f:
+        pickle.dump(self.device, f)
+      print("Done saving to cache.")
 
     # Load template dir.
     template_dir = os.path.join(FORGE_ROOT, 'scripts', 'templates')
@@ -85,38 +90,18 @@ class SVDParserWrapper:
     self.template = self.env.get_template('cmsis_svd_registers.jinja2')
 
     # Start clean.
-    self.clean()
-
-  def clean(self):
     clean_headers(self.output_dir)
 
   def generate_peripheral(self, peripheral_name: str):
+    """
+    Generates the register definitions for a single peripheral.
+    """
     generated = False
     all_names = []
     # Find the peripheral
     for peripheral in self.device.peripherals:
       all_names.append(peripheral.name)
       if peripheral.name == peripheral_name:
-
-        # TODO for debugging only
-        # for register in peripheral.registers:
-        #   for field in register.fields:
-        #     # TODO: in jinja, I am accessing [0] assuming there is only one set of
-        #     # enum types for a field. This assumption could be wrong.
-        #     if field.is_enumerated_type:
-        #       print(f"field: {field.name}")
-        #       if field.enumerated_values:
-        #         list_enumerated_values = field.enumerated_values
-        #         for enumerated_values in list_enumerated_values:
-        #           print(f"name: {enumerated_values.name}")
-        #           print(f"usage: {enumerated_values.usage}")
-        #           print(f"derived from: {enumerated_values.derived_from}")
-        #           print(f"header_enum_name: {enumerated_values.header_enum_name}")
-
-        #           for enumerated_value in enumerated_values.enumerated_values:
-        #             print(f"  {enumerated_value.name}")
-        #             print(f"  {enumerated_value.description}")
-        #             print(f"  {enumerated_value.value}")
 
         # Create a Jinja Template instance with the content
         rendered_template = self.template.render(
@@ -133,8 +118,13 @@ class SVDParserWrapper:
 
     if generated is False:
       print(f"Could not find peripheral, possible options include:\n{all_names}")
+    else:
+      print(f"Register definitions generated in: {self.output_dir} for {peripheral_name}")
 
   def generate(self):
+    """
+    Generates the register definitions for ALL peripherals.
+    """
     for peripheral in self.device.peripherals:
       # Create a Jinja Template instance with the content
       rendered_template = self.template.render(
@@ -146,3 +136,5 @@ class SVDParserWrapper:
       peripheral_hpp = os.path.join(self.output_dir, f'{peripheral.name}.hpp'.lower())
       with open(peripheral_hpp, 'w') as f:
         f.write(rendered_template)
+
+    print(f"Register definitions generated in: {self.output_dir}")
