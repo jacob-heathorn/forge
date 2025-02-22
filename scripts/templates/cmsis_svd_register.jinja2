@@ -23,7 +23,13 @@ union {{ register.name }} {
     uint32_t _reserved_{{ ns.reserved_counter }} : {{ field.bit_offset - ns.current_bit }};
     {%- set ns.reserved_counter = ns.reserved_counter + 1 %}
     {%- endif %}
-    
+
+    {#- Generate doxygen comment -#}
+    {%- set access_comment = field.access.value %}
+    {%- set description_comment = field.description if field.description else '' %}
+    {%- if access_comment or description_comment %}
+    /// {{ access_comment }}{% if description_comment %} - {{ description_comment }}{% endif %}
+    {%- endif -%}
     {#- Use enum only if there is exactly one enum definition for this field -#}
     {%- if field.is_enumerated_type and field.enumerated_values|length == 1 %}
     {%- set enum_name = field.enumerated_values[0].name if field.enumerated_values[0].name else field.name %}
