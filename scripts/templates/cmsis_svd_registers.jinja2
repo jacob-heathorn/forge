@@ -19,12 +19,14 @@ union {{ register.name }} {
   {# Generate all enumerations before the struct definition -#}
   // Enum definitions.
   {%- for field in register.fields | sort(attribute='bit_offset') if field.is_enumerated_type and field.enumerated_values %}
-  {%- set enum_name = field.enumerated_values[0].name if field.enumerated_values[0].name else field.name %}
+  {%- for enum_set in field.enumerated_values %}
+  {%- set enum_name = enum_set.name if enum_set.name else field.name %}
   enum class e{{ enum_name }} : uint32_t {
-      {%- for value in field.enumerated_values[0].enumerated_values %}
-      e{{ value.name }} = {{ value.value }}, // {{ value.description.strip() }}
-      {%- endfor %}
+    {%- for value in enum_set.enumerated_values %}
+    e{{ value.name }} = {{ value.value }}, // {{ value.description.strip() }}
+    {%- endfor %}
   };
+  {%- endfor %}
   {%- endfor %}
   
   {% set ns = namespace(last_bit=0) %}  {#- Workaround to persist variables -#}
@@ -38,8 +40,8 @@ union {{ register.name }} {
     uint32_t _reserved_{{ loop.index0 }} : {{ field.bit_offset - ns.current_bit }};
     {%- endif %}
     
-    {#- Use the previously generated enum if available -#}
-    {%- if field.is_enumerated_type and field.enumerated_values %}
+    {#- Use enum only if there is exactly one enum definition for this field -#}
+    {%- if field.is_enumerated_type and field.enumerated_values|length == 1 %}
     {%- set enum_name = field.enumerated_values[0].name if field.enumerated_values[0].name else field.name %}
     e{{ enum_name }} {{ field.name }} : {{ field.bit_width }};
     {%- else %}
