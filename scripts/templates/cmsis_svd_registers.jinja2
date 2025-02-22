@@ -11,7 +11,21 @@
 
 namespace n{{peripheral.name}} {
 
+{# Iterate over SVDRegister, SVDRegisterArray, and SVDClusterArray -#}
 {% for register in peripheral.registers %}
+{%- if register.__class__.__name__ == "SVDRegisterArray" %}
+{%- for register in register.registers %}
 {% include "cmsis_svd_register.jinja2" %}
+{%- endfor %}
+{%- elif register.__class__.__name__ == "SVDRegisterClusterArray" %}
+{%- for cluster_register in register.registers %}
+{%- with register = cluster_register %}
+{% include "cmsis_svd_register.jinja2" %}
+{%- endwith %}
+{%- endfor %}
+{%- else %}
+{% include "cmsis_svd_register.jinja2" %}
+{%- endif %}
 {% endfor %}
+
 } // namespace n{{peripheral.name}}

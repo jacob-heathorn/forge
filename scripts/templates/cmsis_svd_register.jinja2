@@ -49,5 +49,5 @@ union {{ register.name }} {
 
   {{ register.name }}() = delete;
   inline void Reset() volatile { this->value = 0x{{ "%08X" % register.reset_value }}; }
-  static inline volatile {{ register.name }} &Instance() { return *reinterpret_cast<volatile {{ register.name }}*>(0x{{ "%08X" % (register.parent.base_address + register.address_offset) }}); }
+  static inline volatile {{ register.name }} &Instance() { return *reinterpret_cast<volatile {{ register.name }}*>(0x{{ "%08X" % (peripheral.base_address + register.address_offset) }}); }
 };
