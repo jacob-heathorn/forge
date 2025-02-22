@@ -2,7 +2,7 @@
 import pickle
 import os
 import shutil
-from jinja2 import Template
+from jinja2 import Environment, FileSystemLoader
 
 # https://github.com/cmsis-svd/cmsis-svd
 from cmsis_svd.parser import SVDParser
@@ -79,10 +79,10 @@ class SVDParserWrapper:
 
     self.clean()
 
-    template_file = os.path.join(FORGE_ROOT, 'scripts', 'templates', 'cmsis_svd_registers.jinja2')
-    with open(template_file, 'r') as file:
-      template_content = file.read()
-      self.template = Template(template_content)
+    # Load template dir.
+    template_dir = os.path.join(FORGE_ROOT, 'scripts', 'templates')
+    self.env = Environment(loader=FileSystemLoader(template_dir))
+    self.template = self.env.get_template('cmsis_svd_registers.jinja2')
 
     # Start clean.
     self.clean()
