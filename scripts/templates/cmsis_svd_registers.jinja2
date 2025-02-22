@@ -1,3 +1,4 @@
+{#- Register definitions for {{peripheral.name}} -#}
 #pragma once
 
 #include <stddef.h>
@@ -6,93 +7,61 @@
 
 #include "register32.hpp"
 
-// Register definitions for {{peripheral.name}}
-//
-{{format_comment(peripheral.description, width=100, indent_width=0)}}
+// {{ format_comment(peripheral.description, width=100, indent_width=0) }}
 //
 // NOTE: This file was generated from the forge CMSIS-svd wrapper tool.
 
 namespace n{{peripheral.name}} {
+
 {% for register in peripheral.registers %}
-{{format_comment(register.description, width=100, indent_width=0)}}
-struct {{ register.name }}_t : public Register {
-  {{ register.name }}_t() : Register({{ "0x%08x" % (register.parent.base_address + register.address_offset) }}) {}
 
-  {% for field in register.fields %}
-{{format_comment(field.description, width=100, indent_width=2)}}
-  //
-  {#- Handle enumerated fields -#}
-  {% if field.is_enumerated_type %}
-  {%- if field.enumerated_values %}
-  {#- There could be more than one enumerated values set -#}
-  {% for enumerated_values in field.enumerated_values %}
-  {#- Generate enum definition -#}
-  {#- If there is enum name, use it. -#}
-  {%- if enumerated_values.name %}
-  enum class e{{ enumerated_values.name }} : uint32_t {
-  {%- for value in enumerated_values.enumerated_values %}
-    e{{ value.name }}={{ value.value }}, // {{ value.description.strip() }}
-  {%- endfor %}
-  };
-  {#- TODO: generate getters/setters for this enum definition. -#}
-  {#- If there is no enum name, use the field name. -#}
-  {%- else %}
-  enum class e{{ field.name }} : uint32_t {
-  {%- for value in enumerated_values.enumerated_values %}
-    e{{ value.name }}={{ value.value }}, // {{ value.description.strip() }}
-  {%- endfor %}
-  };
-  {#- Generate getters/setters for this enum definition. -#}
-  {%- if SVDAccessType.WRITE_ONLY == field.access or SVDAccessType.READ_WRITE == field.access or SVDAccessType.WRITE_ONCE == field.access or SVDAccessType.READ_WRITE_ONCE == field.access %}
-  {%- if field.bit_width==1 %}
-  void Set{{ field.name }}(e{{ field.name }} value) { SetBit({{field.bit_offset}}, static_cast<uint32_t>(value)); }
-  {%- else %}
-  void Set{{ field.name }}(e{{ field.name }} value) { SetBits<{{field.bit_width}}>({{field.bit_offset}}, static_cast<uint32_t>(value)); }
-  {%- endif %}
-  {%- endif %}
-  {%- if SVDAccessType.READ_ONLY == field.access or SVDAccessType.READ_WRITE == field.access or SVDAccessType.READ_WRITE_ONCE == field.access  %}
-  {%- if field.bit_width==1 %}
-  e{{ field.name }} Get{{ field.name }}() const { return static_cast<e{{ field.name }}>(GetBit({{field.bit_offset}})); }
-  void WaitFor{{ field.name }}(e{{ field.name }} value) { WaitForBit({{field.bit_offset}}, static_cast<uint32_t>(value)); }
-  {%- else %}
-  e{{ field.name }} Get{{ field.name }}() const { return static_cast<e{{ field.name }}>(GetBits<{{field.bit_width}}>({{field.bit_offset}}).to_ulong()); }
-  void WaitFor{{ field.name }}(e{{ field.name }} value) { WaitForBits<{{field.bit_width}}>({{field.bit_offset}}, static_cast<uint32_t>(value)); }
-  {%- endif %}
-  {%- endif %}
-  {#- End generate getters/setters for this enum definition. -#}
-  {%- endif %}
-  {%- endfor %}
-  {%- else %}
-  TODO unexpected, enumerated type does not have enumerated values!
-  {%- endif %}
-  {#- Handle non-enumerated fields -#}
-  {%- else %}
-  {%- if SVDAccessType.WRITE_ONLY == field.access or SVDAccessType.READ_WRITE == field.access or SVDAccessType.WRITE_ONCE == field.access or SVDAccessType.READ_WRITE_ONCE == field.access %}
-  {%- if field.bit_width==1 %}
-  void Set{{ field.name }}(bool value) { SetBit({{field.bit_offset}}, value); }
-  {%- else %}
-  void Set{{ field.name }}(uint32_t value) { SetBits<{{field.bit_width}}>({{field.bit_offset}}, value); }
-  {%- endif %}
-  {%- endif %}
-  {%- if SVDAccessType.READ_ONLY == field.access or SVDAccessType.READ_WRITE == field.access or SVDAccessType.READ_WRITE_ONCE == field.access  %}
-  {%- if field.bit_width==1 %}
-  bool Get{{ field.name }}() const { return GetBit({{field.bit_offset}}); }
-  void WaitFor{{ field.name }}(bool value) { WaitForBit({{field.bit_offset}}, value); }
-  {%- else %}
-  uint32_t Get{{ field.name }}() const { return GetBits<{{field.bit_width}}>({{field.bit_offset}}).to_ulong(); }
-  void WaitFor{{ field.name }}(uint32_t value) { WaitForBits<{{field.bit_width}}>({{field.bit_offset}}, value); }
-  {%- endif %}
-  {%- endif %}
-  {%- endif %}
-  {% endfor %}
-  void Reset() { this->Set({{  "0x%08x" % register.reset_value  }}); }
+{{ format_comment(register.description, width=100, indent_width=0) }}
+
+union {{ register.name }} {
+    {#- Generate all enumerations before the struct definition -#}
+    {%- for field in register.fields | sort(attribute='bit_offset') if field.is_enumerated_type and field.enumerated_values %}
+    {%- set enum_name = field.enumerated_values[0].name if field.enumerated_values[0].name else field.name %}
+    enum class e{{ enum_name }} : uint32_t {
+        {%- for value in field.enumerated_values[0].enumerated_values %}
+        e{{ value.name }} = {{ value.value }}, // {{ value.description.strip() }}
+        {%- endfor %}
+    };
+    {% endfor %}
+
+    struct {
+        {%- set ns = namespace(last_bit=0) %}  {# Workaround to persist variables #}
+        {% set ns.current_bit = 0 %}  {# Track the current bit position #}
+        {%- for field in register.fields | sort(attribute='bit_offset') %}  {# Ensure sorted order #}
+
+        {%- if field.bit_offset > ns.current_bit %}
+        uint32_t _reserved_{{ loop.index0 }} : {{ field.bit_offset - ns.current_bit }};
+        {% endif %}
+
+        {#- Use the previously generated enum if available -#}
+        {% if field.is_enumerated_type and field.enumerated_values %}
+        e{{ field.enumerated_values[0].name if field.enumerated_values[0].name else field.name }} {{ field.name }} : {{ field.bit_width }};
+        {% else %}
+        uint32_t {{ field.name }} : {{ field.bit_width }};
+        {% endif %}
+
+        {%- set ns.current_bit = field.bit_offset + field.bit_width %} {# Update current bit position #}
+        {%- endfor %}
+
+        {# Insert final reserved bits if there are gaps left #}
+        {%- if ns.current_bit < 32 %}
+        uint32_t _reserved_end : {{ 32 - ns.current_bit }};
+        {%- endif %}
+    } bits;          // Bit-field struct (auto-filling reserved gaps)
+    uint32_t value;  // Full 32-bit register access
+
+    {{ register.name }}() = delete;
+
+    static inline volatile {{ register.name }} &Instance() {
+        return *reinterpret_cast<volatile {{ register.name }}*>(0x{{ "%08X" % (register.parent.base_address + register.address_offset) }});
+    }
+
+    inline void Reset() volatile { this->value = 0x{{ "%08X" % register.reset_value }}; }
 };
+
 {% endfor %}
-
-struct Registers {
-  {%- for register in peripheral.registers %}
-  {{ register.name }}_t {{ register.name }}{};
-  {%- endfor %}
-};
-
-} // namespace {{peripheral.name}}
+} // namespace n{{peripheral.name}}
