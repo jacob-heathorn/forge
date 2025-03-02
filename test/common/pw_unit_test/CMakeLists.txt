@@ -8,7 +8,7 @@ platformify(pw_unit_test)
 function(add_pw_test)
   add_executable(${ARGV})
   platformify(${ARGV0})
-  target_link_libraries(${ARGV0} pw_unit_test)
+  target_link_libraries(${ARGV0} PRIVATE pw_unit_test)
   add_test(NAME ${ARGV0} COMMAND ${ARGV0})
 endfunction()
 

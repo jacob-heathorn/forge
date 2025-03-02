@@ -3,3 +3,7 @@ add_subdirectory(
   $ENV{FORGE_ROOT}/test/native
   ${CMAKE_BINARY_DIR}/forge/test/native
 )
+add_subdirectory(
+  $ENV{FORGE_ROOT}/test/common
+  ${CMAKE_BINARY_DIR}/forge/test/common
+)
