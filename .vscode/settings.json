@@ -21,5 +21,22 @@
   "editor.wordWrapColumn": 100,
   "files.associations": {
     "iostream": "cpp"
-  }
+  },
+
+  "editor.tokenColorCustomizations": {
+      "textMateRules": [
+        {
+            "scope": "command-identifier.cmake",
+            "settings": {
+                "foreground": "#DCDCAA"
+            }
+        },
+        {
+            "scope": "expression.group.cmake",
+            "settings": {
+                "foreground": "#9CDCFE"
+            }
+        }
+      ]
+  },
 }
