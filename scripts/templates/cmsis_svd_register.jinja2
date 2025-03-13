@@ -66,5 +66,5 @@ union {{ reg_name }} {
 
   {{ reg_name }}() = delete;
   inline void Reset() volatile { this->value = 0x{{ "%08X" % register.reset_value }}; }
-  static inline volatile {{ reg_name }} &Instance() { return *reinterpret_cast<volatile {{ reg_name }}*>(0x{{ "%08X" % (peripheral.base_address + register.address_offset) }}); }
+  static inline volatile {{ reg_name }} &ref() { return *reinterpret_cast<volatile {{ reg_name }}*>(0x{{ "%08X" % (peripheral.base_address + register.address_offset) }}); }
 };
