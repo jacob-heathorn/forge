@@ -1,3 +1,4 @@
+{#- Transform name to conform to C++ example[0] -> example_0 -#}
 {%- set reg_name = register.name -%}
 {%- if '[' in reg_name and ']' in reg_name -%}
   {%- set base_name = reg_name.split('[')[0] -%}
@@ -6,6 +7,21 @@
 {%- endif -%}
 {{ format_comment(register.description, width=100, indent_width=0) }}
 union {{ reg_name }} {
+  {#- Determine the appropriate register type based on bit width -#}
+  {%- set reg_type = 'uint32_t' %}
+  {%- if register.bit_width == 8 %}
+    {%- set reg_type = 'uint8_t' %}
+  {%- elif register.bit_width == 16 %}
+    {%- set reg_type = 'uint16_t' %}
+  {%- elif register.bit_width == 32 %}
+    {%- set reg_type = 'uint32_t' %}
+  {%- elif register.bit_width == -8 %}
+    {%- set reg_type = 'int8_t' %}
+  {%- elif register.bit_width == -16 %}
+    {%- set reg_type = 'int16_t' %}
+  {%- elif register.bit_width == -32 %}
+    {%- set reg_type = 'int32_t' %}
+  {%- endif %}
   {# Generate all enumerations before the struct definition -#}
   {%- for field in register.fields | sort(attribute='bit_offset') if field.is_enumerated_type and field.enumerated_values %}
   {%- for enum_set in field.enumerated_values %}
@@ -16,7 +32,7 @@ union {{ reg_name }} {
   {%- endif -%}
   {#- Generate the enum -#}
   {%- set enum_name = enum_set.name if enum_set.name else field.name %}
-  enum class e{{ enum_name }} : uint32_t {
+  enum class e{{ enum_name }} : {{ reg_type }} {
     {%- for value in enum_set.enumerated_values %}
     {%- set description_comment = value.description if value.description else '' %}
     // {{ description_comment }}
@@ -33,7 +49,7 @@ union {{ reg_name }} {
 
     {#- Generate reserved bits to fill in the gaps. -#}
     {%- if field.bit_offset > ns.current_bit %}
-    uint32_t _reserved_{{ ns.reserved_counter }} : {{ field.bit_offset - ns.current_bit }};
+    {{ reg_type }} _reserved_{{ ns.reserved_counter }} : {{ field.bit_offset - ns.current_bit }};
     {%- set ns.reserved_counter = ns.reserved_counter + 1 %}
     {%- endif %}
 
@@ -48,7 +64,7 @@ union {{ reg_name }} {
     {%- set enum_name = field.enumerated_values[0].name if field.enumerated_values[0].name else field.name %}
     e{{ enum_name }} {{ field.name }} : {{ field.bit_width }};
     {%- else %}
-    uint32_t {{ field.name }} : {{ field.bit_width }};
+    {{ reg_type }} {{ field.name }} : {{ field.bit_width }};
     {%- endif %}
     
     {#- Update current bit position -#}
@@ -57,12 +73,12 @@ union {{ reg_name }} {
     
     {#- Insert final reserved bits if there are gaps left -#}
     {%- if ns.current_bit < 32 %}
-    uint32_t _reserved_{{ ns.reserved_counter }} : {{ 32 - ns.current_bit }};
+    {{ reg_type }} _reserved_{{ ns.reserved_counter }} : {{ 32 - ns.current_bit }};
     {%- endif %}
   } bits;
   
   // Full 32-bit register value.
-  uint32_t value;
+  {{ reg_type }} value;
 
   {{ reg_name }}() = delete;
   inline void Reset() volatile { this->value = 0x{{ "%08X" % register.reset_value }}; }
