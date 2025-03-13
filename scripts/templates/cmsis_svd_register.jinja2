@@ -1,5 +1,11 @@
+{%- set reg_name = register.name -%}
+{%- if '[' in reg_name and ']' in reg_name -%}
+  {%- set base_name = reg_name.split('[')[0] -%}
+  {%- set num = reg_name.split('[')[1].split(']')[0] -%}
+  {%- set reg_name = base_name + '_' + num -%}
+{%- endif -%}
 {{ format_comment(register.description, width=100, indent_width=0) }}
-union {{ register.name }} {
+union {{ reg_name }} {
   {# Generate all enumerations before the struct definition -#}
   {%- for field in register.fields | sort(attribute='bit_offset') if field.is_enumerated_type and field.enumerated_values %}
   {%- for enum_set in field.enumerated_values %}
@@ -24,7 +30,7 @@ union {{ register.name }} {
   // Bit field definition.
   struct {
     {%- for field in register.fields | sort(attribute='bit_offset') %}  {#- Ensure sorted order -#}
-    
+
     {#- Generate reserved bits to fill in the gaps. -#}
     {%- if field.bit_offset > ns.current_bit %}
     uint32_t _reserved_{{ ns.reserved_counter }} : {{ field.bit_offset - ns.current_bit }};
@@ -58,7 +64,7 @@ union {{ register.name }} {
   // Full 32-bit register value.
   uint32_t value;
 
-  {{ register.name }}() = delete;
+  {{ reg_name }}() = delete;
   inline void Reset() volatile { this->value = 0x{{ "%08X" % register.reset_value }}; }
-  static inline volatile {{ register.name }} &Instance() { return *reinterpret_cast<volatile {{ register.name }}*>(0x{{ "%08X" % (peripheral.base_address + register.address_offset) }}); }
+  static inline volatile {{ reg_name }} &Instance() { return *reinterpret_cast<volatile {{ reg_name }}*>(0x{{ "%08X" % (peripheral.base_address + register.address_offset) }}); }
 };
