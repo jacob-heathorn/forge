@@ -1,5 +1,31 @@
 {#- Set register size or default to 32 bits. -#}
 {%- set reg_size = register.size if register.size is defined else 32 -%}
+
+{#- Determine the register data type-#}
+{%- if register.data_type and register.data_type | trim | length > 0 -%}
+  {%- set reg_type = register.data_type | trim %}
+{%- else %}
+  {%- if reg_size == 8 %}
+    {%- set reg_type = 'uint8_t' %}
+  {%- elif reg_size == 16 %}
+    {%- set reg_type = 'uint16_t' %}
+  {%- elif reg_size == 32 %}
+    {%- set reg_type = 'uint32_t' %}
+  {%- elif reg_size == 64 %}
+    {%- set reg_type = 'uint64_t' %}
+  {%- elif reg_size == -8 %}
+    {%- set reg_type = 'int8_t' %}
+  {%- elif reg_size == -16 %}
+    {%- set reg_type = 'int16_t' %}
+  {%- elif reg_size == -32 %}
+    {%- set reg_type = 'int32_t' %}
+  {%- elif reg_size == -64 %}
+    {%- set reg_type = 'int64_t' %}
+  {%- else %}
+    {%- set reg_type = 'IDontKnowMan' %}
+  {%- endif %}
+{%- endif %}
+
 {#- Transform name to conform to C++ example[0] -> example_0 -#}
 {%- set reg_name = register.name -%}
 {%- if '[' in reg_name and ']' in reg_name -%}
@@ -9,21 +35,6 @@
 {%- endif -%}
 {{ format_comment(register.description, width=100, indent_width=0) }}
 union {{ reg_name }} {
-  {#- Determine the appropriate register type based on bit width -#}
-  {%- set reg_type = 'uint32_t' %}
-  {%- if register.size == 8 %}
-    {%- set reg_type = 'uint8_t' %}
-  {%- elif register.size == 16 %}
-    {%- set reg_type = 'uint16_t' %}
-  {%- elif register.size == 32 %}
-    {%- set reg_type = 'uint32_t' %}
-  {%- elif register.size == -8 %}
-    {%- set reg_type = 'int8_t' %}
-  {%- elif register.size == -16 %}
-    {%- set reg_type = 'int16_t' %}
-  {%- elif register.size == -32 %}
-    {%- set reg_type = 'int32_t' %}
-  {%- endif %}
   {# Generate all enumerations before the struct definition -#}
   {%- for field in register.fields | sort(attribute='bit_offset') if field.is_enumerated_type and field.enumerated_values %}
   {%- for enum_set in field.enumerated_values %}
