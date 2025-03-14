@@ -161,6 +161,7 @@ def find_application(application_name: str, dir: str) -> str:
     forge.error(f"More than one runnable found with the name '{application_name}'")
 
   application_fullfile = matched_files[0]
+  forge.print_green(f"Found application: {application_fullfile}")
   return application_fullfile
 
 
