@@ -1,3 +1,5 @@
+{#- Set register size or default to 32 bits. -#}
+{%- set reg_size = register.size if register.size is defined else 32 -%}
 {#- Transform name to conform to C++ example[0] -> example_0 -#}
 {%- set reg_name = register.name -%}
 {%- if '[' in reg_name and ']' in reg_name -%}
@@ -9,17 +11,17 @@
 union {{ reg_name }} {
   {#- Determine the appropriate register type based on bit width -#}
   {%- set reg_type = 'uint32_t' %}
-  {%- if register.bit_width == 8 %}
+  {%- if register.size == 8 %}
     {%- set reg_type = 'uint8_t' %}
-  {%- elif register.bit_width == 16 %}
+  {%- elif register.size == 16 %}
     {%- set reg_type = 'uint16_t' %}
-  {%- elif register.bit_width == 32 %}
+  {%- elif register.size == 32 %}
     {%- set reg_type = 'uint32_t' %}
-  {%- elif register.bit_width == -8 %}
+  {%- elif register.size == -8 %}
     {%- set reg_type = 'int8_t' %}
-  {%- elif register.bit_width == -16 %}
+  {%- elif register.size == -16 %}
     {%- set reg_type = 'int16_t' %}
-  {%- elif register.bit_width == -32 %}
+  {%- elif register.size == -32 %}
     {%- set reg_type = 'int32_t' %}
   {%- endif %}
   {# Generate all enumerations before the struct definition -#}
@@ -72,12 +74,12 @@ union {{ reg_name }} {
     {%- endfor %}
     
     {#- Insert final reserved bits if there are gaps left -#}
-    {%- if ns.current_bit < 32 %}
-    {{ reg_type }} _reserved_{{ ns.reserved_counter }} : {{ 32 - ns.current_bit }};
+    {%- if ns.current_bit < reg_size %}
+    {{ reg_type }} _reserved_{{ ns.reserved_counter }} : {{ reg_size - ns.current_bit }};
     {%- endif %}
   } bits;
   
-  // Full 32-bit register value.
+  // Full {{ reg_size }}-bit register value.
   {{ reg_type }} value;
 
   {{ reg_name }}() = delete;
