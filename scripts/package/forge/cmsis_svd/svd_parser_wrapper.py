@@ -59,6 +59,8 @@ class SVDParserWrapper:
   """
 
   def __init__(self, svd_file, output_dir):
+    print(f"Using svd file: {svd_file}")
+
     self.svd_parser = SVDParser.for_xml_file(svd_file)
     self.output_dir = output_dir
 
