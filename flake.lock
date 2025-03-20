@@ -1,22 +1,5 @@
 {
   "nodes": {
-    "mcux-soc-svd": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1727448973,
-        "narHash": "sha256-M3WBuhc9dupFA7u0Ki+vEjNXi4ezRwIWZ1lZI+4KBL4=",
-        "owner": "nxp-mcuxpresso",
-        "repo": "mcux-soc-svd",
-        "rev": "a24a5351f5fd12526bbf14ca7ad283a4fddcd2ec",
-        "type": "github"
-      },
-      "original": {
-        "owner": "nxp-mcuxpresso",
-        "ref": "MCUX_2.16.100",
-        "repo": "mcux-soc-svd",
-        "type": "github"
-      }
-    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1739055578,
@@ -35,7 +18,6 @@
     },
     "root": {
       "inputs": {
-        "mcux-soc-svd": "mcux-soc-svd",
         "nixpkgs": "nixpkgs"
       }
     }

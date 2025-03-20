@@ -1,23 +1,14 @@
 {
   description = "Forge native development flake";
 
-  inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
 
-    # Add mcux-soc-svd repository
-    mcux-soc-svd = {
-      url = "github:nxp-mcuxpresso/mcux-soc-svd/MCUX_2.16.100";
-      flake = false;  # It's not a flake, just a repo
-    };
-  };
-
-  outputs = { self, nixpkgs, mcux-soc-svd }: let
+  outputs = { self, nixpkgs }: let
     system = "x86_64-linux";
     pkgs = import nixpkgs { inherit system; };
     gtestPath = builtins.toString pkgs.gtest.dev.outPath;
     gccArmPath = builtins.toString pkgs.gcc-arm-embedded-13;
     repo = builtins.toString ./.;
-    svdRepoPath = builtins.toString mcux-soc-svd;
   in {
     devShells.${system}.default = pkgs.mkShell {
       buildInputs = [
@@ -37,7 +28,6 @@
         export GTEST_INCLUDE_DIR=${gtestPath}/include
         export PYTHONPYCACHEPREFIX=$PROJECT_ROOT/.pycache
         export ARM_GCC_TOOLCHAIN_PATH=${gccArmPath}/bin
-        export MCUX_SOC_SVD_ROOT=${svdRepoPath}
         echo -e "\033[1;32mWelcome to the forge development shell!\033[0m"
         source ${repo}/scripts/common.envrc
       '';
