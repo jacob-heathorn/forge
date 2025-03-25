@@ -35,10 +35,11 @@ class SerialTerminal:
       print("lsof command not found. Install it with: sudo apt install lsof")
       return False  # Assume port is free if lsof is unavailable
 
-  def readline(self):
+  def readline(self) -> str:
     """
     Blocking read and return one line of serial data.
     """
+    assert self.ser is not None, "Serial port not initialized"
     return self.ser.readline().decode('utf-8').strip('\r\n')
 
   def read(self):
