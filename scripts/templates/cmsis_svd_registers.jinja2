@@ -1,55 +1,30 @@
+{#- Register definitions for {{peripheral.name}} -#}
 #pragma once
 
 #include <stddef.h>
 #include <stdint.h>
 #include <cstring>
 
-#include "stm32h743-platform/registers/register32.hpp"
-
-// Register definitions for {{peripheral.name}}
-//
-{{format_comment(peripheral.description, width=100, indent_width=0)}}
+{{ format_comment(peripheral.description, width=100, indent_width=0) }}
 //
 // NOTE: This file was generated from the forge CMSIS-svd wrapper tool.
+namespace n{{peripheral.name}} {
 
-namespace {{peripheral.name}} {
+{# Iterate over SVDRegister, SVDRegisterArray, and SVDClusterArray -#}
 {% for register in peripheral.registers %}
-{{format_comment(register.description, width=100, indent_width=0)}}
-struct {{ register.name }}_t : public Register {
-  {{ register.name }}_t() : Register({{ "0x%08x" % (register.parent.base_address + register.address_offset) }}) {}
-
-  {% for field in register.fields %}
-{{format_comment(field.description, width=100, indent_width=2)}}
-  //
-  {%- if field.is_enumerated_type %}
-    TODO handle enumerated type!
-  {%- else %}
-  {%- if "write" in field.access %}
-  {%- if field.bit_width==1 %}
-  void Set{{ field.name }}(bool value) { SetBit({{field.bit_offset}}, value); }
-  {%- else %}
-  void Set{{ field.name }}(uint32_t value) { SetBits<{{field.bit_width}}>({{field.bit_offset}}, value); }
-  {%- endif %}
-  {%- endif %}
-  {%- if "read" in field.access %}
-  {%- if field.bit_width==1 %}
-  bool Get{{ field.name }}() const { return GetBit({{field.bit_offset}}); }
-  void WaitFor{{ field.name }}(bool value) { WaitForBit({{field.bit_offset}}, value); }
-  {%- else %}
-  uint32_t Get{{ field.name }}() const { return GetBits<{{field.bit_width}}>({{field.bit_offset}}).to_ulong(); }
-  void WaitFor{{ field.name }}(uint32_t value) { WaitForBits<{{field.bit_width}}>({{field.bit_offset}}, value); }
-  {%- endif %}
-  {%- endif %}
-  {%- endif %}
-  {% endfor %}
-  void Reset() { this->Set({{  "0x%08x" % register.reset_value  }}); }
-};
+{%- if register.__class__.__name__ == "SVDRegisterArray" %}
+{%- for register in register.registers %}
+{% include "cmsis_svd_register.jinja2" %}
+{%- endfor %}
+{%- elif register.__class__.__name__ == "SVDRegisterClusterArray" %}
+{%- for cluster_register in register.registers %}
+{%- with register = cluster_register %}
+{% include "cmsis_svd_register.jinja2" %}
+{%- endwith %}
+{%- endfor %}
+{%- else %}
+{% include "cmsis_svd_register.jinja2" %}
+{%- endif %}
 {% endfor %}
 
-struct Registers {
-  {%- for register in peripheral.registers %}
-  {{ register.name }}_t {{ register.name }}{};
-  {%- endfor %}
-};
-
-} // namespace {{peripheral.name}}
+} // namespace n{{peripheral.name}}

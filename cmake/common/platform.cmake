@@ -111,3 +111,29 @@ endfunction()
 # -Wsign-compare (only in C++): Warns when comparing signed to unsigned numbers.
 # -Wsizeof-pointer-memaccess: Warns about suspicious uses of sizeof on pointer types.
 # -Wstrict-aliasing: Warn
+
+
+# =================================================================================================
+# Other utilities
+
+# Finds a file recursively in a given directory
+function(find_file_in_directory result_var input_directory input_filename)
+  # Use GLOB_RECURSE to search for the file recursively
+  file(GLOB_RECURSE found_files
+    RELATIVE "${input_directory}"
+    "${input_directory}/${input_filename}")
+
+  # Check the number of files found
+  list(LENGTH found_files num_files)
+  if(num_files EQUAL 1)
+    list(GET found_files 0 first_file_path)
+    # Construct the full path
+    set(full_path "${input_directory}/${first_file_path}")
+    set("${result_var}" "${full_path}" PARENT_SCOPE)
+    message(STATUS "File found: ${full_path}")
+  elseif(num_files GREATER 1)
+    message(FATAL_ERROR "Error: Multiple instances of '${input_filename}' found in directory '${input_directory}'.")
+  else()
+    message(FATAL_ERROR "Error: The file '${input_filename}' not found in directory '${input_directory}'")
+  endif()
+endfunction()
