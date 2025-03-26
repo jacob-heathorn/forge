@@ -12,7 +12,6 @@ jinja2 = "*"
 json5 = "*"
 cmsis-svd = "0.6.0"
 pyserial = "*"
-# cmsis-svd = { git = "https://github.com/posborne/cmsis-svd.git", subdirectory = "python" }
 
 [tool.pytest.ini_options]
 cache_dir = "../../.pycache"
