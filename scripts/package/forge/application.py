@@ -162,6 +162,7 @@ def find_application(application_name: str, dir: str) -> str:
 
   application_fullfile = matched_files[0]
   forge.print_green(f"Found application: {application_fullfile}")
+  print_size(application_fullfile)
   return application_fullfile
 
 
