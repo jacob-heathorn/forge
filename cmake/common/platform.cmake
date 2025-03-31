@@ -52,9 +52,11 @@ function(add_common_c_cxx_flags target)
 
   # -ffunction-sections: Puts each function into its own unique section in the object file.
   # -fdata-sections: Places data items into individual sections, helping linker optimizations.
+  # -fno-common: Disallows multiple tentative definitions of global variables.
   target_compile_options(${target} PRIVATE
     -ffunction-sections
     -fdata-sections
+    -fno-common
   )
   
   # Release mode flags
