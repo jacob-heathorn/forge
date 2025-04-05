@@ -5,6 +5,10 @@
 #include <type_traits>
 #include <utility>
 
+
+namespace forge
+{
+
 // This template provides a mechanism for ensuring that only one instance of a derived class exists
 // throughout the lifetime of the application. The instance is allocated in static storage and can
 // be accessed via the instance() method.
@@ -63,3 +67,5 @@ private:
         return flag;
     }
 };
+
+}
