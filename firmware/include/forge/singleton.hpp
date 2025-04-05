@@ -19,24 +19,24 @@ public:
     // Must be called exactly once.
     template <typename... Args>
     static void create(Args&&... args) {
-        assert(!is_created() && "Singleton already created!");
-        if (!is_created())
+        assert(!isCreated() && "Singleton already created!");
+        if (!isCreated())
         {
-            new (instance_buffer()) T(std::forward<Args>(args)...);
+            new (instanceBuffer()) T(std::forward<Args>(args)...);
         }
     }
 
     // Returns a reference to the singleton instance.
     static T& instance() {
-        assert(is_created() && "Singleton not created! Call create() first.");
-        return *reinterpret_cast<T*>(instance_buffer());
+        assert(isCreated() && "Singleton not created! Call create() first.");
+        return *reinterpret_cast<T*>(instanceBuffer());
     }
 
     // Optionally, destroy the singleton (calls its destructor).
     static void destroy() {
-        if (is_created()) {
+        if (isCreated()) {
             instance().~T();
-            is_created() = false;
+            isCreated() = false;
         }
     }
 
@@ -47,14 +47,14 @@ public:
 protected:
     Singleton()
     {
-        assert(!is_created() && "Singleton already created!");
-        is_created() = true;
+        assert(!isCreated() && "Singleton already created!");
+        isCreated() = true;
     }
     ~Singleton() = default;
 
 private:
     // Use a function that returns a reference to a static storage buffer.
-    static void* instance_buffer() {
+    static void* instanceBuffer() {
         // This static variable is defined when the function is first called.
         // By then, T should be complete.
         static typename std::aligned_storage<sizeof(T), alignof(T)>::type buffer;
@@ -62,7 +62,7 @@ private:
     }
 
     // Use a function-local static boolean to track whether the instance was created.
-    static bool& is_created() {
+    static bool& isCreated() {
         static bool flag = false;
         return flag;
     }
