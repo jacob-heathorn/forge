@@ -15,8 +15,8 @@ private:
 
 public:
     mutex() noexcept {
-        initialized_ = (tx_mutex_create(&handle_, kMutexName, TX_INHERIT) == TX_SUCCESS);
-        assert(initialized_ == true);
+        while (TX_SUCCESS != tx_mutex_create(&handle_, kMutexName, TX_INHERIT)) {}
+        initialized_ = true;
     }
     ~mutex() noexcept {
         if (initialized_) {
