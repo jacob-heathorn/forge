@@ -14,7 +14,7 @@ private:
 
 public:
     mutex() noexcept {
-        initialized_ = (tx_mutex_create(&handle_, kMutexName, TX_NO_INHERIT) == TX_SUCCESS);
+        initialized_ = (tx_mutex_create(&handle_, kMutexName, TX_INHERIT) == TX_SUCCESS);
     }
     ~mutex() noexcept {
         if (initialized_) {
