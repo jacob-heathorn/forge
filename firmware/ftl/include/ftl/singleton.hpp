@@ -6,7 +6,7 @@
 #include <utility>
 
 
-namespace forge
+namespace ftl
 {
 
 // This template provides a mechanism for ensuring that only one instance of a derived class exists

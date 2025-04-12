@@ -11,7 +11,7 @@
 // According to the Google C++ Style Guide, file names, function names, and comments
 // follow consistent formatting for clarity and maintainability.
 
-#include "forge/bump_allocator.hpp"
+#include "ftl/bump_allocator.hpp"
 #include "gtest/gtest.h"
 #include <cstdint>
 #include <cstring>
@@ -37,14 +37,14 @@ class BumpAllocatorTest : public ::testing::Test {
     // Reset the memory block to zeros.
     memset(gMemoryBlock, 0, kBlockSize);
     // Construct the bump allocator using the test memory block.
-    allocator_ = new forge::BumpAllocator(gMemoryBlock, kBlockSize);
+    allocator_ = new ftl::BumpAllocator(gMemoryBlock, kBlockSize);
   }
 
   void TearDown() override {
     delete allocator_;
   }
 
-  forge::BumpAllocator* allocator_;
+  ftl::BumpAllocator* allocator_;
 };
 
 // Tests that allocate() returns a valid (non-null) pointer when memory is available.
