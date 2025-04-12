@@ -14,9 +14,14 @@ class MutexTest : public ::testing::Test {
 };
 
 TEST_F(MutexTest, LocksAndUnlocks) {
-  EXPECT_NO_THROW({
+  {
     ftl::lock_guard<ftl::mutex> guard(mutex_);
-  });
+    // Should be locked.
+    EXPECT_FALSE(mutex_.try_lock());
+  }
+  // Should now be unlocked.
+  EXPECT_TRUE(mutex_.try_lock());
+  mutex_.unlock();
 }
 
 TEST_F(MutexTest, AdoptLockSkipsRelocking) {
@@ -40,7 +45,7 @@ TEST_F(MutexTest, DeferLockDoesNotLock) {
 
 TEST_F(MutexTest, TryToLockSucceedsWhenUnlocked) {
   ftl::lock_guard<ftl::mutex> guard(mutex_, ftl::try_to_lock);
-  // Can't inspect owns_lock unless you expose it, but no crash = success
+  // Can't inspect owns_lock unless you expose it, but no hang/crash = success
   SUCCEED();
 }
 

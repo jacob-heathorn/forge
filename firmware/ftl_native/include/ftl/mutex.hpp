@@ -8,7 +8,7 @@ namespace ftl {
 // An implementation of IMutex using std::mutex (for Linux / unit testing)
 class mutex : public IMutex {
  public:
- mutex() = default;
+  mutex() = default;
   ~mutex() override = default;
 
   void lock() override {
