@@ -25,7 +25,7 @@ public:
     }
     void lock() {
         if (initialized_) {
-            tx_mutex_get(&handle_, TX_WAIT_FOREVER);
+            while (TX_SUCCESS != tx_mutex_get(&handle_, TX_WAIT_FOREVER)) {}
         }
     }
     bool try_lock()
@@ -36,7 +36,7 @@ public:
     void unlock()
     {
         if (initialized_) {
-            tx_mutex_put(&handle_);
+            while (TX_SUCCESS != tx_mutex_put(&handle_)) {}
         }
     }
 
