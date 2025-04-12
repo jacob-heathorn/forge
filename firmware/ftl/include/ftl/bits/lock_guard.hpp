@@ -1,5 +1,4 @@
-// bits/ftl_mutex.cpp
-#include "ftl/mutex.hpp"
+#pragma once
 
 namespace ftl {
 

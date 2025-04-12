@@ -1,15 +1,15 @@
 #pragma once
 
-#include "ftl/i_mutex.hpp"
+#include "ftl/bits/i_mutex.hpp"
 #include <mutex>
 
 namespace ftl {
 
 // An implementation of IMutex using std::mutex (for Linux / unit testing)
-class Mutex : public IMutex {
+class mutex : public IMutex {
  public:
- Mutex() = default;
-  ~Mutex() override = default;
+ mutex() = default;
+  ~mutex() override = default;
 
   void lock() override {
     mtx_.lock();
@@ -23,8 +23,8 @@ class Mutex : public IMutex {
     mtx_.unlock();
   }
 
-  Mutex(const Mutex&) = delete;
-  Mutex& operator=(const Mutex&) = delete;
+  mutex(const mutex&) = delete;
+  mutex& operator=(const mutex&) = delete;
 
  private:
   std::mutex mtx_;

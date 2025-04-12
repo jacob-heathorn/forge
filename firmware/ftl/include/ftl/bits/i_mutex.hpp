@@ -1,4 +1,3 @@
-// ftl_mutex_interface.hpp
 #pragma once
 
 namespace ftl {
@@ -20,4 +19,4 @@ class IMutex {
 
 }  // namespace ftl
 
-#include "ftl/bits/ftl_mutex.hpp"
+#include "ftl/bits/lock_guard.hpp"
