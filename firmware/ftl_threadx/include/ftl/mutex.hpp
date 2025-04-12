@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ftl/bits/i_mutex.hpp"
+#include <cassert>
 #include "tx_api.h"
 
 namespace ftl {
@@ -15,6 +16,7 @@ private:
 public:
     mutex() noexcept {
         initialized_ = (tx_mutex_create(&handle_, kMutexName, TX_INHERIT) == TX_SUCCESS);
+        assert(initialized_ == true);
     }
     ~mutex() noexcept {
         if (initialized_) {
