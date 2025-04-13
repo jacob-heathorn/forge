@@ -3,25 +3,24 @@
 #include <thread>
 #include "ftl/bits/i_thread.hpp"
 
-namespace ftl::native {
+namespace ftl {
 
-// Cross-platform thread wrapper that uses std::thread underneath.
-class Thread : public IThread {
+class NativeThread : public IThread {
  public:
- Thread() = default;
+ NativeThread() = default;
 
   template <typename Callable, typename... Args>
-  explicit Thread(Callable&& func, Args&&... args)
+  explicit NativeThread(Callable&& func, Args&&... args)
       : thread_(std::forward<Callable>(func), std::forward<Args>(args)...) {}
 
   // Rule of 5
-  Thread(const Thread&) = delete;
-  Thread& operator=(const Thread&) = delete;
+  NativeThread(const NativeThread&) = delete;
+  NativeThread& operator=(const NativeThread&) = delete;
 
-  Thread(Thread&& other) noexcept = default;
-  Thread& operator=(Thread&& other) noexcept = default;
+  NativeThread(NativeThread&& other) noexcept = default;
+  NativeThread& operator=(NativeThread&& other) noexcept = default;
 
-  ~Thread() override {
+  ~NativeThread() override {
     if (thread_.joinable()) {
       thread_.detach();  // Avoid std::terminate
     }
