@@ -2,12 +2,12 @@
 #include "tx_api.h"
 #include <cassert>
 
-namespace ftl {
+namespace ftl::tx {
 
-class thread {
+class Thread {
  public:
   // The thread entry in our implementation is a callable with signature void(void*).
-  thread(const char* name,
+  Thread(const char* name,
          ftl::function<void(void*)> func,
          void* arg,
          void* stack,
@@ -32,17 +32,17 @@ class thread {
     assert(status == TX_SUCCESS && "tx_thread_create failed");
   }
 
-  ~thread() {
+  ~Thread() {
     UINT status = tx_thread_terminate(&handle_);
     assert(status == TX_SUCCESS && "tx_thread_terminate failed");
     status = tx_thread_delete(&handle_);
     assert(status == TX_SUCCESS && "tx_thread_delete failed");
   }
 
-  thread(const thread&) = delete;
-  thread& operator=(const thread&) = delete;
-  thread(thread&&) = delete;
-  thread& operator=(thread&&) = delete;
+  Thread(const Thread&) = delete;
+  Thread& operator=(const Thread&) = delete;
+  Thread(Thread&&) = delete;
+  Thread& operator=(Thread&&) = delete;
 
  private:
   TX_THREAD handle_;
@@ -50,9 +50,9 @@ class thread {
   void* user_arg_;
 
   static void thread_entry_helper(ULONG input) {
-    auto* self = reinterpret_cast<thread*>(input);
+    auto* self = reinterpret_cast<Thread*>(input);
     self->user_callable_(self->user_arg_);
   }
 };
 
-}  // namespace ftl
+}

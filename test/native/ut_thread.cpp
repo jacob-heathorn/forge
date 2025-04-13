@@ -1,6 +1,6 @@
 #include "gtest/gtest.h"
 
-#include "ftl/thread.hpp"   // ftl::thread declaration (std::thread–based)
+#include "ftl/native/thread.hpp"   // ftl::native::Thread declaration (std::thread–based)
 #include "ftl/mutex.hpp"    // ftl::mutex declaration (std::mutex–based)
 
 #include <atomic>
@@ -17,7 +17,7 @@ TEST(FtlThreadTest, ThreadExecutesLambda) {
   std::atomic<bool> ran{false};
 
   {
-    ftl::thread t([&]() {
+    ftl::native::Thread t([&]() {
       ran.store(true);
     });
     t.join();
@@ -33,7 +33,7 @@ TEST(FtlThreadTest, ThreadCanBeDetached) {
   std::atomic<bool> ran{false};
 
   {
-    ftl::thread t([&]() {
+    ftl::native::Thread t([&]() {
       std::this_thread::sleep_for(std::chrono::milliseconds(50));
       ran.store(true);
     });
@@ -58,8 +58,8 @@ TEST(FtlThreadTest, MutexGuardsSharedResource) {
     }
   };
 
-  ftl::thread t1(increment);
-  ftl::thread t2(increment);
+  ftl::native::Thread t1(increment);
+  ftl::native::Thread t2(increment);
 
   t1.join();
   t2.join();
@@ -71,7 +71,7 @@ TEST(FtlThreadTest, MutexGuardsSharedResource) {
 // Test 4: Verify that joinable() reflects thread state correctly.
 //
 TEST(FtlThreadTest, IsJoinableReportsCorrectly) {
-  ftl::thread t([] {
+  ftl::native::Thread t([] {
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   });
 
@@ -95,7 +95,7 @@ TEST(FtlThreadTest, ClassMethodWithArgument) {
   TestClass obj;
   // Create a thread that calls the member function.
   // The thread constructor should forward the arguments appropriately.
-  ftl::thread t(&TestClass::doWork, &obj, 456);
+  ftl::native::Thread t(&TestClass::doWork, &obj, 456);
   t.join();
 
   EXPECT_EQ(obj.result, 456);

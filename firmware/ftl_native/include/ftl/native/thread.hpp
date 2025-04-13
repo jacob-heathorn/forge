@@ -3,25 +3,25 @@
 #include <thread>
 #include "ftl/bits/i_thread.hpp"
 
-namespace ftl {
+namespace ftl::native {
 
 // Cross-platform thread wrapper that uses std::thread underneath.
-class thread : public IThread {
+class Thread : public IThread {
  public:
- thread() = default;
+ Thread() = default;
 
   template <typename Callable, typename... Args>
-  explicit thread(Callable&& func, Args&&... args)
+  explicit Thread(Callable&& func, Args&&... args)
       : thread_(std::forward<Callable>(func), std::forward<Args>(args)...) {}
 
   // Rule of 5
-  thread(const thread&) = delete;
-  thread& operator=(const thread&) = delete;
+  Thread(const Thread&) = delete;
+  Thread& operator=(const Thread&) = delete;
 
-  thread(thread&& other) noexcept = default;
-  thread& operator=(thread&& other) noexcept = default;
+  Thread(Thread&& other) noexcept = default;
+  Thread& operator=(Thread&& other) noexcept = default;
 
-  ~thread() override {
+  ~Thread() override {
     if (thread_.joinable()) {
       thread_.detach();  // Avoid std::terminate
     }
@@ -47,4 +47,4 @@ class thread : public IThread {
   std::thread thread_;
 };
 
-}  // namespace ftl
+}
