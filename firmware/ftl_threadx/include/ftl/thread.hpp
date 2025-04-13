@@ -1,33 +1,27 @@
-#pragma once
-
-#include <cassert>
+#include "ftl/function.hpp"  // Our function wrapper
 #include "tx_api.h"
+#include <cassert>
 
 namespace ftl {
 
 class thread {
  public:
-  // Use a function pointer type directly
-  using entry_fn = void (*)(void*);
-
+  // The thread entry in our implementation is a callable with signature void(void*).
   thread(const char* name,
-         entry_fn fn,
-         void* user_data,
+         ftl::function<void(void*)> func,
+         void* arg,
          void* stack,
          ULONG stack_size,
          UINT priority,
          UINT preempt_thresh,
          ULONG time_slice,
          UINT auto_start)
-      : name_{name}, fn_{fn}, user_data_{user_data} {
-    // Verify stack alignment (8-byte for Cortex-M7)
-    assert(((uintptr_t)stack % 8) == 0 && "Stack must be 8-byte aligned");
-
+      : user_callable_(func), user_arg_(arg) {
     UINT status = tx_thread_create(
         &handle_,
-        const_cast<char*>(name_),     // CHAR* expected
-        thread_entry,
-        reinterpret_cast<ULONG>(this),  // Pass 'this' as thread argument
+        const_cast<char*>(name),
+        thread_entry_helper,
+        reinterpret_cast<ULONG>(this),
         stack,
         stack_size,
         priority,
@@ -35,17 +29,16 @@ class thread {
         time_slice,
         auto_start);
 
-    if (status != TX_SUCCESS) {
-      assert(false && "Thread creation failed");
-    }
+    assert(status == TX_SUCCESS && "tx_thread_create failed");
   }
 
   ~thread() {
-    tx_thread_terminate(&handle_);
-    tx_thread_delete(&handle_);
+    UINT status = tx_thread_terminate(&handle_);
+    assert(status == TX_SUCCESS && "tx_thread_terminate failed");
+    status = tx_thread_delete(&handle_);
+    assert(status == TX_SUCCESS && "tx_thread_delete failed");
   }
 
-  // Delete copy and move
   thread(const thread&) = delete;
   thread& operator=(const thread&) = delete;
   thread(thread&&) = delete;
@@ -53,15 +46,12 @@ class thread {
 
  private:
   TX_THREAD handle_;
-  const char* name_;
-  entry_fn fn_;         // Function pointer
-  void* user_data_;
+  ftl::function<void(void*)> user_callable_;
+  void* user_arg_;
 
-  static void thread_entry(ULONG input) {
+  static void thread_entry_helper(ULONG input) {
     auto* self = reinterpret_cast<thread*>(input);
-    if (self->fn_) {
-      self->fn_(self->user_data_);
-    }
+    self->user_callable_(self->user_arg_);
   }
 };
 
