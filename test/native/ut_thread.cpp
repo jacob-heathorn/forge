@@ -1,44 +1,52 @@
-#include <gtest/gtest.h>
+#include "gtest/gtest.h"
+
+#include "ftl/thread.hpp"   // ftl::thread declaration (std::thread–based)
+#include "ftl/mutex.hpp"    // ftl::mutex declaration (std::mutex–based)
 
 #include <atomic>
 #include <chrono>
-#include <thread>
+#include <thread>  // For std::this_thread::sleep_for
 
-#include "ftl/thread.hpp"
-#include "ftl/mutex.hpp"
-
+// Anonymous namespace for unit tests.
 namespace {
 
+//
+// Test 1: Verify that a thread executing a lambda runs and sets a flag.
+//
 TEST(FtlThreadTest, ThreadExecutesLambda) {
   std::atomic<bool> ran{false};
 
   {
-    ftl::thread thread([&]() {
-      ran = true;
+    ftl::thread t([&]() {
+      ran.store(true);
     });
-    thread.join();
+    t.join();
   }
-
   EXPECT_TRUE(ran.load());
 }
 
+//
+// Test 2: Verify that a thread can be detached and eventually runs.
+// Note: Detach means the thread is not joinable; we use a sleep in main thread to allow work.
+//
 TEST(FtlThreadTest, ThreadCanBeDetached) {
   std::atomic<bool> ran{false};
 
   {
-    ftl::thread thread([&]() {
+    ftl::thread t([&]() {
       std::this_thread::sleep_for(std::chrono::milliseconds(50));
-      ran = true;
+      ran.store(true);
     });
-    thread.detach();
-
-    // Give the thread some time to run after main thread exits scope
+    t.detach();
+    // Give the thread time to run.
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
-
   EXPECT_TRUE(ran.load());
 }
 
+//
+// Test 3: Verify that a shared resource is correctly protected by ftl::mutex and ftl::lock_guard
+//
 TEST(FtlThreadTest, MutexGuardsSharedResource) {
   ftl::mutex mutex;
   int counter = 0;
@@ -59,16 +67,38 @@ TEST(FtlThreadTest, MutexGuardsSharedResource) {
   EXPECT_EQ(counter, 20000);
 }
 
+//
+// Test 4: Verify that joinable() reflects thread state correctly.
+//
 TEST(FtlThreadTest, IsJoinableReportsCorrectly) {
-  ftl::thread thread([] {
+  ftl::thread t([] {
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   });
 
-  EXPECT_TRUE(thread.joinable());
+  EXPECT_TRUE(t.joinable());
+  t.join();
+  EXPECT_FALSE(t.joinable());
+}
 
-  thread.join();
+//
+// Test 5: Verify using a class member function with an argument as thread work.
+//
+TEST(FtlThreadTest, ClassMethodWithArgument) {
+  // A simple test class with a member function that takes an int parameter.
+  class TestClass {
+   public:
+    TestClass() : result(0) {}
+    void doWork(int value) { result = value; }
+    int result;
+  };
 
-  EXPECT_FALSE(thread.joinable());  // joinable() is false after join
+  TestClass obj;
+  // Create a thread that calls the member function.
+  // The thread constructor should forward the arguments appropriately.
+  ftl::thread t(&TestClass::doWork, &obj, 456);
+  t.join();
+
+  EXPECT_EQ(obj.result, 456);
 }
 
 }  // namespace
