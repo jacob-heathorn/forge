@@ -1,7 +1,7 @@
 #include "gtest/gtest.h"
 
 #include "ftl/native/thread.hpp"   // ftl::native::Thread declaration (std::thread–based)
-#include "ftl/mutex.hpp"    // ftl::mutex declaration (std::mutex–based)
+#include "ftl/mutex.hpp"    // ftl::Mutex declaration (std::mutex–based)
 
 #include <atomic>
 #include <chrono>
@@ -45,15 +45,15 @@ TEST(FtlThreadTest, ThreadCanBeDetached) {
 }
 
 //
-// Test 3: Verify that a shared resource is correctly protected by ftl::mutex and ftl::lock_guard
+// Test 3: Verify that a shared resource is correctly protected by ftl::Mutex and ftl::LockGuard
 //
 TEST(FtlThreadTest, MutexGuardsSharedResource) {
-  ftl::mutex mutex;
+  ftl::Mutex mutex;
   int counter = 0;
 
   auto increment = [&]() {
     for (int i = 0; i < 10000; ++i) {
-      ftl::lock_guard<ftl::mutex> guard(mutex);
+      ftl::LockGuard<ftl::Mutex> guard(mutex);
       ++counter;
     }
   };

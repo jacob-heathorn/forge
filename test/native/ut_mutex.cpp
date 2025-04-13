@@ -10,12 +10,12 @@ namespace {
 
 class MutexTest : public ::testing::Test {
  protected:
-  ftl::mutex mutex_;
+  ftl::Mutex mutex_;
 };
 
 TEST_F(MutexTest, LocksAndUnlocks) {
   {
-    ftl::lock_guard<ftl::mutex> guard(mutex_);
+    ftl::LockGuard<ftl::Mutex> guard(mutex_);
     // Should be locked.
     EXPECT_FALSE(mutex_.try_lock());
   }
@@ -27,7 +27,7 @@ TEST_F(MutexTest, LocksAndUnlocks) {
 TEST_F(MutexTest, AdoptLockSkipsRelocking) {
   mutex_.lock();
   {
-    ftl::lock_guard<ftl::mutex> guard(mutex_, ftl::adopt_lock);
+    ftl::LockGuard<ftl::Mutex> guard(mutex_, ftl::adopt_lock);
   }
   // Should now be unlocked
   EXPECT_TRUE(mutex_.try_lock());
@@ -36,7 +36,7 @@ TEST_F(MutexTest, AdoptLockSkipsRelocking) {
 
 TEST_F(MutexTest, DeferLockDoesNotLock) {
   {
-    ftl::lock_guard<ftl::mutex> guard(mutex_, ftl::defer_lock);
+    ftl::LockGuard<ftl::Mutex> guard(mutex_, ftl::defer_lock);
     // Since guard doesn't lock, mutex should still be lockable
     EXPECT_TRUE(mutex_.try_lock());
     mutex_.unlock();
@@ -44,7 +44,7 @@ TEST_F(MutexTest, DeferLockDoesNotLock) {
 }
 
 TEST_F(MutexTest, TryToLockSucceedsWhenUnlocked) {
-  ftl::lock_guard<ftl::mutex> guard(mutex_, ftl::try_to_lock);
+  ftl::LockGuard<ftl::Mutex> guard(mutex_, ftl::try_to_lock);
   // Can't inspect owns_lock unless you expose it, but no hang/crash = success
   SUCCEED();
 }
@@ -53,7 +53,7 @@ TEST_F(MutexTest, TryToLockFailsWhenLocked) {
   std::atomic<bool> try_succeeded{true};
   mutex_.lock();
   std::thread t([&]() {
-    ftl::lock_guard<ftl::mutex> guard(mutex_, ftl::try_to_lock);
+    ftl::LockGuard<ftl::Mutex> guard(mutex_, ftl::try_to_lock);
     // Should silently fail to acquire
     try_succeeded = false;
   });
@@ -70,7 +70,7 @@ TEST_F(MutexTest, ThreadedIncrementsAreCorrect) {
 
   auto worker = [&]() {
     for (int i = 0; i < kIncrements; ++i) {
-      ftl::lock_guard<ftl::mutex> guard(mutex_);
+      ftl::LockGuard<ftl::Mutex> guard(mutex_);
       ++counter;
     }
   };

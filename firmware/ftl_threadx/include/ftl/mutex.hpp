@@ -8,17 +8,17 @@ namespace ftl {
 
 static char kMutexName[] = "FtlMutex";
 
-class mutex : IMutex {
+class Mutex : IMutex {
 private:
     TX_MUTEX handle_;
     bool initialized_;
 
 public:
-    mutex() noexcept {
+    Mutex() noexcept {
         while (TX_SUCCESS != tx_mutex_create(&handle_, kMutexName, TX_INHERIT)) {}
         initialized_ = true;
     }
-    ~mutex() noexcept {
+    ~Mutex() noexcept {
         if (initialized_) {
             tx_mutex_delete(&handle_);
         }
@@ -40,8 +40,8 @@ public:
         }
     }
 
-    mutex(const mutex&) = delete;
-    mutex& operator=(const mutex&) = delete;
+    Mutex(const Mutex&) = delete;
+    Mutex& operator=(const Mutex&) = delete;
 
     using native_handle_type = void*;
     native_handle_type native_handle() { return &handle_; }

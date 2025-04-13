@@ -6,10 +6,10 @@
 namespace ftl {
 
 // An implementation of IMutex using std::mutex (for Linux / unit testing)
-class mutex : public IMutex {
+class Mutex : public IMutex {
  public:
-  mutex() = default;
-  ~mutex() override = default;
+  Mutex() = default;
+  ~Mutex() override = default;
 
   void lock() override {
     mtx_.lock();
@@ -23,8 +23,8 @@ class mutex : public IMutex {
     mtx_.unlock();
   }
 
-  mutex(const mutex&) = delete;
-  mutex& operator=(const mutex&) = delete;
+  Mutex(const Mutex&) = delete;
+  Mutex& operator=(const Mutex&) = delete;
 
  private:
   std::mutex mtx_;
