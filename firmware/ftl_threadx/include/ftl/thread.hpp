@@ -1,4 +1,4 @@
-#include "ftl/function.hpp"  // Our function wrapper
+#include "ftl/functional.hpp"  // Our function wrapper
 #include "tx_api.h"
 #include <cassert>
 

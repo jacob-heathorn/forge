@@ -1,5 +1,5 @@
 #include "gtest/gtest.h"
-#include "ftl/function.hpp"  // Adjust the include path to your ftl::function header
+#include "ftl/functional.hpp"  // Adjust the include path to your ftl::function header
 
 namespace {
 
