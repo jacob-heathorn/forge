@@ -1,22 +1,24 @@
-#include "ftl/functional.hpp"  // Our function wrapper
 #include "tx_api.h"
 #include <cassert>
 
 namespace ftl {
 
+// TODO. 
+//<Func, Arg>
+// TxThreadFunction
+
 class TxThread {
  public:
-  // The thread entry in our implementation is a callable with signature void(void*).
+  // The thread entry in our implementation is a simple function pointer with signature void(void).
   TxThread(const char* name,
-         ftl::function<void(void*)> func,
-         void* arg,
-         void* stack,
-         ULONG stack_size,
-         UINT priority,
-         UINT preempt_thresh,
-         ULONG time_slice,
-         UINT auto_start)
-      : user_callable_(func), user_arg_(arg) {
+           void (*func)(),
+           void* stack,
+           ULONG stack_size,
+           UINT priority,
+           UINT preempt_thresh,
+           ULONG time_slice,
+           UINT auto_start)
+      : user_func_(func) {
     UINT status = tx_thread_create(
         &handle_,
         const_cast<char*>(name),
@@ -46,12 +48,11 @@ class TxThread {
 
  private:
   TX_THREAD handle_;
-  ftl::function<void(void*)> user_callable_;
-  void* user_arg_;
+  void (*user_func_)();
 
   static void thread_entry_helper(ULONG input) {
     auto* self = reinterpret_cast<TxThread*>(input);
-    self->user_callable_(self->user_arg_);
+    self->user_func_();
   }
 };
 
