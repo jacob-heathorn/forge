@@ -1,24 +1,25 @@
+#ifndef FTL_TX_THREAD_HPP
+#define FTL_TX_THREAD_HPP
+
 #include "tx_api.h"
 #include <cassert>
+#include "etl/delegate.h"  // Include ETL delegate header
 
 namespace ftl {
 
-// TODO. 
-//<Func, Arg>
-// TxThreadFunction
-
 class TxThread {
  public:
-  // The thread entry in our implementation is a simple function pointer with signature void(void).
+  // Constructor accepts an ETL delegate callback (of type void(void))
   TxThread(const char* name,
-           void (*func)(),
+           etl::delegate<void(void)> callback,
            void* stack,
            ULONG stack_size,
            UINT priority,
            UINT preempt_thresh,
            ULONG time_slice,
            UINT auto_start)
-      : user_func_(func) {
+      : callback_(callback)
+  {
     UINT status = tx_thread_create(
         &handle_,
         const_cast<char*>(name),
@@ -30,7 +31,6 @@ class TxThread {
         preempt_thresh,
         time_slice,
         auto_start);
-
     assert(status == TX_SUCCESS && "tx_thread_create failed");
   }
 
@@ -41,6 +41,7 @@ class TxThread {
     assert(status == TX_SUCCESS && "tx_thread_delete failed");
   }
 
+  // Disable copying and moving.
   TxThread(const TxThread&) = delete;
   TxThread& operator=(const TxThread&) = delete;
   TxThread(TxThread&&) = delete;
@@ -48,12 +49,15 @@ class TxThread {
 
  private:
   TX_THREAD handle_;
-  void (*user_func_)();
+  etl::delegate<void(void)> callback_;
 
+  // Thread entry point: call the stored delegate.
   static void thread_entry_helper(ULONG input) {
-    auto* self = reinterpret_cast<TxThread*>(input);
-    self->user_func_();
+    TxThread* self = reinterpret_cast<TxThread*>(input);
+    self->callback_();
   }
 };
 
-}
+} // namespace ftl
+
+#endif  // FTL_TX_THREAD_HPP
