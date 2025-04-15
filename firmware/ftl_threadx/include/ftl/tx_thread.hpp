@@ -16,8 +16,8 @@ class TxThread {
            ULONG stack_size,
            UINT priority,
            UINT preempt_thresh,
-           ULONG time_slice,
-           UINT auto_start)
+           ULONG time_slice = TX_NO_TIME_SLICE,
+           UINT auto_start = TX_AUTO_START)
       : callback_(callback)
   {
     UINT status = tx_thread_create(
