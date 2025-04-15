@@ -4,6 +4,7 @@
 #include "tx_api.h"
 #include <cassert>
 #include "etl/delegate.h"  // Include ETL delegate header
+#include "etl/optional.h"
 
 namespace ftl {
 
@@ -15,7 +16,7 @@ class TxThread {
            void* stack,
            ULONG stack_size,
            UINT priority,
-           UINT preempt_thresh,
+           etl::optional<UINT> preempt_thresh = etl::nullopt,
            ULONG time_slice = TX_NO_TIME_SLICE,
            UINT auto_start = TX_AUTO_START)
       : callback_(callback)
@@ -28,7 +29,7 @@ class TxThread {
         stack,
         stack_size,
         priority,
-        preempt_thresh,
+        preempt_thresh.value_or(priority),
         time_slice,
         auto_start);
     assert(status == TX_SUCCESS && "tx_thread_create failed");
