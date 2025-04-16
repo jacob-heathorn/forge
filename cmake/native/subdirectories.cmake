@@ -5,15 +5,11 @@ add_subdirectory(
   ${CMAKE_BINARY_DIR}/forge/firmware/ftl
 )
 add_subdirectory(
-  $ENV{FORGE_ROOT}/firmware/ftl_native
-  ${CMAKE_BINARY_DIR}/forge/firmware/ftl_native
+  $ENV{FORGE_ROOT}/firmware/native
+  ${CMAKE_BINARY_DIR}/forge/firmware/native
 )
 
 # Test
-add_subdirectory(
-  $ENV{FORGE_ROOT}/test/common
-  ${CMAKE_BINARY_DIR}/forge/test/common
-)
 add_subdirectory(
   $ENV{FORGE_ROOT}/test/native
   ${CMAKE_BINARY_DIR}/forge/test/native

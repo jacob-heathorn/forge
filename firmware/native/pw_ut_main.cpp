@@ -1,9 +1,3 @@
-// sample_pw_ut_main.cpp
-//
-// Copy this file, adapt it for your platform (e.g. threadx entry function), and it to the
-// pw_unit_test target library, so that when you link it while authoring unit tests, main is
-// defined.
-
 #include "gtest/gtest.h"
 
 #include <cstdio>
