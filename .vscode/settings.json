@@ -23,7 +23,8 @@
     "iostream": "cpp",
     "type_traits": "cpp",
     "utility": "cpp",
-    "cstdint": "cpp"
+    "cstdint": "cpp",
+    "optional": "cpp"
 },
 
   "editor.tokenColorCustomizations": {

@@ -33,6 +33,7 @@ class TxThread {
         time_slice,
         auto_start);
     assert(status == TX_SUCCESS && "tx_thread_create failed");
+    (void)status; // Prevent unused variable warning in release builds.
   }
 
   ~TxThread() {
@@ -40,6 +41,7 @@ class TxThread {
     assert(status == TX_SUCCESS && "tx_thread_terminate failed");
     status = tx_thread_delete(&handle_);
     assert(status == TX_SUCCESS && "tx_thread_delete failed");
+    (void)status; // Prevent unused variable warning in release builds.
   }
 
   // Disable copying and moving.
