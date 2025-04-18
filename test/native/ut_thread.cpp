@@ -1,0 +1,104 @@
+#include "gtest/gtest.h"
+
+#include "ftl/native_thread.hpp"   // ftl::NativeThread declaration (std::thread–based)
+#include "ftl/mutex.hpp"           // ftl::Mutex declaration (std::mutex–based)
+
+#include <atomic>
+#include <chrono>
+#include <thread>  // For std::this_thread::sleep_for
+
+// Anonymous namespace for unit tests.
+namespace {
+
+//
+// Test 1: Verify that a thread executing a lambda runs and sets a flag.
+//
+TEST(FtlThreadTest, ThreadExecutesLambda) {
+  std::atomic<bool> ran{false};
+
+  {
+    ftl::NativeThread t([&]() {
+      ran.store(true);
+    });
+    t.join();
+  }
+  EXPECT_TRUE(ran.load());
+}
+
+//
+// Test 2: Verify that a thread can be detached and eventually runs.
+// Note: Detach means the thread is not joinable; we use a sleep in main thread to allow work.
+//
+TEST(FtlThreadTest, ThreadCanBeDetached) {
+  std::atomic<bool> ran{false};
+
+  {
+    ftl::NativeThread t([&]() {
+      std::this_thread::sleep_for(std::chrono::milliseconds(50));
+      ran.store(true);
+    });
+    t.detach();
+    // Give the thread time to run.
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
+  EXPECT_TRUE(ran.load());
+}
+
+//
+// Test 3: Verify that a shared resource is correctly protected by ftl::Mutex and ftl::LockGuard
+//
+TEST(FtlThreadTest, MutexGuardsSharedResource) {
+  ftl::Mutex mutex;
+  int counter = 0;
+
+  auto increment = [&]() {
+    for (int i = 0; i < 10000; ++i) {
+      ftl::LockGuard<ftl::Mutex> guard(mutex);
+      ++counter;
+    }
+  };
+
+  ftl::NativeThread t1(increment);
+  ftl::NativeThread t2(increment);
+
+  t1.join();
+  t2.join();
+
+  EXPECT_EQ(counter, 20000);
+}
+
+//
+// Test 4: Verify that joinable() reflects thread state correctly.
+//
+TEST(FtlThreadTest, IsJoinableReportsCorrectly) {
+  ftl::NativeThread t([] {
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  });
+
+  EXPECT_TRUE(t.joinable());
+  t.join();
+  EXPECT_FALSE(t.joinable());
+}
+
+//
+// Test 5: Verify using a class member function with an argument as thread work.
+//
+TEST(FtlThreadTest, ClassMethodWithArgument) {
+  // A simple test class with a member function that takes an int parameter.
+  class TestClass {
+   public:
+    TestClass() : result(0) {}
+    void doWork(int value) { result = value; }
+    int result;
+  };
+
+  TestClass obj;
+  // Create a thread that calls the member function.
+  // The thread constructor should forward the arguments appropriately.
+  ftl::NativeThread t(&TestClass::doWork, &obj, 456);
+  t.join();
+
+  EXPECT_EQ(obj.result, 456);
+}
+
+}  // namespace

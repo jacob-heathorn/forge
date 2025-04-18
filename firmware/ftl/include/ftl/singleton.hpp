@@ -6,7 +6,7 @@
 #include <utility>
 
 
-namespace forge
+namespace ftl
 {
 
 // This template provides a mechanism for ensuring that only one instance of a derived class exists
@@ -44,6 +44,12 @@ public:
     Singleton(const Singleton&) = delete;
     Singleton& operator=(const Singleton&) = delete;
 
+    // Use a function-local static boolean to track whether the instance was created.
+    static bool& isCreated() {
+        static bool flag = false;
+        return flag;
+    }
+
 protected:
     Singleton()
     {
@@ -59,12 +65,6 @@ private:
         // By then, T should be complete.
         static typename std::aligned_storage<sizeof(T), alignof(T)>::type buffer;
         return &buffer;
-    }
-
-    // Use a function-local static boolean to track whether the instance was created.
-    static bool& isCreated() {
-        static bool flag = false;
-        return flag;
     }
 };
 

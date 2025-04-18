@@ -20,8 +20,12 @@
   "editor.tabSize": 2,
   "editor.wordWrapColumn": 100,
   "files.associations": {
-    "iostream": "cpp"
-  },
+    "iostream": "cpp",
+    "type_traits": "cpp",
+    "utility": "cpp",
+    "cstdint": "cpp",
+    "optional": "cpp"
+},
 
   "editor.tokenColorCustomizations": {
       "textMateRules": [

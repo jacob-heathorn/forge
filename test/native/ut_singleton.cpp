@@ -1,12 +1,12 @@
 #include "gtest/gtest.h"
-#include "forge/singleton.hpp"
+#include "ftl/singleton.hpp"
 #include <cassert>
 
-// Define a simple test class that inherits from forge::Singleton.
+// Define a simple test class that inherits from ftl::Singleton.
 namespace {
-class TestSingleton : public forge::Singleton<TestSingleton> {
+class TestSingleton : public ftl::Singleton<TestSingleton> {
     // Allow the singleton base to access TestSingleton's constructor.
-    friend class forge::Singleton<TestSingleton>;
+    friend class ftl::Singleton<TestSingleton>;
 public:
     int value;
 

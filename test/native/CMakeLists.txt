@@ -2,12 +2,14 @@
 add_platform_test(gtest-ut-simple ut_simple.cpp)
 add_pw_test(pw-ut-simple ut_simple.cpp)
 
-# Other unit tests.
-add_platform_test(ut-forge
+# FTL unit tests.
+add_platform_test(ut-ftl
   ut_bump_allocator.cpp
   ut_singleton.cpp
+  ut_mutex.cpp
+  ut_thread.cpp
 )
-target_link_libraries(ut-forge forge)
+target_link_libraries(ut-ftl ftl ftl-native)
 
 # Manual tests
 add_executable(hello-world hello_world.cpp)

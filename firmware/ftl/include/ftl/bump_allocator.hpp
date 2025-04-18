@@ -3,7 +3,7 @@
 #include <new>      // For placement new
 #include <utility>  // For std::forward
 
-namespace forge {
+namespace ftl {
 
 // BumpAllocator provides a simple, linear ("bump") memory allocator.
 // It allocates memory from a contiguous block, moving a pointer forward
