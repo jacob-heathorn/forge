@@ -1,3 +1,5 @@
+#pragma once
+
 #include <stddef.h>
 #include <stdint.h>
 #include <new>      // For placement new
