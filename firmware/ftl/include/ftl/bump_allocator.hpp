@@ -57,7 +57,7 @@ class BumpAllocator {
   uint8_t* ptr_ = nullptr;
   // Base of the memory block.
   uint8_t* base_ = nullptr;
-  // End of the memory block.
+  // One past the end of the memory block.
   uint8_t* end_ = nullptr;
 };
 
