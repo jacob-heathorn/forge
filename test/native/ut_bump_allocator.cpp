@@ -5,6 +5,7 @@
 //   - Allocation returns a valid pointer.
 //   - Allocated memory is properly aligned.
 //   - Allocation fails (returns nullptr) when out of memory.
+//   - Allocation succeeds when exactly filling the block.
 //   - The templated allocate() method constructs an object correctly.
 //   - The reset() method allows reusing the memory block.
 //
@@ -24,10 +25,10 @@ class TestObject {
 };
 
 namespace {
-  // Constants for the test memory block.
-  const size_t kBlockSize = 1024;
-  // A static memory block used by the allocator in tests.
-  uint8_t gMemoryBlock[kBlockSize];
+// Constants for the test memory block.
+constexpr size_t kBlockSize = 1024;
+// A static memory block used by the allocator in tests.
+uint8_t gMemoryBlock[kBlockSize];
 }  // namespace
 
 // Test fixture for BumpAllocator tests.
@@ -35,7 +36,7 @@ class BumpAllocatorTest : public ::testing::Test {
  protected:
   void SetUp() override {
     // Reset the memory block to zeros.
-    memset(gMemoryBlock, 0, kBlockSize);
+    std::memset(gMemoryBlock, 0, kBlockSize);
     // Construct the bump allocator using the test memory block.
     allocator_ = new ftl::BumpAllocator(gMemoryBlock, kBlockSize);
   }
@@ -58,7 +59,7 @@ TEST_F(BumpAllocatorTest, AllocateProperlyAlignsMemory) {
   // Allocate 50 bytes with a 16-byte alignment requirement.
   void* ptr = allocator_->allocate(50, 16);
   uintptr_t addr = reinterpret_cast<uintptr_t>(ptr);
-  EXPECT_EQ(addr % 16, 0);
+  EXPECT_EQ(addr % 16, 0u);
 }
 
 // Tests that allocate() returns nullptr when there is not enough memory.
@@ -66,6 +67,21 @@ TEST_F(BumpAllocatorTest, AllocateReturnsNullWhenOutOfMemory) {
   // Try to allocate more bytes than available.
   void* ptr = allocator_->allocate(kBlockSize + 1);
   EXPECT_EQ(ptr, nullptr);
+}
+
+// Tests that allocation of the exact block size succeeds.
+TEST_F(BumpAllocatorTest, AllocateExactBlockSizeSucceeds) {
+  void* ptr = allocator_->allocate(kBlockSize);
+  EXPECT_NE(ptr, nullptr);
+}
+
+// Tests that allocating one more byte after filling the block fails.
+TEST_F(BumpAllocatorTest, AllocateOneByteTooManyAfterExact) {
+  void* ptr1 = allocator_->allocate(kBlockSize);
+  ASSERT_NE(ptr1, nullptr);
+  // Now the block is exhausted; a further tiny allocation must fail.
+  void* ptr2 = allocator_->allocate(1);
+  EXPECT_EQ(ptr2, nullptr);
 }
 
 // Tests the templated allocate() method which constructs an object in allocated memory.
