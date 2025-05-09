@@ -5,6 +5,7 @@ add_pw_test(pw-ut-simple ut_simple.cpp)
 # FTL unit tests.
 add_platform_test(ut-ftl
   ut_bump_allocator.cpp
+  ut_bump_pool.cpp
   ut_singleton.cpp
   ut_mutex.cpp
   ut_thread.cpp
