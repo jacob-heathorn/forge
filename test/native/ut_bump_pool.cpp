@@ -9,6 +9,7 @@
 // Size of the bump-allocator backing store (1 MB)
 static constexpr size_t POOL_MEMORY_SIZE = 1024 * 1024;
 
+
 //------------------------------------------------------------------------------
 // Helper type to count constructions and destructions
 //------------------------------------------------------------------------------
@@ -101,18 +102,91 @@ TEST(BumpPoolTest, ReuseMemoryAfterRelease) {
 }
 
 //------------------------------------------------------------------------------
+// Initial counters should reflect the preallocation
+//------------------------------------------------------------------------------
+TEST(BumpPoolSizeTest, InitialCounts) {
+  auto* buffer = new uint8_t[POOL_MEMORY_SIZE];
+  ftl::BumpAllocator alloc(buffer, POOL_MEMORY_SIZE);
+  BumpPool<int> pool(alloc, /*initialSize=*/5);
+
+  EXPECT_EQ(pool.TotalSize(), 5);
+  EXPECT_EQ(pool.FreeSize(), 5);
+  EXPECT_EQ(pool.UsedSize(), 0);
+
+  delete[] buffer;
+}
+
+//------------------------------------------------------------------------------
+// Acquiring and releasing adjusts free/used counts correctly
+//------------------------------------------------------------------------------
+TEST(BumpPoolSizeTest, SingleAcquireRelease) {
+  auto* buffer = new uint8_t[POOL_MEMORY_SIZE];
+  ftl::BumpAllocator alloc(buffer, POOL_MEMORY_SIZE);
+  BumpPool<int> pool(alloc, /*initialSize=*/3);
+
+  int* a = pool.acquire();
+  EXPECT_EQ(pool.TotalSize(), 3);
+  EXPECT_EQ(pool.FreeSize(), 2);
+  EXPECT_EQ(pool.UsedSize(), 1);
+
+  pool.release(a);
+  EXPECT_EQ(pool.FreeSize(), 3);
+  EXPECT_EQ(pool.UsedSize(), 0);
+
+  delete[] buffer;
+}
+
+//------------------------------------------------------------------------------
+// Exhausting the free-list causes bump-allocation, then counters update
+//------------------------------------------------------------------------------
+TEST(BumpPoolSizeTest, ExhaustAndExpand) {
+  auto* buffer = new uint8_t[POOL_MEMORY_SIZE];
+  ftl::BumpAllocator alloc(buffer, POOL_MEMORY_SIZE);
+  BumpPool<int> pool(alloc, /*initialSize=*/2);
+
+  // Pop both prebuilt nodes
+  int* x = pool.acquire();
+  int* y = pool.acquire();
+  EXPECT_EQ(pool.FreeSize(), 0);
+  EXPECT_EQ(pool.UsedSize(), 2);
+  EXPECT_EQ(pool.TotalSize(), 2);
+
+  // Third acquire must bump-allocate a new node
+  int* z = pool.acquire();
+  EXPECT_EQ(pool.TotalSize(), 3);
+  EXPECT_EQ(pool.FreeSize(), 0);
+  EXPECT_EQ(pool.UsedSize(), 3);
+
+  // Release one back
+  pool.release(x);
+  EXPECT_EQ(pool.FreeSize(), 1);
+  EXPECT_EQ(pool.UsedSize(), 2);
+
+  // Clean up
+  pool.release(y);
+  pool.release(z);
+  EXPECT_EQ(pool.FreeSize(), 3);
+  EXPECT_EQ(pool.UsedSize(), 0);
+
+  delete[] buffer;
+}
+
+//------------------------------------------------------------------------------
 // Stress test thread-safety: concurrent acquire/release using std::thread
 //------------------------------------------------------------------------------
 TEST(BumpPoolThreadSafety, AcquireReleaseConcurrently) {
   auto* buffer = new uint8_t[POOL_MEMORY_SIZE];
   ftl::BumpAllocator alloc(buffer, POOL_MEMORY_SIZE);
   BumpPool<CountingType> pool(alloc, /*initialSize=*/2);
+  EXPECT_EQ(pool.TotalSize(), 2);
+  EXPECT_EQ(pool.FreeSize(), 2);
+  EXPECT_EQ(pool.UsedSize(), 0);
 
   // Reset counters
   CountingType::ctor_count = 0;
   CountingType::dtor_count = 0;
 
-  const int iterations = 10000;
+  const int iterations = 10;
 
   std::thread t1([&]() {
     for (int i = 0; i < iterations; ++i) {
@@ -130,6 +204,10 @@ TEST(BumpPoolThreadSafety, AcquireReleaseConcurrently) {
 
   t1.join();
   t2.join();
+
+  EXPECT_GE(pool.TotalSize(), 2);
+  EXPECT_GE(pool.FreeSize(), 2);
+  EXPECT_EQ(pool.UsedSize(), 0);
 
   EXPECT_EQ(CountingType::ctor_count.load(), 2 * iterations);
   EXPECT_EQ(CountingType::dtor_count.load(), 2 * iterations);

@@ -39,6 +39,7 @@ class BumpPool {
         ftl::LockGuard<ftl::Mutex> lock(allocatorMutex_);
         mem = allocator_.allocate(sizeof(Node));
       }
+      total_count_.fetch_add(1, std::memory_order_relaxed);
       auto* node = new (mem) Node{};
       pushNode_(node);
     }
@@ -47,6 +48,21 @@ class BumpPool {
   // No copying or moving
   BumpPool(const BumpPool&) = delete;
   BumpPool& operator=(const BumpPool&) = delete;
+
+  // Total nodes ever allocated (steady-state capacity)
+  std::size_t TotalSize() const noexcept {
+    return total_count_.load(std::memory_order_relaxed);
+  }
+
+  // Nodes currently in the free-list (available)
+  std::size_t FreeSize() const noexcept {
+    return free_count_.load(std::memory_order_relaxed);
+  }
+
+  // Nodes currently in use (acquired)
+  std::size_t UsedSize() const noexcept {
+    return TotalSize() - FreeSize();
+  }
 
   // Acquire an object.  If the free‑list is non‑empty, pop it lock‑free.
   // Otherwise grab a fresh node under the mutex.
@@ -60,6 +76,7 @@ class BumpPool {
         ftl::LockGuard<ftl::Mutex> lock(allocatorMutex_);
         mem = allocator_.allocate(sizeof(Node));
       }
+      total_count_.fetch_add(1, std::memory_order_relaxed);
       node = new (mem) Node{};
     }
     // placement‑new the T inside our node
@@ -111,6 +128,7 @@ class BumpPool {
       {
         // 3) Successful pop: detach the node from the list
         head->next = nullptr;
+        free_count_.fetch_sub(1, std::memory_order_relaxed);
         return head;
       }
       // Failure path: head now holds the latest head_.loop continues
@@ -157,6 +175,7 @@ class BumpPool {
     // 3) At this point, `node` has been atomically installed
     //    as the new head of the free‑list, and anyone popping
     //    will see it (with acquire semantics on their side).
+    free_count_.fetch_add(1, std::memory_order_relaxed);
   }
 
   static_assert(std::atomic<Node*>::is_always_lock_free,
@@ -165,4 +184,6 @@ class BumpPool {
   ftl::BumpAllocator&        allocator_;
   ftl::Mutex            allocatorMutex_;  // only used when bump‑allocating
   std::atomic<Node*>    head_{nullptr};   // free‑list head
+  std::atomic<std::size_t>  total_count_{0};
+  std::atomic<std::size_t>  free_count_{0};
 };
