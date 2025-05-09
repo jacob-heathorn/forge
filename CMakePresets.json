@@ -18,7 +18,8 @@
       "inherits": "default",
       "toolchainFile": "${sourceDir}/cmake/native/toolchain.cmake",
       "cacheVariables": {
-        "PLATFORM_PATH": "${sourceDir}/cmake/native"
+        "PLATFORM_PATH": "${sourceDir}/cmake/native",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
       }
     },
     {
