@@ -7,10 +7,3 @@ file(GLOB_RECURSE FTL_HEADERS CONFIGURE_DEPENDS
 )
 
 target_sources(ftl INTERFACE ${FTL_HEADERS})
-
-# Add ETL (Embedded Template Library)
-add_subdirectory(
-  $ENV{ETL_ROOT}
-  ${CMAKE_BINARY_DIR}/etl
-)
-target_link_libraries(ftl-threadx INTERFACE etl)

@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <thread>
+#include "etl/memory.h"
 
 #include "ftl/bump_allocator.hpp"
 #include "ftl/bump_pool.hpp"
@@ -211,6 +212,38 @@ TEST(BumpPoolThreadSafety, AcquireReleaseConcurrently) {
 
   EXPECT_EQ(CountingType::ctor_count.load(), 2 * iterations);
   EXPECT_EQ(CountingType::dtor_count.load(), 2 * iterations);
+
+  delete[] buffer;
+}
+
+//------------------------------------------------------------------------------
+// Test automatic release via unique_ptr custom deleter
+//------------------------------------------------------------------------------
+TEST(BumpPoolTest, UniquePtrAutomaticRelease) {
+  auto* buffer = new uint8_t[POOL_MEMORY_SIZE];
+  ftl::BumpAllocator alloc(buffer, POOL_MEMORY_SIZE);
+  BumpPool<int> pool(alloc, /*initialSize=*/1);
+
+  // Initially exactly one free slot, none in use
+  EXPECT_EQ(pool.FreeSize(), 1);
+  EXPECT_EQ(pool.UsedSize(), 0);
+
+  {
+    // Create a unique_ptr that will call pool.release(...) when destroyed
+    auto deleter = [&](int* p){ pool.release(p); };
+    etl::unique_ptr<int, decltype(deleter)> ptr(pool.acquire(123), deleter);
+
+    // The pointer holds our value, and the pool is now empty/1 in use
+    EXPECT_EQ(*ptr, 123);
+    EXPECT_EQ(pool.FreeSize(), 0);
+    EXPECT_EQ(pool.UsedSize(), 1);
+
+    // Exiting this scope will destroy ptr and call pool.release(ptr.get())
+  }
+
+  // After scope exit, the slot is returned automatically
+  EXPECT_EQ(pool.FreeSize(), 1);
+  EXPECT_EQ(pool.UsedSize(), 0);
 
   delete[] buffer;
 }
