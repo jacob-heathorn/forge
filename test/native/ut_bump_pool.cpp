@@ -2,7 +2,7 @@
 
 #include <atomic>
 #include <thread>
-#include "etl/memory.h"
+#include <memory>
 
 #include "ftl/bump_allocator.hpp"
 #include "ftl/bump_pool.hpp"
@@ -231,7 +231,7 @@ TEST(BumpPoolTest, UniquePtrAutomaticRelease) {
   {
     // Create a unique_ptr that will call pool.release(...) when destroyed
     auto deleter = [&](int* p){ pool.release(p); };
-    etl::unique_ptr<int, decltype(deleter)> ptr(pool.acquire(123), deleter);
+    std::unique_ptr<int, decltype(deleter)> ptr(pool.acquire(123), deleter);
 
     // The pointer holds our value, and the pool is now empty/1 in use
     EXPECT_EQ(*ptr, 123);
