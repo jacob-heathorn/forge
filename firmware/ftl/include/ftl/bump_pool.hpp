@@ -44,10 +44,13 @@ class BumpPool {
       pushNode_(node);
     }
   }
+  ~BumpPool() = default;
 
-  // No copying or moving
-  BumpPool(const BumpPool&) = delete;
-  BumpPool& operator=(const BumpPool&) = delete;
+  // No copying or moving.
+  BumpPool(const BumpPool&) = delete;            // Delete copy constructor
+  BumpPool& operator=(const BumpPool&) = delete; // Delete copy assignment operator
+  BumpPool(BumpPool&&) = delete;                 // Delete move constructor
+  BumpPool& operator=(BumpPool&&) = delete;      // Delete move assignment operator
 
   // Total nodes ever allocated (steady-state capacity)
   std::size_t TotalSize() const noexcept {
@@ -99,6 +102,7 @@ class BumpPool {
   }
 
  private:
+
   // Single‑linked list node; storage for T + next pointer
   struct Node {
     Node* next{nullptr};
