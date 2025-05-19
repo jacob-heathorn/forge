@@ -1,34 +1,47 @@
 #pragma once
 
 #include "ftl/bump_pool.hpp"
+#include "ftl/deleter.hpp"
 
+//-------------------------------------------------------------------------------------------------
+// UniqueBumpPool: combines a bump allocator pool with a polymorphic deleter. Inherits BumpPool<D>
+// for pool management and PolymorphicDeleter<B> for runtime-deletions. Provides acquire() to wrap
+// new objects in a std::unique_ptr<B, DelegatingDeleter<B>> that returns memory to the pool.
+//
+// Let base class (B) equal derived class (D) if you don't need to use the polymorphism this class
+// provides.
+//-------------------------------------------------------------------------------------------------
 template <typename D, typename B = D>
 class UniqueBumpPool
-  : public BumpPool<D>              // get all the pool logic “for free”
-  , public PolymorphicDeleter<B>    // satisfy the polymorphic-deleter interface
+  : public BumpPool<D>
+  , public PolymorphicDeleter<B>
 {
 public:
-  // Inherit the pool’s constructor(s):
+  // Inherit all constructors from the base bump pool.
   using BumpPool<D>::BumpPool;
 
-  // We still want no copies or moves:
-  UniqueBumpPool(const UniqueBumpPool&)            = delete;
+  // Prevent copying.
+  UniqueBumpPool(const UniqueBumpPool&) = delete;
   UniqueBumpPool& operator=(const UniqueBumpPool&) = delete;
-  UniqueBumpPool(UniqueBumpPool&&)                 = delete;
-  UniqueBumpPool& operator=(UniqueBumpPool&&)      = delete;
 
-  // PolymorphicDeleter<B> requires us to override operator():
+  // Prevent moving.
+  UniqueBumpPool(UniqueBumpPool&&) = delete;
+  UniqueBumpPool& operator=(UniqueBumpPool&&) = delete;
+
+  // Override polymorphic deleter call: release object back to the pool.
+  // @param ptr Pointer to the object to release.
   void operator()(B* ptr) override
   {
-    // call the pool’s release, casting back to D*
     BumpPool<D>::release(static_cast<D*>(ptr));
   }
 
-  // Acquire returns a unique_ptr that uses *this* as its deleter.
+  // Acquire an object from the pool and wrap it in a unique_ptr.
+  // @tparam Args Constructor argument types.
+  // @param args Arguments forwarded to the object's constructor.
+  // @return std::unique_ptr<B, DelegatingDeleter<B>> that returns memory on destruction.
   template <typename... Args>
   std::unique_ptr<B, DelegatingDeleter<B>> acquire(Args&&... args)
   {
-    // Note: unique_ptr will copy/move your deleter (UniqueBumpPool) by value
     return {
       BumpPool<D>::acquire(std::forward<Args>(args)...),
       DelegatingDeleter<B>{this}

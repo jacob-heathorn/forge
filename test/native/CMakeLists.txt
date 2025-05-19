@@ -9,6 +9,7 @@ add_platform_test(ut-ftl
   ut_singleton.cpp
   ut_mutex.cpp
   ut_thread.cpp
+  ut_unique_bump_pool.cpp
 )
 target_link_libraries(ut-ftl ftl ftl-native)
 
