@@ -61,8 +61,7 @@ public:
     }
 
     // Construct the Buffer handle in-place
-    std::size_t bufBytes = (slot + 1) * kAlign;
-    new (&node->buf) Buffer{ reinterpret_cast<uint8_t*>(node + 1), bufBytes };
+    new (&node->buf) Buffer{ reinterpret_cast<uint8_t*>(node + 1), size };
     return &node->buf;
   }
 
