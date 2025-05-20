@@ -37,21 +37,23 @@ TEST_F(BufferBumpPoolTest, AcquireReturnsAlignedBuffer) {
     }
 }
 
-// Ensure head moves at least payload size but no more than payload + 2*ALIGN
+// Ensure head moves at least payload size but no more than payload + 2*kAlign
 TEST_F(BufferBumpPoolTest, AcquireHeadAdvanceWithinBounds) {
-    static constexpr size_t ALIGN = 64;
+    static constexpr size_t kAlign = 64;
+    static_assert(kAlign == ftl::BufferBumpPool::kAlign);
+    static_assert(2048 == ftl::BufferBumpPool::kMaxSize);
     std::vector<size_t> sizes = {1, 64*2, 64*3+100, 64*4+128, 64*5+200, 2048};
     for (auto sz : sizes) {
         auto headBefore = alloc_->head();
         ftl::Buffer* buf = pool_->acquire(sz);
         auto headAfter = alloc_->head();
 
-        size_t bufBytes = ((sz + ALIGN - 1) / ALIGN) * ALIGN;
+        size_t bufBytes = ((sz + kAlign - 1) / kAlign) * kAlign;
         size_t advance  = static_cast<size_t>(headAfter - headBefore);
 
         EXPECT_GE(advance, bufBytes)
             << "Head advanced " << advance << " < payload rounded up size=" << bufBytes;
-        EXPECT_LE(advance, bufBytes + 2 * ALIGN)
+        EXPECT_LE(advance, bufBytes + 2 * kAlign)
             << "Head advanced " << advance << " > max allowed for sz=" << sz;
 
         pool_->release(buf);
@@ -60,7 +62,10 @@ TEST_F(BufferBumpPoolTest, AcquireHeadAdvanceWithinBounds) {
 
 // Verify head advance rounds metadata+payload up to the next 64-byte boundary
 TEST_F(BufferBumpPoolTest, AcquireMinimalHeadAdvance) {
-    static constexpr size_t ALIGN = 64;
+    static constexpr size_t kAlign = 64;
+    static_assert(kAlign == ftl::BufferBumpPool::kAlign);
+    static_assert(2048 == ftl::BufferBumpPool::kMaxSize);
+    
     std::vector<size_t> sizes = {1, 64*2, 64*3+100, 64*4+128, 64*5+200, 2048};
     for (auto sz : sizes) {
         // snapshot the head before
@@ -72,14 +77,14 @@ TEST_F(BufferBumpPoolTest, AcquireMinimalHeadAdvance) {
         // snapshot after
         auto headAfter = alloc_->head();
 
-        // payload always rounded up to ALIGN
-        size_t bufBytes = ((sz + ALIGN - 1) / ALIGN) * ALIGN;
+        // payload always rounded up to kAlign
+        size_t bufBytes = ((sz + kAlign - 1) / kAlign) * kAlign;
         // metadata = next‐pointer + Buffer handle
         size_t metadata = sizeof(void*) + sizeof(ftl::Buffer);
         // total bytes requested
         size_t total = metadata + bufBytes;
-        // expected bump = round_up(total, ALIGN)
-        size_t expectedAdvance = ((total + ALIGN - 1) / ALIGN) * ALIGN;
+        // expected bump = round_up(total, kAlign)
+        size_t expectedAdvance = ((total + kAlign - 1) / kAlign) * kAlign;
         // actual observed bump
         size_t actualAdvance = static_cast<size_t>(headAfter - headBefore);
 

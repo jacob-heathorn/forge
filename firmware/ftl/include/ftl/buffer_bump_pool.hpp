@@ -24,6 +24,13 @@ namespace ftl {
 //-------------------------------------------------------------------------------------------------
 class BufferBumpPool {
 public:
+  // Alignment in bytes for each buffer (matches CPU cache line size)
+  static constexpr std::size_t kAlign   = 64;
+  // Maximum payload size the pool will hand out
+  static constexpr std::size_t kMaxSize = 2048;
+  // Number of size classes (buckets) = kMaxSize / kAlign
+  static constexpr std::size_t kNumSlots = kMaxSize / kAlign;
+
   explicit BufferBumpPool(ftl::BumpAllocator& alloc)
     : allocator_(alloc)
   {
@@ -43,7 +50,7 @@ public:
   // 64-byte multiple).  Returns a pointer to an ftl::Buffer which holds
   // a 64-byte-aligned block of at least that size.
   Buffer* acquire(std::size_t size) {
-    assert(size <= MAX_SIZE && "Requested size exceeds maximum buffer size");
+    assert(size <= kMaxSize && "Requested size exceeds maximum buffer size");
     const std::size_t slot = slotForSize(size);
 
     // attempt to get from free list
@@ -54,7 +61,7 @@ public:
     }
 
     // Construct the Buffer handle in-place
-    std::size_t bufBytes = (slot + 1) * ALIGN;
+    std::size_t bufBytes = (slot + 1) * kAlign;
     new (&node->buf) Buffer{ reinterpret_cast<uint8_t*>(node + 1), bufBytes };
     return &node->buf;
   }
@@ -73,20 +80,16 @@ public:
   }
 
 private:
-  static constexpr std::size_t ALIGN     = 64;
-  static constexpr std::size_t MAX_SIZE  = 2048;
-  static constexpr std::size_t NUM_SLOTS = MAX_SIZE / ALIGN;
-
   struct Node {
     Node* next;
     Buffer buf;    // in-place handle to the payload
   };
 
-  // Map an arbitrary size to a slot index [0 .. NUM_SLOTS-1]
+  // Map an arbitrary size to a slot index [0 .. kNumSlots-1]
   static std::size_t slotForSize(std::size_t size) {
-    std::size_t buckets = (size + ALIGN - 1) / ALIGN;
+    std::size_t buckets = (size + kAlign - 1) / kAlign;
     if (buckets == 0) buckets = 1;
-    if (buckets > NUM_SLOTS) buckets = NUM_SLOTS;
+    if (buckets > kNumSlots) buckets = kNumSlots;
     return buckets - 1;
   }
 
@@ -110,7 +113,7 @@ private:
   // Allocate a new Node + payload for slot 'i', ensuring the payload
   // is 64-byte aligned.
   Node* allocateNode_(std::size_t i) {
-    const std::size_t bufBytes = (i + 1) * ALIGN;
+    const std::size_t bufBytes = (i + 1) * kAlign;
     size_t pad = 0;
     void*  rawPtr = nullptr;
 
@@ -120,7 +123,7 @@ private:
 
       // 1) snapshot current head and compute how many bytes of padding are needed
       uintptr_t base      = reinterpret_cast<uintptr_t>(allocator_.head()) + sizeof(Node);
-      pad = (ALIGN - (base % ALIGN)) % ALIGN;
+      pad = (kAlign - (base % kAlign)) % kAlign;
 
       // 2) ask for exactly metadata + pad + payload
       size_t totalBytes = sizeof(Node) + pad + bufBytes;
@@ -140,7 +143,7 @@ private:
 
   ftl::BumpAllocator&              allocator_;
   ftl::Mutex                       mutex_;
-  etl::array<Node*, NUM_SLOTS>     heads_;
+  etl::array<Node*, kNumSlots>     heads_;
 };
 
 } // namespace ftl
