@@ -3,10 +3,15 @@
 #include <cstddef>
 #include <cstdint>
 #include <new>               // for placement new
+#include <cassert>
+#include <cstddef>           // for offsetof
 #include "etl/array.h"
 
+#include "ftl/buffer.hpp"
 #include "ftl/bump_allocator.hpp"
 #include "ftl/mutex.hpp"
+
+namespace ftl {
 
 //-------------------------------------------------------------------------------------------------
 // BufferBumpPool
@@ -34,10 +39,10 @@ public:
   BufferBumpPool(BufferBumpPool&&) = delete;
   BufferBumpPool& operator=(BufferBumpPool&&) = delete;
 
-  // Acquire a buffer of at least 'size' bytes (rounded up to the next
-  // 64-byte multiple).  Returns a pointer aligned to 64 bytes.
-  uint8_t* acquire(std::size_t size) {
-    // TODO: error handling.
+  // Acquire a Buffer of at least 'size' bytes (rounded up to the next
+  // 64-byte multiple).  Returns a pointer to an ftl::Buffer which holds
+  // a 64-byte-aligned block of at least that size.
+  Buffer* acquire(std::size_t size) {
     assert(size <= MAX_SIZE && "Requested size exceeds maximum buffer size");
     const std::size_t slot = slotForSize(size);
 
@@ -47,16 +52,23 @@ public:
       // allocate a new node+payload
       node = allocateNode_(slot);
     }
-    // payload immediately follows Node header
-    return reinterpret_cast<uint8_t*>(node + 1);
+
+    // Construct the Buffer handle in-place
+    std::size_t bufBytes = (slot + 1) * ALIGN;
+    new (&node->buf) Buffer{ reinterpret_cast<uint8_t*>(node + 1), bufBytes };
+    return &node->buf;
   }
 
-  // Return a buffer previously acquired with the same 'size'.
-  // Thread-safe: pushes the node back onto its slot’s free list.
-  void release(uint8_t* buffer, std::size_t size) noexcept {
+  // Return a Buffer previously acquired.  Thread-safe: pushes the node
+  // back onto its slot’s free list.
+  void release(Buffer* buffer) noexcept {
     if (!buffer) return;
-    Node* node = reinterpret_cast<Node*>(buffer) - 1;
-    const std::size_t slot = slotForSize(size);
+
+    // Recover the Node* from the Buffer* via offsetof
+    auto nodePtr = reinterpret_cast<uint8_t*>(buffer) - offsetof(Node, buf);
+    Node* node = reinterpret_cast<Node*>(nodePtr);
+
+    const std::size_t slot = slotForSize(buffer->size());
     pushNode_(slot, node);
   }
 
@@ -67,6 +79,7 @@ private:
 
   struct Node {
     Node* next;
+    Buffer buf;    // in-place handle to the payload
   };
 
   // Map an arbitrary size to a slot index [0 .. NUM_SLOTS-1]
@@ -119,3 +132,5 @@ private:
   ftl::Mutex                       mutex_;
   etl::array<Node*, NUM_SLOTS>     heads_;
 };
+
+} // namespace ftl
