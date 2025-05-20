@@ -40,7 +40,7 @@ TEST_F(BufferBumpPoolTest, AcquireReturnsAlignedBuffer) {
 // Ensure head moves at least payload size but no more than payload + 2*ALIGN
 TEST_F(BufferBumpPoolTest, AcquireHeadAdvanceWithinBounds) {
     static constexpr size_t ALIGN = 64;
-    std::vector<size_t> sizes = {1, 64, 100, 128, 200, 2048};
+    std::vector<size_t> sizes = {1, 64*2, 64*3+100, 64*4+128, 64*5+200, 2048};
     for (auto sz : sizes) {
         auto headBefore = alloc_->head();
         ftl::Buffer* buf = pool_->acquire(sz);
@@ -54,15 +54,15 @@ TEST_F(BufferBumpPoolTest, AcquireHeadAdvanceWithinBounds) {
         EXPECT_LE(advance, bufBytes + 2 * ALIGN)
             << "Head advanced " << advance << " > max allowed for sz=" << sz;
 
-        // pool_->release(buf);
-        (void)buf;
+        pool_->release(buf);
     }
 }
 
 // Verify head advance rounds metadata+payload up to the next 64-byte boundary
 TEST_F(BufferBumpPoolTest, AcquireMinimalHeadAdvance) {
     static constexpr size_t ALIGN = 64;
-    for (auto sz : std::vector<size_t>{1, 64, 100, 128, 200, 2048}) {
+    std::vector<size_t> sizes = {1, 64*2, 64*3+100, 64*4+128, 64*5+200, 2048};
+    for (auto sz : sizes) {
         // snapshot the head before
         auto headBefore = alloc_->head();
 
@@ -88,8 +88,7 @@ TEST_F(BufferBumpPoolTest, AcquireMinimalHeadAdvance) {
             << " bytes but expected nearest 64-byte multiple " << expectedAdvance
             << " for request size=" << sz;
 
-        // pool_->release(buf);
-        (void)buf;
+        pool_->release(buf);
     }
 }
 
