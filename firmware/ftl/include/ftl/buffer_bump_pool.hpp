@@ -110,19 +110,29 @@ private:
   // Allocate a new Node + payload for slot 'i', ensuring the payload
   // is 64-byte aligned.
   Node* allocateNode_(std::size_t i) {
-    const std::size_t bufBytes   = (i + 1) * ALIGN;
-    const std::size_t totalBytes = sizeof(Node) + bufBytes + (ALIGN - 1);
+    const std::size_t bufBytes = (i + 1) * ALIGN;
+    size_t pad = 0;
+    void*  rawPtr = nullptr;
 
-    void* rawPtr;
     {
+      // Protect head() read, pad-calc, and allocate() in one critical section
       ftl::LockGuard<ftl::Mutex> lock(mutex_);
+
+      // 1) snapshot current head and compute how many bytes of padding are needed
+      uintptr_t base      = reinterpret_cast<uintptr_t>(allocator_.head()) + sizeof(Node);
+      pad = (ALIGN - (base % ALIGN)) % ALIGN;
+
+      // 2) ask for exactly metadata + pad + payload
+      size_t totalBytes = sizeof(Node) + pad + bufBytes;
       rawPtr = allocator_.allocate(totalBytes);
     }
 
-    uintptr_t base        = reinterpret_cast<uintptr_t>(rawPtr);
-    uintptr_t payloadAddr = (base + sizeof(Node) + (ALIGN - 1)) & ~(ALIGN - 1);
+    // 3) compute final addresses outside lock
+    uintptr_t newBase     = reinterpret_cast<uintptr_t>(rawPtr);
+    uintptr_t payloadAddr = newBase + sizeof(Node) + pad;
     uintptr_t nodeAddr    = payloadAddr - sizeof(Node);
 
+    // 4) construct node and return
     auto* node = reinterpret_cast<Node*>(nodeAddr);
     node->next = nullptr;
     return node;
