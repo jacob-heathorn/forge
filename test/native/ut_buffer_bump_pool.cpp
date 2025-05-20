@@ -27,7 +27,7 @@ protected:
 
 TEST_F(BufferBumpPoolTest, AcquireReturnsAlignedBuffer) {
     // various sizes, including boundary and clamp
-    std::vector<size_t> sizes = {1, 64, 100, 128, 200, 2048, 5000};
+    std::vector<size_t> sizes = {1, 64, 100, 128, 200, 2048};
     for (auto sz : sizes) {
         uint8_t* buf = pool_->acquire(sz);
         EXPECT_EQ(reinterpret_cast<uintptr_t>(buf) % 64, 0u)
@@ -60,13 +60,12 @@ TEST_F(BufferBumpPoolTest, DifferentSlotsAreSeparated) {
     EXPECT_EQ(buf65, buf65b);
 }
 
-TEST_F(BufferBumpPoolTest, ClampToMaxSize) {
-    // Asking >2048 bytes should clamp to 2048-slot
-    uint8_t* buf1 = pool_->acquire(5000);
-    pool_->release(buf1, 5000);
-    uint8_t* buf2 = pool_->acquire(5000);
-    EXPECT_EQ(buf1, buf2)
-        << "Oversize requests must map to max-slot and be reusable";
+TEST_F(BufferBumpPoolTest, AcquireOversizeTriggersAssert) {
+    // Asking for more than MAX_SIZE should hit our assert() and abort.
+    EXPECT_DEATH(
+        { pool_->acquire(5000); },
+        "Requested size exceeds maximum buffer size"
+    );
 }
 
 TEST_F(BufferBumpPoolTest, MultipleAllocationsDontCorrupt) {

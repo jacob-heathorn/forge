@@ -37,6 +37,8 @@ public:
   // Acquire a buffer of at least 'size' bytes (rounded up to the next
   // 64-byte multiple).  Returns a pointer aligned to 64 bytes.
   uint8_t* acquire(std::size_t size) {
+    // TODO: error handling.
+    assert(size <= MAX_SIZE && "Requested size exceeds maximum buffer size");
     const std::size_t slot = slotForSize(size);
 
     // attempt to get from free list
