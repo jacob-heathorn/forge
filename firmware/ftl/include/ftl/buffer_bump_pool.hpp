@@ -25,7 +25,7 @@ namespace ftl {
 class BufferBumpPool {
 public:
   // Alignment in bytes for each buffer (matches CPU cache line size)
-  static constexpr std::size_t kAlign   = 64;
+  static constexpr std::size_t kAlign = std::hardware_destructive_interference_size;
   // Maximum payload size the pool will hand out
   static constexpr std::size_t kMaxSize = 2048;
   // Number of size classes (buckets) = kMaxSize / kAlign

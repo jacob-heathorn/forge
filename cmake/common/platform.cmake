@@ -48,6 +48,7 @@ function(add_common_c_cxx_flags target)
     -Wduplicated-cond
     -Wmisleading-indentation
     -Wunused-but-set-parameter
+    $<$<COMPILE_LANGUAGE:CXX>:-Wno-interference-size>
   )
 
   # -ffunction-sections: Puts each function into its own unique section in the object file.

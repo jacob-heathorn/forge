@@ -12,10 +12,7 @@ class Buffer {
 public:
   Buffer() noexcept : data_{nullptr}, size_{0} {}
   Buffer(uint8_t* ptr, std::size_t sz) noexcept
-    : data_{ptr}, size_{sz} 
-  {
-    assert((reinterpret_cast<uintptr_t>(ptr) % kAlign) == 0 && "Buffer not aligned");
-  }
+    : data_{ptr}, size_{sz} {}
 
   /// Pointer to first byte
   uint8_t* front() noexcept { return data_; }
@@ -43,8 +40,6 @@ public:
   }
 
 private:
-  static constexpr std::size_t kAlign = 64;
-
   uint8_t*       data_;
   std::size_t    size_;
 };
