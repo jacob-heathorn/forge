@@ -31,6 +31,19 @@ public:
       );
     }
 
+    // Default constructs an empty data frame.
+    DataFrame() = default;
+
+    // Returns true if the buffer is not empty (DatFrame is not empty).
+    explicit operator bool() const noexcept {
+        return static_cast<bool>(buffer_);
+    }
+
+    // Releases (resets) our buffer; afterwards operator bool() will be false
+    void reset() noexcept {
+      buffer_.reset();
+    }
+
     // Movable but not copyable
     DataFrame(DataFrame&&) noexcept = default;
     DataFrame& operator=(DataFrame&&) noexcept = default;
