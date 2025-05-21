@@ -28,15 +28,21 @@ public:
   /// Write a trivially-copyable T at offset (must fit)
   template <typename T>
   void set(std::size_t offset, const T& value) {
+    static_assert(std::is_trivially_copyable_v<T>,
+                  "Buffer::set<T> requires T to be trivially copyable");
     assert(offset + sizeof(T) <= size_);
-    *reinterpret_cast<T*>(data_ + offset) = value;
+    memcpy(data_ + offset, &value, sizeof(T));
   }
 
   /// Read a trivially-copyable T from offset
   template <typename T>
   T get(std::size_t offset) const {
+    static_assert(std::is_trivially_copyable_v<T>,
+                  "Buffer::get<T> requires T to be trivially copyable");
     assert(offset + sizeof(T) <= size_);
-    return *reinterpret_cast<const T*>(data_ + offset);
+    T temp;
+    memcpy(&temp, data_ + offset, sizeof(T));
+    return temp;
   }
 
 private:
