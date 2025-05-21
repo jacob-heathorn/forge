@@ -52,9 +52,11 @@ public:
     ~DataFrame() = default;
 
     // Accessors
-    std::size_t size() const noexcept { return buffer_->size(); }
-    uint8_t*    front() noexcept    { return buffer_->front(); }
-    uint8_t*    back() noexcept     { return buffer_->back(); }
+    std::size_t       size() const noexcept   { return buffer_->size(); }
+    uint8_t*          front() noexcept        { return buffer_->front(); }
+    const uint8_t*    front() const noexcept  { return buffer_->front(); }
+    uint8_t*          back() noexcept         { return buffer_->back(); }
+    const uint8_t*    back() const noexcept   { return buffer_->back(); }
     
     /// Write a trivially-copyable T at offset (must fit)
     template <typename T>
