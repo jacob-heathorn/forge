@@ -21,28 +21,24 @@ struct BufferReleaser {
 // DataFrame owns a Buffer allocated from a BufferBumpPool
 class DataFrame {
 public:
+    explicit DataFrame(std::size_t size)
+    {
+      // single pool for all sizes, backed by the same allocator
+      // static BufferBumpPool pool{alloc};
+
+      // // wrap in unique_ptr with custom releaser
+      // buffer_ = std::make_unique<Buffer, BufferReleaser>(
+      //     pool.acquire(size),
+      //     BufferReleaser{&pool}
+      // );
+    }
+
     // Movable but not copyable
     DataFrame(DataFrame&&) noexcept = default;
     DataFrame& operator=(DataFrame&&) noexcept = default;
     DataFrame(const DataFrame&) = delete;
     DataFrame& operator=(const DataFrame&) = delete;
     ~DataFrame() = default;
-
-    // Factory: allocate 'size' bytes (rounded internally) from a shared pool
-    static DataFrame Create(BumpAllocator& alloc, std::size_t size) {
-        // single pool for all sizes, backed by the same allocator
-        static BufferBumpPool pool{alloc};
-
-        // acquire raw buffer pointer
-        Buffer* rawBuf = pool.acquire(size);
-
-        // wrap in unique_ptr with custom releaser
-        std::unique_ptr<Buffer, BufferReleaser> bufPtr(
-            rawBuf,
-            BufferReleaser{&pool}
-        );
-        return DataFrame(std::move(bufPtr));
-    }
 
     // Accessors
     std::size_t size() const noexcept { return buffer_->size(); }
@@ -55,13 +51,20 @@ public:
 
     /// Read a trivially-copyable T from offset
     template <typename T>
-    T get(std::size_t offset) const { return buffer_->get<T>(offset) }
+    T get(std::size_t offset) const { return buffer_->get<T>(offset); }
 
+    // static initialize(BumpAllocator& allocator) {
+    //   initialized_ = true;
+    // }
+    // static BufferBumpPool &pool() {
+    //   static BufferBumpPool pool{alloc};
+    // }
 private:
-    explicit DataFrame(std::unique_ptr<Buffer, BufferReleaser> buf)
-      : buffer_{std::move(buf)} {}
-
+    static BufferBumpPool kPool;
     std::unique_ptr<Buffer, BufferReleaser> buffer_;
 };
+
+static_assert(sizeof(DataFrame) == 2 * sizeof(uintptr_t),
+              "Expect DataFrame is exactly two machine words in size");
 
 } // namespace ftl
