@@ -23,14 +23,12 @@ class DataFrame {
 public:
     explicit DataFrame(std::size_t size)
     {
-      // single pool for all sizes, backed by the same allocator
-      // static BufferBumpPool pool{alloc};
-
-      // // wrap in unique_ptr with custom releaser
-      // buffer_ = std::make_unique<Buffer, BufferReleaser>(
-      //     pool.acquire(size),
-      //     BufferReleaser{&pool}
-      // );
+      assert(pool() && "DataFrame::initialize() has not been called.");
+      // Acquire the buffer.
+      buffer_ = std::unique_ptr<Buffer, BufferReleaser>(
+          pool()->acquire(size),
+          BufferReleaser{pool()}
+      );
     }
 
     // Movable but not copyable
@@ -53,14 +51,19 @@ public:
     template <typename T>
     T get(std::size_t offset) const { return buffer_->get<T>(offset); }
 
-    // static initialize(BumpAllocator& allocator) {
-    //   initialized_ = true;
-    // }
-    // static BufferBumpPool &pool() {
-    //   static BufferBumpPool pool{alloc};
-    // }
+    static void initialize(ftl::BumpAllocator &allocator)
+    {
+      static ftl::BufferBumpPool p{allocator};
+      pool() = &p;
+    }
+
+    static BufferBumpPool*& pool()
+    {
+      static BufferBumpPool* ptr = nullptr;
+      return ptr;
+    }
+
 private:
-    static BufferBumpPool kPool;
     std::unique_ptr<Buffer, BufferReleaser> buffer_;
 };
 
