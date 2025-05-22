@@ -24,6 +24,12 @@ public:
   virtual bool send(ipv4::udp::Payload payload, const ipv4::Endpoint dest) = 0;
   virtual ipv4::udp::Payload  receive(ipv4::Endpoint *const peer) = 0;
   virtual void close() = 0;
+
+  // Joins the given multicast group on the local interface.
+  virtual bool join_multicast_group(const ftl::ipv4::Address &group) = 0;
+
+  // Leaves the given multicast group on the local interface.
+  virtual bool leave_multicast_group(const ftl::ipv4::Address &group) = 0;
 };
 
 using SocketPtr = std::unique_ptr<Socket, DelegatingDeleter<Socket>>;
