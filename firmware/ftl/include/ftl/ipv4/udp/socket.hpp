@@ -19,6 +19,7 @@ public:
   Socket& operator=(Socket&&) = delete;
 
   virtual bool open(size_t recieve_queue_len = 1) = 0;
+  virtual bool is_open() const noexcept = 0;
   virtual bool bind(uint16_t port = 0) = 0;
   virtual bool send(ipv4::udp::Payload payload, const ipv4::Endpoint dest) = 0;
   virtual ipv4::udp::Payload  receive(ipv4::Endpoint *const peer) = 0;
