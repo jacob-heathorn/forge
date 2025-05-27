@@ -52,6 +52,8 @@ class BumpAllocator {
     ptr_ = base_;
   }
 
+  const uint8_t * head() const { return ptr_; }
+
  private:
   // Pointer to the current allocation position.
   uint8_t* ptr_ = nullptr;
