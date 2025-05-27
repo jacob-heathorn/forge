@@ -7,6 +7,9 @@
 #include "ftl/bump_allocator.hpp"
 #include "ftl/mutex.hpp"
 
+
+namespace ftl {
+
 //-------------------------------------------------------------------------------------------------
 // BumpPool (mutex-protected): fixed-capacity object pool backed by a bump allocator.
 // 
@@ -109,3 +112,5 @@ private:
   std::size_t  total_count_{0};       // number of nodes ever allocated
   std::size_t  free_count_{0};        // number of nodes currently in free-list
 };
+
+}

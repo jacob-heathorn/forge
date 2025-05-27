@@ -22,7 +22,7 @@ public:
   virtual bool is_open() const noexcept = 0;
   virtual bool bind(uint16_t port = 0) = 0;
   virtual bool send(ipv4::udp::Payload payload, const ipv4::Endpoint dest) = 0;
-  virtual ipv4::udp::Payload  receive(ipv4::Endpoint *const peer) = 0;
+  virtual ipv4::udp::Payload receive(ipv4::Endpoint *const peer) = 0;
   virtual void close() = 0;
 
   // Joins the given multicast group on the local interface.

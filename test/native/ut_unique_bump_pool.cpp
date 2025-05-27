@@ -42,7 +42,7 @@ protected:
 
 // Test basic acquire and element access for trivial type
 TEST_F(UniqueBumpPoolTest, AcquireReturnsValidUniquePtr) {
-  UniqueBumpPool<TestInt> pool{*allocator_, /*initialSize=*/1};
+  ftl::UniqueBumpPool<TestInt> pool{*allocator_, /*initialSize=*/1};
   auto ptr = pool.acquire(123);
 
   ASSERT_NE(ptr.get(), nullptr);
@@ -51,7 +51,7 @@ TEST_F(UniqueBumpPoolTest, AcquireReturnsValidUniquePtr) {
 
 // Test that releasing and re-acquiring reuses the same memory address
 TEST_F(UniqueBumpPoolTest, ReleaseAndAcquireReuseMemory) {
-  UniqueBumpPool<TestInt> pool{*allocator_, /*initialSize=*/1};
+  ftl::UniqueBumpPool<TestInt> pool{*allocator_, /*initialSize=*/1};
 
   uintptr_t first_addr;
   {
@@ -68,7 +68,7 @@ TEST_F(UniqueBumpPoolTest, ReleaseAndAcquireReuseMemory) {
 
 // Test polymorphic behavior with Base/Derived
 TEST_F(UniqueBumpPoolTest, PolymorphicDeleterWorksWithDerived) {
-  UniqueBumpPool<Derived, Base> pool{*allocator_, /*initialSize=*/1};
+  ftl::UniqueBumpPool<Derived, Base> pool{*allocator_, /*initialSize=*/1};
   auto ptr = pool.acquire(42);
 
   ASSERT_NE(ptr.get(), nullptr);
@@ -77,7 +77,7 @@ TEST_F(UniqueBumpPoolTest, PolymorphicDeleterWorksWithDerived) {
 
 // Test deleter type matches DelegatingDeleter<TestInt>
 TEST_F(UniqueBumpPoolTest, UniquePtrUsesDelegatingDeleter) {
-  UniqueBumpPool<TestInt> pool{*allocator_, /*initialSize=*/1};
+  ftl::UniqueBumpPool<TestInt> pool{*allocator_, /*initialSize=*/1};
   auto ptr = pool.acquire(7);
 
   using DeleterT = typename decltype(ptr)::deleter_type;
@@ -86,7 +86,7 @@ TEST_F(UniqueBumpPoolTest, UniquePtrUsesDelegatingDeleter) {
 
 // Test TotalSize, FreeSize, UsedSize after construction
 TEST_F(UniqueBumpPoolTest, InitialTotalFreeUsedSize) {
-  UniqueBumpPool<TestInt> pool{*allocator_, /*initialSize=*/3};
+  ftl::UniqueBumpPool<TestInt> pool{*allocator_, /*initialSize=*/3};
   EXPECT_EQ(pool.TotalSize(), 3u);
   EXPECT_EQ(pool.FreeSize(), 3u);
   EXPECT_EQ(pool.UsedSize(), 0u);
@@ -94,7 +94,7 @@ TEST_F(UniqueBumpPoolTest, InitialTotalFreeUsedSize) {
 
 // Test counts update on acquire and release
 TEST_F(UniqueBumpPoolTest, TotalFreeUsedSizeOnAcquireAndRelease) {
-  UniqueBumpPool<TestInt> pool{*allocator_, /*initialSize=*/2};
+  ftl::UniqueBumpPool<TestInt> pool{*allocator_, /*initialSize=*/2};
   EXPECT_EQ(pool.TotalSize(), 2u);
   EXPECT_EQ(pool.FreeSize(), 2u);
   EXPECT_EQ(pool.UsedSize(), 0u);

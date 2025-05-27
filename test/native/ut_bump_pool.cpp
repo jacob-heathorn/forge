@@ -51,7 +51,7 @@ protected:
 // Acquire returns non-null and release works
 //------------------------------------------------------------------------------
 TEST_F(BumpPoolTest, AcquireReturnsNonNull) {
-  BumpPool<int> pool(*alloc_);
+  ftl::BumpPool<int> pool(*alloc_);
 
   int* p = pool.acquire();
   EXPECT_NE(p, nullptr);
@@ -62,8 +62,7 @@ TEST_F(BumpPoolTest, AcquireReturnsNonNull) {
 // Release null is no-op
 //------------------------------------------------------------------------------
 TEST_F(BumpPoolTest, ReleaseNullIsNoOp) {
-  BumpPool<int> pool(*alloc_);
-
+  ftl::BumpPool<int> pool(*alloc_);
   EXPECT_NO_THROW(pool.release(nullptr));
 }
 
@@ -71,7 +70,7 @@ TEST_F(BumpPoolTest, ReleaseNullIsNoOp) {
 // Constructors and destructors are called correctly
 //------------------------------------------------------------------------------
 TEST_F(BumpPoolTest, ConstructorDestructorCount) {
-  BumpPool<CountingType> pool(*alloc_, /*initialSize=*/0);
+  ftl::BumpPool<CountingType> pool(*alloc_, /*initialSize=*/0);
 
   CountingType::ctor_count = 0;
   CountingType::dtor_count = 0;
@@ -88,7 +87,7 @@ TEST_F(BumpPoolTest, ConstructorDestructorCount) {
 // Released memory is reused
 //------------------------------------------------------------------------------
 TEST_F(BumpPoolTest, ReuseMemoryAfterRelease) {
-  BumpPool<int> pool(*alloc_, /*initialSize=*/1);
+  ftl::BumpPool<int> pool(*alloc_, /*initialSize=*/1);
 
   int* first  = pool.acquire();
   pool.release(first);
@@ -102,7 +101,7 @@ TEST_F(BumpPoolTest, ReuseMemoryAfterRelease) {
 // Initial counts reflect preallocation
 //------------------------------------------------------------------------------
 TEST_F(BumpPoolTest, InitialCounts) {
-  BumpPool<int> pool(*alloc_, /*initialSize=*/5);
+  ftl::BumpPool<int> pool(*alloc_, /*initialSize=*/5);
 
   EXPECT_EQ(pool.TotalSize(), 5);
   EXPECT_EQ(pool.FreeSize(), 5);
@@ -113,7 +112,7 @@ TEST_F(BumpPoolTest, InitialCounts) {
 // Single acquire/release adjusts counts
 //------------------------------------------------------------------------------
 TEST_F(BumpPoolTest, SingleAcquireRelease) {
-  BumpPool<int> pool(*alloc_, /*initialSize=*/3);
+  ftl::BumpPool<int> pool(*alloc_, /*initialSize=*/3);
 
   int* a = pool.acquire();
   EXPECT_EQ(pool.TotalSize(), 3);
@@ -129,7 +128,7 @@ TEST_F(BumpPoolTest, SingleAcquireRelease) {
 // Exhausting free-list causes bump-allocation
 //------------------------------------------------------------------------------
 TEST_F(BumpPoolTest, ExhaustAndExpand) {
-  BumpPool<int> pool(*alloc_, /*initialSize=*/2);
+  ftl::BumpPool<int> pool(*alloc_, /*initialSize=*/2);
 
   int* x = pool.acquire();
   int* y = pool.acquire();
@@ -156,7 +155,7 @@ TEST_F(BumpPoolTest, ExhaustAndExpand) {
 // Thread-safety: concurrent acquire/release
 //------------------------------------------------------------------------------
 TEST_F(BumpPoolTest, AcquireReleaseConcurrently) {
-  BumpPool<CountingType> pool(*alloc_, /*initialSize=*/2);
+  ftl::BumpPool<CountingType> pool(*alloc_, /*initialSize=*/2);
 
   CountingType::ctor_count = 0;
   CountingType::dtor_count = 0;
@@ -188,7 +187,7 @@ TEST_F(BumpPoolTest, AcquireReleaseConcurrently) {
 // Unique_ptr custom deleter automatic release
 //------------------------------------------------------------------------------
 TEST_F(BumpPoolTest, UniquePtrAutomaticRelease) {
-  BumpPool<int> pool(*alloc_, /*initialSize=*/1);
+  ftl::BumpPool<int> pool(*alloc_, /*initialSize=*/1);
 
   EXPECT_EQ(pool.FreeSize(), 1);
   EXPECT_EQ(pool.UsedSize(), 0);

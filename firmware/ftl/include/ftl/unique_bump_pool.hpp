@@ -3,6 +3,9 @@
 #include "ftl/bump_pool.hpp"
 #include "ftl/deleter.hpp"
 
+
+namespace ftl {
+
 //-------------------------------------------------------------------------------------------------
 // UniqueBumpPool: combines a bump allocator pool with a polymorphic deleter. Inherits BumpPool<D>
 // for pool management and PolymorphicDeleter<B> for runtime-deletions. Provides acquire() to wrap
@@ -48,3 +51,5 @@ public:
     };
   }
 };
+
+}
