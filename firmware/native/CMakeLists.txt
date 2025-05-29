@@ -9,12 +9,32 @@ target_sources(pw_unit_test
 )
 
 # Add FTL-native library.
-add_library(ftl-native INTERFACE)
-target_include_directories(ftl-native INTERFACE ${CMAKE_CURRENT_LIST_DIR}/include)
+add_library(ftl-native STATIC
+  native_udp_socket.cpp
+)
+target_link_libraries(ftl-native PUBLIC ftl)
+platformify(ftl-native)
 
-file(GLOB_RECURSE FTL_HEADERS CONFIGURE_DEPENDS
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/ftl/*.hpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/ftl/**/*.hpp
+target_include_directories(ftl-native
+  PUBLIC
+    ${CMAKE_CURRENT_LIST_DIR}/include
 )
 
-target_sources(ftl INTERFACE ${FTL_HEADERS})
+# Expose headers for IDEs and consumers
+file(GLOB_RECURSE FTL_NATIVE_HEADERS
+  CONFIGURE_DEPENDS
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/ftl/*.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/ftl/**/*.hpp
+)
+
+target_sources(ftl-native
+  PUBLIC
+    ${FTL_NATIVE_HEADERS}
+)
+
+# TODO needed?
+# Link any platform dependencies (e.g. pthread on POSIX)
+target_link_libraries(ftl-native
+  PUBLIC
+    pthread
+)
