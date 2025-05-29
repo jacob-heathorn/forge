@@ -49,13 +49,13 @@ TEST_F(NativeUdpSocketTest, UnicastSendReceive) {
     std::memcpy(p_send.data(), msg, std::strlen(msg));
 
     // Send to loopback 127.0.0.1
-    Endpoint dst(Address{0x7F000001u}, PORT);
+    Endpoint dst(Address{"127.0.0.1"}, PORT);
     ASSERT_TRUE(sender_.send(std::move(p_send), dst));
 
     // Receive
     Endpoint peer{};
     Payload p_recv = receiver_.receive(&peer);
-    // ASSERT_EQ(p_recv.size(), std::strlen(msg));
+    ASSERT_TRUE(p_recv);
     // std::string received(reinterpret_cast<char*>(p_recv.data()), p_recv.size());
     // EXPECT_EQ(received, msg);
 

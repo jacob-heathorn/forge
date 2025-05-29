@@ -4,8 +4,11 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <fcntl.h>
 #include <unistd.h>
 #include <cstring>
+
+#include <iostream>
 
 namespace ftl::ipv4::udp {
 
@@ -34,6 +37,11 @@ bool NativeUdpSocket::open(std::size_t receive_queue_len) {
   int buf_bytes = static_cast<int>(receive_queue_len) * kMaxDatagram;
   ::setsockopt(fd_, SOL_SOCKET, SO_RCVBUF, &buf_bytes, sizeof(buf_bytes));
 
+  // Make the socket non-blocking
+  int flags = fcntl(fd_, F_GETFL, 0);
+  if (flags < 0) return false;
+  if (fcntl(fd_, F_SETFL, flags | O_NONBLOCK) < 0) return false;
+
   return true;
 }
 
@@ -61,6 +69,7 @@ bool NativeUdpSocket::send(Payload payload, const ipv4::Endpoint dest) {
   }
   sockaddr_in addr{};
   addr.sin_family = AF_INET;
+  std::cout << "sending to: " << dest.address().ToUint32() << std::endl;
   addr.sin_addr.s_addr = dest.address().ToUint32();
   addr.sin_port = htons(dest.port());
   auto sent = ::sendto(fd_,
@@ -77,53 +86,31 @@ Payload NativeUdpSocket::receive(ipv4::Endpoint *const peer) {
     return Payload(0);
   }
 
-  // 1) Peek the next datagram’s full length
-  sockaddr_in addr{};
-  socklen_t addrlen = sizeof(addr);
+  constexpr std::size_t kMaxDatagram = 65507;  // worst‐case UDP payload
+  uint8_t               tmpBuf[kMaxDatagram];
+  sockaddr_in           addr{};
+  socklen_t             addrlen = sizeof(addr);
 
-  // A 1-byte buffer just to satisfy recvmsg; MSG_TRUNC makes the return
-  // value the real length of the whole datagram, regardless of iov_len.
-  uint8_t  tmp;
-  iovec    iov{ &tmp, 1 };
-  msghdr   msg{};
-  msg.msg_name    = &addr;
-  msg.msg_namelen = addrlen;
-  msg.msg_iov     = &iov;
-  msg.msg_iovlen  = 1;
-
-  ssize_t peek_len = ::recvmsg(fd_, &msg, MSG_PEEK | MSG_TRUNC);
-  if (peek_len < 0) {
-    return Payload(0);
+  // This will block until a full datagram arrives, then return its exact length.
+  ssize_t n = ::recvfrom(fd_, tmpBuf, sizeof(tmpBuf), 0,
+                       (sockaddr*)&addr, &addrlen);
+  if (n < 0) {
+    if (errno == EAGAIN || errno == EWOULDBLOCK) {
+      // no data ready, return empty immediately
+      return {};
+    }
+    // real error
+    return {};
   }
 
-  size_t packet_len = static_cast<size_t>(peek_len);
-  // Guard against absurd sizes
-  constexpr size_t kMaxDatagram = 65507;
-  if (packet_len > kMaxDatagram) {
-    packet_len = kMaxDatagram;
-  }
+  // Allocate a Payload sized exactly to the received length
+  size_t len = static_cast<size_t>(n);
+  Payload p(len);
+  std::memcpy(p.data(), tmpBuf, len);
 
-  // 2) Allocate exactly the right size
-  Payload p(packet_len);
-
-  // 3) Now actually receive it
-  auto n = ::recvfrom(
-    fd_,
-    p.data(),
-    packet_len,
-    0,
-    reinterpret_cast<sockaddr*>(&addr),
-    &addrlen
-  );
-  if (n < 0 || static_cast<size_t>(n) != packet_len) {
-    return Payload(0);
-  }
-
-  // 4) Fill in peer address and port
-  char addr_str[INET_ADDRSTRLEN];
-  inet_ntop(AF_INET, &addr.sin_addr, addr_str, sizeof(addr_str));
-  peer->set_address(addr_str);
-  peer->set_port(ntohs(addr.sin_port));
+  // Fill in peer info (Address ctor takes network-order uint32_t)
+  peer->set_address(Address{ addr.sin_addr.s_addr });
+  peer->set_port   ( ntohs(addr.sin_port) );
 
   return p;
 }
