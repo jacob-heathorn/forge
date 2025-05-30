@@ -12,8 +12,6 @@
 
 namespace ftl::ipv4::udp {
 
-NativeUdpSocket::NativeUdpSocket() = default;
-
 NativeUdpSocket::~NativeUdpSocket() {
   close();
 }
@@ -55,7 +53,7 @@ bool NativeUdpSocket::bind(uint16_t port) {
   }
   sockaddr_in addr{};
   addr.sin_family = AF_INET;
-  addr.sin_addr.s_addr = INADDR_ANY;
+  addr.sin_addr.s_addr = htonl(this->interface_.address().ToUint32());
   addr.sin_port = htons(port);
   if (::bind(fd_, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) < 0) {
     return false;

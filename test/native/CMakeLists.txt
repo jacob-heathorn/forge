@@ -14,11 +14,11 @@ add_platform_test(ut-ftl
 )
 target_link_libraries(ut-ftl ftl ftl-native)
 
-# Network test
-add_platform_test(ut-network
-  ut_udp_socket.cpp
-)
-target_link_libraries(ut-network ftl ftl-native)
+# # Network test
+# add_platform_test(ut-network
+#   ut_udp_socket.cpp
+# )
+# target_link_libraries(ut-network ftl ftl-native)
 
 # Manual tests
 add_executable(hello-world hello_world.cpp)

@@ -7,12 +7,14 @@
 #include "ftl/ipv4/udp/socket.hpp"
 #include "ftl/ipv4/udp/payload.hpp"
 #include "ftl/ipv4/endpoint.hpp"
+#include "ftl/native_ethernet_interface.hpp"
 
 namespace ftl::ipv4::udp {
 
 class NativeUdpSocket final : public Socket {
 public:
-  NativeUdpSocket();
+  NativeUdpSocket(ftl::ethernet::NativeEthernetInterface &interface) 
+    : interface_{interface} {}
   ~NativeUdpSocket() override;
 
   bool open(std::size_t receive_queue_len = 1) override;
@@ -27,6 +29,7 @@ public:
 
 private:
   int fd_{-1};
+  ftl::ethernet::NativeEthernetInterface &interface_;
 };
 
 }  // namespace ftl::ipv4::udp

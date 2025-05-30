@@ -11,6 +11,7 @@ target_sources(pw_unit_test
 # Add FTL-native library.
 add_library(ftl-native STATIC
   native_udp_socket.cpp
+  native_ethernet_interface.cpp
 )
 target_link_libraries(ftl-native PUBLIC ftl)
 platformify(ftl-native)
