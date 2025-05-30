@@ -69,29 +69,33 @@ TEST_F(NativeUdpSocketTest, UnicastSendReceive) {
     EXPECT_EQ(peer.port(), kSenderPort);
 }
 
-// // Test multicast send/receive on loopback
-// TEST_F(NativeUdpSocketTest, MulticastSendReceive) {
-//     constexpr uint16_t PORT = 12345;
-//     Address group{0xEF00002Au};  // 239.0.0.42
+// Test multicast send/receive on loopback
+TEST_F(NativeUdpSocketTest, MulticastSendReceive) {
+  constexpr uint16_t kSenderPort = 5555;
+  constexpr uint16_t kReceiverPort = 5556;
+  // 239.0.0.42
+  Address group{ 239, 0, 0, 42 };
 
-//     ASSERT_TRUE(receiver_.bind(PORT));
-//     ASSERT_TRUE(receiver_.join_multicast_group(group));
+  ASSERT_TRUE(sender_.bind(kSenderPort));
+  ASSERT_TRUE(receiver_.bind(kReceiverPort));
+  ASSERT_TRUE(receiver_.join_multicast_group(group));
 
-//     const char *msg = "hello_multicast";
-//     Payload p_send(std::strlen(msg));
-//     std::memcpy(p_send.data(), msg, std::strlen(msg));
+  const char* msg = "hello_multicast";
+  Payload p_send(std::strlen(msg));
+  std::memcpy(p_send.data(), msg, std::strlen(msg));
 
-//     Endpoint dst(group, PORT);
-//     ASSERT_TRUE(sender_.send(std::move(p_send), dst));
+  Endpoint dst{ group, kReceiverPort };
+  ASSERT_TRUE(sender_.send(std::move(p_send), dst));
 
-//     Endpoint peer{};
-//     Payload p_recv = receiver_.receive(&peer);
-//     ASSERT_EQ(p_recv.size(), std::strlen(msg));
-//     std::string received(reinterpret_cast<char*>(p_recv.data()), p_recv.size());
-//     EXPECT_EQ(received, msg);
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-//     // For multicast we only reliably check the port
-//     EXPECT_EQ(peer.port(), PORT);
+  Endpoint peer{};
+  Payload p_recv = receiver_.receive(&peer);
+  ASSERT_TRUE(p_recv);
+  std::string received{ reinterpret_cast<char*>(p_recv.data()), p_recv.size() };
+  EXPECT_EQ(received, msg);
 
-//     ASSERT_TRUE(receiver_.leave_multicast_group(group));
-// }
+  // Only check the port for multicast
+  EXPECT_EQ(peer.port(), kSenderPort);
+  ASSERT_TRUE(receiver_.leave_multicast_group(group));
+}

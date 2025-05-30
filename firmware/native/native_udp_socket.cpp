@@ -125,7 +125,7 @@ bool NativeUdpSocket::join_multicast_group(const ftl::ipv4::Address &group) {
     return false;
   }
   ip_mreq mreq{};
-  mreq.imr_multiaddr.s_addr = group.ToUint32();
+  mreq.imr_multiaddr.s_addr = htonl(group.ToUint32());
   mreq.imr_interface.s_addr = INADDR_ANY;
   return (::setsockopt(fd_, IPPROTO_IP, IP_ADD_MEMBERSHIP,
                       &mreq, sizeof(mreq)) == 0);
@@ -136,7 +136,7 @@ bool NativeUdpSocket::leave_multicast_group(const ftl::ipv4::Address &group) {
     return false;
   }
   ip_mreq mreq{};
-  mreq.imr_multiaddr.s_addr = group.ToUint32();
+  mreq.imr_multiaddr.s_addr = htonl(group.ToUint32());
   mreq.imr_interface.s_addr = INADDR_ANY;
   return (::setsockopt(fd_, IPPROTO_IP, IP_DROP_MEMBERSHIP,
                       &mreq, sizeof(mreq)) == 0);
