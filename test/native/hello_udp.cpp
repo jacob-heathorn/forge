@@ -53,8 +53,16 @@ int main() {
         std::memcpy(p_send.data(), msg, len);
 
         // 2) Send it
-        if (!sender.send(std::move(p_send), dst)) {
-            std::cerr << "[send] error\n";
+        bool ok = sender.send(std::move(p_send), dst);
+        if (!ok) {
+            std::cerr 
+              << "[send] error, return=false, errno=" << errno 
+              << " (" << std::strerror(errno) << ")\n";
+        } else {
+            std::cout 
+              << "[send] sent " << len 
+              << " bytes → " << dst.address().ToString().c_str()
+              << ":" << dst.port() << "\n";
         }
 
         // 3) Receive it back
