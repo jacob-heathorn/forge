@@ -69,7 +69,6 @@ bool NativeUdpSocket::send(Payload payload, const ipv4::Endpoint dest) {
   }
   sockaddr_in addr{};
   addr.sin_family = AF_INET;
-  std::cout << "sending to: " << dest.address().ToUint32() << std::endl;
   addr.sin_addr.s_addr = dest.address().ToUint32();
   addr.sin_port = htons(dest.port());
   auto sent = ::sendto(fd_,

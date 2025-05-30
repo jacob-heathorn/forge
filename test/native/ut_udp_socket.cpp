@@ -6,6 +6,8 @@
 #include "ftl/ipv4/udp/payload.hpp"
 
 #include <cstring>
+#include <thread>
+#include <chrono>
 
 using ftl::ipv4::Address;
 using ftl::ipv4::Endpoint;
@@ -39,18 +41,25 @@ protected:
 
 // Test unicast send/receive on loopback
 TEST_F(NativeUdpSocketTest, UnicastSendReceive) {
-    constexpr uint16_t PORT = 54321;
+    constexpr uint16_t PORT = 5555;
     ASSERT_TRUE(receiver_.bind(PORT));
 
-    // Prepare payload (Payload(size) auto-sets .size())
-    const char *msg = "hello_unicast";
-    (void)msg;
-    Payload p_send(std::strlen(msg));
-    std::memcpy(p_send.data(), msg, std::strlen(msg));
+    while (1)
+    {
 
-    // Send to loopback 127.0.0.1
-    Endpoint dst(Address{"127.0.0.1"}, PORT);
-    ASSERT_TRUE(sender_.send(std::move(p_send), dst));
+      // Prepare payload (Payload(size) auto-sets .size())
+      const char *msg = "hello_unicast";
+      (void)msg;
+      Payload p_send(std::strlen(msg));
+      std::memcpy(p_send.data(), msg, std::strlen(msg));
+
+      // Send to loopback 127.0.0.1
+      Endpoint dst(Address{"127.0.0.1"}, PORT);
+      ASSERT_TRUE(sender_.send(std::move(p_send), dst));
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+      std::cout << "loop" << std::endl;
+    }
 
     // Receive
     Endpoint peer{};

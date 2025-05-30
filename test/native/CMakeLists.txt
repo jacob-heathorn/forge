@@ -18,3 +18,7 @@ target_link_libraries(ut-ftl ftl ftl-native)
 # Manual tests
 add_executable(hello-world hello_world.cpp)
 platformify(hello-world)
+
+add_executable(hello-udp hello_udp.cpp)
+platformify(hello-udp)
+target_link_libraries(hello-udp ftl ftl-native)
