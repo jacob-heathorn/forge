@@ -90,7 +90,6 @@ Payload NativeUdpSocket::receive(ipv4::Endpoint *const peer) {
   sockaddr_in           addr{};
   socklen_t             addrlen = sizeof(addr);
 
-  // This will block until a full datagram arrives, then return its exact length.
   ssize_t n = ::recvfrom(fd_, tmpBuf, sizeof(tmpBuf), 0,
                        (sockaddr*)&addr, &addrlen);
   if (n < 0) {
@@ -108,7 +107,7 @@ Payload NativeUdpSocket::receive(ipv4::Endpoint *const peer) {
   std::memcpy(p.data(), tmpBuf, len);
 
   // Fill in peer info (Address ctor takes network-order uint32_t)
-  peer->set_address(Address{ addr.sin_addr.s_addr });
+  peer->set_address(Address{ ntohl(addr.sin_addr.s_addr) });
   peer->set_port   ( ntohs(addr.sin_port) );
 
   return p;

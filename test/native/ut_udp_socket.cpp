@@ -41,36 +41,32 @@ protected:
 
 // Test unicast send/receive on loopback
 TEST_F(NativeUdpSocketTest, UnicastSendReceive) {
-    constexpr uint16_t PORT = 5555;
-    ASSERT_TRUE(receiver_.bind(PORT));
+    constexpr uint16_t kSenderPort = 5555;
+    constexpr uint16_t kReceiverPort = 5556;
+    ASSERT_TRUE(sender_.bind(kSenderPort));
+    ASSERT_TRUE(receiver_.bind(kReceiverPort));
 
-    while (1)
-    {
+    // Prepare payload (Payload(size) auto-sets .size())
+    const char *msg = "hello_unicast";
+    (void)msg;
+    Payload p_send(std::strlen(msg));
+    std::memcpy(p_send.data(), msg, std::strlen(msg));
 
-      // Prepare payload (Payload(size) auto-sets .size())
-      const char *msg = "hello_unicast";
-      (void)msg;
-      Payload p_send(std::strlen(msg));
-      std::memcpy(p_send.data(), msg, std::strlen(msg));
-
-      // Send to loopback 127.0.0.1
-      Endpoint dst(Address{"127.0.0.1"}, PORT);
-      ASSERT_TRUE(sender_.send(std::move(p_send), dst));
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
-      std::cout << "loop" << std::endl;
-    }
+    // Send to loopback 127.0.0.1
+    Endpoint dst(Address{"127.0.0.1"}, kReceiverPort);
+    ASSERT_TRUE(sender_.send(std::move(p_send), dst));
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     // Receive
     Endpoint peer{};
     Payload p_recv = receiver_.receive(&peer);
     ASSERT_TRUE(p_recv);
-    // std::string received(reinterpret_cast<char*>(p_recv.data()), p_recv.size());
-    // EXPECT_EQ(received, msg);
+    std::string received(reinterpret_cast<char*>(p_recv.data()), p_recv.size());
+    EXPECT_EQ(received, msg);
 
-    // // Peer addr must match exactly an Address
-    // EXPECT_EQ(peer.address(), Address{0x7F000001u});
-    // EXPECT_EQ(peer.port(), PORT);
+    // Peer addr must match exactly an Address
+    EXPECT_EQ(peer.address(), Address{"127.0.0.1"});
+    EXPECT_EQ(peer.port(), kSenderPort);
 }
 
 // // Test multicast send/receive on loopback
