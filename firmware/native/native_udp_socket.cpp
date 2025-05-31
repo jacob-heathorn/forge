@@ -41,7 +41,7 @@ bool NativeUdpSocket::is_open() const noexcept {
     return fd_ >= 0;
 }
 
-bool NativeUdpSocket::bind(uint16_t /*port*/) {
+bool NativeUdpSocket::bind(uint16_t port) {
   if (!is_open()) {
       return false;
   }
@@ -49,11 +49,11 @@ bool NativeUdpSocket::bind(uint16_t /*port*/) {
   // Get the interface address in network order:
   uint32_t interface_addr = htonl(this->interface_.address().ToUint32());
 
-  // Bind the socket to <loopback>:0 (ephemeral port)
+  // Bind the socket to interface:port
   sockaddr_in bind_addr{};
   bind_addr.sin_family      = AF_INET;
   bind_addr.sin_addr.s_addr = interface_addr;
-  bind_addr.sin_port        = htons(0);
+  bind_addr.sin_port        = htons(port);
   if (::bind(fd_, reinterpret_cast<sockaddr*>(&bind_addr), sizeof(bind_addr)) < 0) {
       return false;
   }

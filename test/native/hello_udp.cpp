@@ -17,6 +17,7 @@ int main() {
     using namespace ftl::ipv4;
     using namespace ftl::ipv4::udp;
 
+    constexpr uint16_t kSenderPort = 5555;
     constexpr uint16_t kReceiverPort    = 9382U;
     const Address      kLocalAddress{"127.0.0.1"};
     // We will use 239.0.0.42 as our multicast “test” group:
@@ -35,9 +36,7 @@ int main() {
         return 1;
     }
 
-    // ← ADD THIS: Bind to loopback (port = 0).  This runs all of
-    // the steps (bind to 127.0.0.1:0, setsockopt(IP_MULTICAST_TTL), setsockopt(IP_MULTICAST_IF), …)
-    if (!sender->bind(0)) {
+    if (!sender->bind(kSenderPort)) {
         std::cerr << "Failed to bind sender to loopback\n";
         return 1;
     }
