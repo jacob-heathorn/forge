@@ -56,8 +56,10 @@ int main() {
     }
 
     Endpoint multiDst{ kMulticastGroup, kReceiverPort };
+    Endpoint uniDst{ kLocalAddress,  kReceiverPort };
 
-    std::cout << "Starting send/receive loop (127.0.0.1 → 239.0.0.42:" << kReceiverPort << ")\n";
+    std::cout << "Starting send/receive loop (127.0.0.1 → {unicast,multicast} on port " 
+              << kReceiverPort << ")\n";
 
     while (true) {
         // --- Send a multicast packet “Hello multicast” ---
@@ -78,20 +80,39 @@ int main() {
             }
         }
 
-        // Give the kernel a moment to emit and loop back the packet
+        // --- Send a unicast packet “Hello unicast” ---
+        {
+            const char *msg = "Hello unicast";
+            size_t      len = std::strlen(msg);
+            Payload     p_send(len);
+            std::memcpy(p_send.data(), msg, len);
+
+            bool ok = sender->send(std::move(p_send), uniDst);
+            if (!ok) {
+                std::cerr << "[send] unicast error, errno=" << errno
+                          << " (" << std::strerror(errno) << ")\n";
+            } else {
+                std::cout << "[send] unicast: “" << msg 
+                          << "” → " << uniDst.address().ToString().c_str()
+                          << ":" << uniDst.port() << "\n";
+            }
+        }
+
+        // Give the kernel a moment to emit and loop back the packets
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-        // --- Attempt to receive any pending packets ---
+        // --- Attempt to receive any pending packets (both multicast and unicast) ---
         {
             Endpoint peer{};
-            Payload  p_recv = receiver->receive(&peer);
-            if (p_recv) {
+            while (true) {
+                Payload  p_recv = receiver->receive(&peer);
+                if (!p_recv) {
+                    break;  // no more data right now
+                }
                 std::string received{ reinterpret_cast<char*>(p_recv.data()), p_recv.size() };
                 std::cout << "[recv] " 
                           << peer.address().ToString().c_str() << ":" << peer.port()
                           << " → “" << received << "”\n";
-            } else {
-                // No data available right now
             }
         }
 
