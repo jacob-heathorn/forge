@@ -51,24 +51,24 @@ int16_t udpTxInit(UDPTxHandle* self, uint32_t local_iface_address_nbo)
                        reinterpret_cast<sockaddr*>(&bind_addr),
                        sizeof(bind_addr)) == 0);
 
-    // 2) Non‐blocking
-    ok = ok && (fcntl(self->fd, F_SETFL, O_NONBLOCK) == 0);
+    // // 2) Non‐blocking
+    // ok = ok && (fcntl(self->fd, F_SETFL, O_NONBLOCK) == 0);
 
-    // 3) Multicast TTL
-    int ttl = OVERRIDE_TTL;
-    ok = ok && (setsockopt(self->fd,
-                           IPPROTO_IP,
-                           IP_MULTICAST_TTL,
-                           &ttl,
-                           sizeof(ttl)) == 0);
+    // // 3) Multicast TTL
+    // int ttl = OVERRIDE_TTL;
+    // ok = ok && (setsockopt(self->fd,
+    //                        IPPROTO_IP,
+    //                        IP_MULTICAST_TTL,
+    //                        &ttl,
+    //                        sizeof(ttl)) == 0);
 
-    // 4) Egress interface for multicast
-    uint32_t iface_be = htonl(local_iface_address_nbo);
-    ok = ok && (setsockopt(self->fd,
-                           IPPROTO_IP,
-                           IP_MULTICAST_IF,
-                           &iface_be,
-                           sizeof(iface_be)) == 0);
+    // // 4) Egress interface for multicast
+    // uint32_t iface_be = htonl(local_iface_address_nbo);
+    // ok = ok && (setsockopt(self->fd,
+    //                        IPPROTO_IP,
+    //                        IP_MULTICAST_IF,
+    //                        &iface_be,
+    //                        sizeof(iface_be)) == 0);
 
     if (!ok) {
         int e = errno;

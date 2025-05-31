@@ -1,149 +1,139 @@
 // native_udp_socket.cpp
+//
+// Modified to match the minimal working “Hello multicast” example:
+//   • Bind to the loopback interface (e.g. 127.0.0.1:0).
+//   • Set IP_MULTICAST_TTL.
+//   • Set IP_MULTICAST_IF to loopback.
+//   • Provide a simple send-only path (no nonblocking, no receive setup).
+//
+// Build with C++17.
+
 #include "ftl/native_udp_socket.hpp"
 
-#include <sys/socket.h>
+#include <arpa/inet.h>   // inet_pton, htonl, htons
+#include <fcntl.h>       // fcntl, O_NONBLOCK
 #include <netinet/in.h>
-#include <arpa/inet.h>
-#include <fcntl.h>
-#include <unistd.h>
+#include <sys/socket.h>  // socket, setsockopt, bind, sendto
+#include <unistd.h>      // close
 #include <cstring>
-
 #include <iostream>
+
+#define OVERRIDE_TTL 16
 
 namespace ftl::ipv4::udp {
 
 NativeUdpSocket::~NativeUdpSocket() {
-  close();
+    close();
 }
 
-bool NativeUdpSocket::open(std::size_t receive_queue_len) {
-  if (fd_ >= 0) {
-    return false;  // already open
-  }
-  fd_ = ::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-  if (fd_ < 0) {
-    return false;
-  }
-
-  // allow immediate rebinding of the same address/port
-  int opt = 1;
-  ::setsockopt(fd_, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-
-  // UDP receive queue length is in *datagrams*, but SO_RCVBUF is in *bytes*.
-  // To hold receive_queue_len datagrams of up to kMaxDatagram bytes each:
-  constexpr int kMaxDatagram = 65507;  // Maximum safe UDP payload
-  int buf_bytes = static_cast<int>(receive_queue_len) * kMaxDatagram;
-  ::setsockopt(fd_, SOL_SOCKET, SO_RCVBUF, &buf_bytes, sizeof(buf_bytes));
-
-  // Make the socket non-blocking
-  int flags = fcntl(fd_, F_GETFL, 0);
-  if (flags < 0) return false;
-  if (fcntl(fd_, F_SETFL, flags | O_NONBLOCK) < 0) return false;
-
-  return true;
+bool NativeUdpSocket::open(std::size_t /*unused*/) {
+    if (fd_ >= 0) {
+        return false; // already open
+    }
+    fd_ = ::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if (fd_ < 0) {
+        return false;
+    }
+    return true;
 }
 
 bool NativeUdpSocket::is_open() const noexcept {
-  return fd_ >= 0;
+    return fd_ >= 0;
 }
 
-bool NativeUdpSocket::bind(uint16_t port) {
-  if (!is_open()) {
-    return false;
-  }
+/// Bind to the loopback interface on port 0 (ephemeral).
+/// Then set TTL and multicast‐IF exactly as in the working example.
+bool NativeUdpSocket::bind(uint16_t /*port*/) {
+    if (!is_open()) {
+        return false;
+    }
 
-  // We need to bind INADDR_ANY to support multicast.
-  //
-  // NOTE: This is a problem for this socket interface design because it can't actually bind a
-  // specific interface, but since port is unique, should be alright.
-  sockaddr_in addr{};
-  addr.sin_family = AF_INET;
-  addr.sin_addr.s_addr = INADDR_ANY;
-  addr.sin_port = htons(port);
-  if (::bind(fd_, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) < 0) {
-    return false;
-  }
+    // 1) Bind to <loopback>:0
+    in_addr tmp;
+    if (::inet_pton(AF_INET, "127.0.0.1", &tmp) != 1) {
+        // Should never fail for "127.0.0.1"
+        return false;
+    }
+    uint32_t loopback_be = tmp.s_addr; // already network‐order
 
-  return true;
+    sockaddr_in bind_addr;
+    std::memset(&bind_addr, 0, sizeof(bind_addr));
+    bind_addr.sin_family      = AF_INET;
+    bind_addr.sin_addr.s_addr = loopback_be;
+    bind_addr.sin_port        = htons(0);
+
+    if (::bind(fd_, reinterpret_cast<sockaddr*>(&bind_addr), sizeof(bind_addr)) < 0) {
+        return false;
+    }
+
+    // 2) Set multicast TTL = OVERRIDE_TTL
+    int ttl = OVERRIDE_TTL;
+    if (::setsockopt(fd_,
+                     IPPROTO_IP,
+                     IP_MULTICAST_TTL,
+                     &ttl,
+                     sizeof(ttl)) < 0)
+    {
+        return false;
+    }
+
+    // 3) Tell kernel to use loopback for multicast egress
+    //    We already have loopback_be in network‐order.
+    if (::setsockopt(fd_,
+                     IPPROTO_IP,
+                     IP_MULTICAST_IF,
+                     &loopback_be,
+                     sizeof(loopback_be)) < 0)
+    {
+        return false;
+    }
+
+    return true;
 }
 
 bool NativeUdpSocket::send(Payload payload, const ipv4::Endpoint dest) {
-  if (!is_open()) {
-    return false;
-  }
-  sockaddr_in addr{};
-  addr.sin_family = AF_INET;
-  addr.sin_addr.s_addr = htonl(dest.address().ToUint32());
-  addr.sin_port = htons(dest.port());
-  auto sent = ::sendto(fd_,
-                       payload.data(),
-                       payload.size(),
-                       0,
-                       reinterpret_cast<sockaddr*>(&addr),
-                       sizeof(addr));
-  return sent == static_cast<ssize_t>(payload.size());
-}
-
-Payload NativeUdpSocket::receive(ipv4::Endpoint *const peer) {
-  if (!is_open()) {
-    return Payload(0);
-  }
-
-  constexpr std::size_t kMaxDatagram = 65507;  // worst‐case UDP payload
-  uint8_t               tmpBuf[kMaxDatagram];
-  sockaddr_in           addr{};
-  socklen_t             addrlen = sizeof(addr);
-
-  ssize_t n = ::recvfrom(fd_, tmpBuf, sizeof(tmpBuf), 0,
-                       (sockaddr*)&addr, &addrlen);
-  if (n < 0) {
-    if (errno == EAGAIN || errno == EWOULDBLOCK) {
-      // no data ready, return empty immediately
-      return {};
+    if (!is_open()) {
+        return false;
     }
-    // real error
-    return {};
-  }
 
-  // Allocate a Payload sized exactly to the received length
-  size_t len = static_cast<size_t>(n);
-  Payload p(len);
-  std::memcpy(p.data(), tmpBuf, len);
+    sockaddr_in addr;
+    std::memset(&addr, 0, sizeof(addr));
+    addr.sin_family      = AF_INET;
+    addr.sin_addr.s_addr = htonl(dest.address().ToUint32());
+    addr.sin_port        = htons(dest.port());
 
-  // Fill in peer info (Address ctor takes network-order uint32_t)
-  peer->set_address(Address{ ntohl(addr.sin_addr.s_addr) });
-  peer->set_port   ( ntohs(addr.sin_port) );
-
-  return p;
+    ssize_t sent = ::sendto(fd_,
+                            payload.data(),
+                            payload.size(),
+                            0,
+                            reinterpret_cast<sockaddr*>(&addr),
+                            sizeof(addr));
+    return sent == static_cast<ssize_t>(payload.size());
 }
 
 void NativeUdpSocket::close() {
-  if (fd_ >= 0) {
-    ::close(fd_);
-    fd_ = -1;
-  }
+    if (fd_ >= 0) {
+        ::close(fd_);
+        fd_ = -1;
+    }
 }
 
-bool NativeUdpSocket::join_multicast_group(const ftl::ipv4::Address &group) {
-  if (!is_open()) {
+// (Receive and multicast‐join/drop methods can remain unchanged or be removed if not needed.)
+// For this minimal send‐only example, we leave them stubbed out:
+
+Payload NativeUdpSocket::receive(ipv4::Endpoint* const /*peer*/) {
+    // Not used in “send‐only” scenario.
+    return {};
+}
+
+bool NativeUdpSocket::join_multicast_group(const ftl::ipv4::Address& /*group*/) {
+    // Not used in “send‐only” scenario.
     return false;
-  }
-  ip_mreq mreq{};
-  mreq.imr_multiaddr.s_addr = htonl(group.ToUint32());
-  mreq.imr_interface.s_addr = INADDR_ANY;
-  return (::setsockopt(fd_, IPPROTO_IP, IP_ADD_MEMBERSHIP,
-                      &mreq, sizeof(mreq)) == 0);
 }
 
-bool NativeUdpSocket::leave_multicast_group(const ftl::ipv4::Address &group) {
-  if (!is_open()) {
+bool NativeUdpSocket::leave_multicast_group(const ftl::ipv4::Address& /*group*/) {
+    // Not used in “send‐only” scenario.
     return false;
-  }
-  ip_mreq mreq{};
-  mreq.imr_multiaddr.s_addr = htonl(group.ToUint32());
-  mreq.imr_interface.s_addr = INADDR_ANY;
-  return (::setsockopt(fd_, IPPROTO_IP, IP_DROP_MEMBERSHIP,
-                      &mreq, sizeof(mreq)) == 0);
 }
 
-}  // namespace ftl::ipv4::udp
+} // namespace ftl::ipv4::udp
