@@ -28,8 +28,10 @@ public:
   bool leave_multicast_group(const ftl::ipv4::Address &group) override;
 
 private:
-  int fd_{-1};
   ftl::ethernet::NativeEthernetInterface &interface_;
+  int tx_fd_{ -1 };
+  int rx_multicast_fd_{ -1 };
+  static constexpr int OVERRIDE_TTL = 16;
 };
 
 }  // namespace ftl::ipv4::udp
