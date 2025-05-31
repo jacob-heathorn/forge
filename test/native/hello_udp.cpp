@@ -17,10 +17,9 @@ int main() {
     using namespace ftl::ipv4;
     using namespace ftl::ipv4::udp;
 
-    constexpr uint16_t kSenderPort = 5555;
-    constexpr uint16_t kReceiverPort    = 9382U;
+    constexpr uint16_t kSenderPort   = 5555;
+    constexpr uint16_t kReceiverPort = 9382U;
     const Address      kLocalAddress{"127.0.0.1"};
-    // We will use 239.0.0.42 as our multicast “test” group:
     const Address      kMulticastGroup{239, 0, 0, 42};
 
     // “Loopback” interface just for IPv4 on 127.0.0.1/24
@@ -28,43 +27,73 @@ int main() {
 
     ftl::DataFrame::initialize(kAllocator);
 
-    // Create a sender‐socket bound to the “lo” interface:
+    // Create and configure the sender socket:
     SocketPtr sender = lo.CreateUdpSocket();
-
     if (!sender->open(4)) {
         std::cerr << "Failed to open sender socket\n";
         return 1;
     }
-
     if (!sender->bind(kSenderPort)) {
         std::cerr << "Failed to bind sender to loopback\n";
         return 1;
     }
 
-    // Pre‐construct the multicast endpoint: 239.0.0.42:54321
+    // Create and configure the receiver socket:
+    SocketPtr receiver = lo.CreateUdpSocket();
+    if (!receiver->open(4)) {
+        std::cerr << "Failed to open receiver socket\n";
+        return 1;
+    }
+    // Bind the receiver to port kReceiverPort on loopback (INADDR_ANY in our implementation will use loopback)
+    if (!receiver->bind(kReceiverPort)) {
+        std::cerr << "Failed to bind receiver to port " << kReceiverPort << "\n";
+        return 1;
+    }
+    // Join the multicast group on loopback:
+    if (!receiver->join_multicast_group(kMulticastGroup)) {
+        std::cerr << "Failed to join multicast group " << kMulticastGroup.ToString().c_str() << "\n";
+        return 1;
+    }
+
     Endpoint multiDst{ kMulticastGroup, kReceiverPort };
 
-    std::cout << "Starting send‐only loop (127.0.0.1 → 239.0.0.42:"
-              << kReceiverPort << ")\n";
+    std::cout << "Starting send/receive loop (127.0.0.1 → 239.0.0.42:" << kReceiverPort << ")\n";
 
     while (true) {
-        const char *msg_multicast = "Hello multicast";
-        size_t      len_m         = std::strlen(msg_multicast);
-        Payload     p_send_m(len_m);
-        std::memcpy(p_send_m.data(), msg_multicast, len_m);
+        // --- Send a multicast packet “Hello multicast” ---
+        {
+            const char *msg = "Hello multicast";
+            size_t      len = std::strlen(msg);
+            Payload     p_send(len);
+            std::memcpy(p_send.data(), msg, len);
 
-        bool ok = sender->send(std::move(p_send_m), multiDst);
-        if (!ok) {
-            std::cerr << "[send] multicast error, errno=" << errno
-                      << " (" << std::strerror(errno) << ")\n";
-        } else {
-            std::cout << "[send] multicast: “" << msg_multicast 
-                      << "” → " << multiDst.address().ToString().c_str()
-                      << ":" << multiDst.port() << "\n";
+            bool ok = sender->send(std::move(p_send), multiDst);
+            if (!ok) {
+                std::cerr << "[send] multicast error, errno=" << errno
+                          << " (" << std::strerror(errno) << ")\n";
+            } else {
+                std::cout << "[send] multicast: “" << msg 
+                          << "” → " << multiDst.address().ToString().c_str()
+                          << ":" << multiDst.port() << "\n";
+            }
         }
 
         // Give the kernel a moment to emit and loop back the packet
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+        // --- Attempt to receive any pending packets ---
+        {
+            Endpoint peer{};
+            Payload  p_recv = receiver->receive(&peer);
+            if (p_recv) {
+                std::string received{ reinterpret_cast<char*>(p_recv.data()), p_recv.size() };
+                std::cout << "[recv] " 
+                          << peer.address().ToString().c_str() << ":" << peer.port()
+                          << " → “" << received << "”\n";
+            } else {
+                // No data available right now
+            }
+        }
 
         // Wait a bit before sending again
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
