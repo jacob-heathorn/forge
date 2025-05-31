@@ -41,54 +41,46 @@ bool NativeUdpSocket::is_open() const noexcept {
     return fd_ >= 0;
 }
 
-/// Bind to the loopback interface on port 0 (ephemeral).
-/// Then set TTL and multicast‐IF exactly as in the working example.
 bool NativeUdpSocket::bind(uint16_t /*port*/) {
-    if (!is_open()) {
-        return false;
-    }
+  if (!is_open()) {
+      return false;
+  }
 
-    // 1) Bind to <loopback>:0
-    in_addr tmp;
-    if (::inet_pton(AF_INET, "127.0.0.1", &tmp) != 1) {
-        // Should never fail for "127.0.0.1"
-        return false;
-    }
-    uint32_t loopback_be = tmp.s_addr; // already network‐order
+  // 1) Figure out our loopback address in network order:
+  uint32_t loopback_hbo = this->interface_.address().ToUint32(); // host‐byte‐order
+  uint32_t loopback_be  = htonl(loopback_hbo);
 
-    sockaddr_in bind_addr;
-    std::memset(&bind_addr, 0, sizeof(bind_addr));
-    bind_addr.sin_family      = AF_INET;
-    bind_addr.sin_addr.s_addr = loopback_be;
-    bind_addr.sin_port        = htons(0);
+  // 2) Bind the socket to <loopback>:0 (ephemeral port)
+  sockaddr_in bind_addr{};
+  bind_addr.sin_family      = AF_INET;
+  bind_addr.sin_addr.s_addr = loopback_be;
+  bind_addr.sin_port        = htons(0);
+  if (::bind(fd_, reinterpret_cast<sockaddr*>(&bind_addr), sizeof(bind_addr)) < 0) {
+      return false;
+  }
 
-    if (::bind(fd_, reinterpret_cast<sockaddr*>(&bind_addr), sizeof(bind_addr)) < 0) {
-        return false;
-    }
+  // 3) Set the multicast TTL to OVERRIDE_TTL
+  int ttl = OVERRIDE_TTL;
+  if (::setsockopt(fd_,
+                   IPPROTO_IP,
+                   IP_MULTICAST_TTL,
+                   &ttl,
+                   sizeof(ttl)) < 0)
+  {
+      return false;
+  }
 
-    // 2) Set multicast TTL = OVERRIDE_TTL
-    int ttl = OVERRIDE_TTL;
-    if (::setsockopt(fd_,
-                     IPPROTO_IP,
-                     IP_MULTICAST_TTL,
-                     &ttl,
-                     sizeof(ttl)) < 0)
-    {
-        return false;
-    }
+  // 4) Tell the kernel to use this loopback interface for multicast egress
+  if (::setsockopt(fd_,
+                   IPPROTO_IP,
+                   IP_MULTICAST_IF,
+                   &loopback_be,
+                   sizeof(loopback_be)) < 0)
+  {
+      return false;
+  }
 
-    // 3) Tell kernel to use loopback for multicast egress
-    //    We already have loopback_be in network‐order.
-    if (::setsockopt(fd_,
-                     IPPROTO_IP,
-                     IP_MULTICAST_IF,
-                     &loopback_be,
-                     sizeof(loopback_be)) < 0)
-    {
-        return false;
-    }
-
-    return true;
+  return true;
 }
 
 bool NativeUdpSocket::send(Payload payload, const ipv4::Endpoint dest) {

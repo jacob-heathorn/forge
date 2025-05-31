@@ -17,7 +17,7 @@ int main() {
     using namespace ftl::ipv4;
     using namespace ftl::ipv4::udp;
 
-    constexpr uint16_t kReceiverPort    = 54321;
+    constexpr uint16_t kReceiverPort    = 9382U;
     const Address      kLocalAddress{"127.0.0.1"};
     // We will use 239.0.0.42 as our multicast “test” group:
     const Address      kMulticastGroup{239, 0, 0, 42};
