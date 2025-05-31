@@ -47,12 +47,17 @@ bool NativeUdpSocket::bind(uint16_t port) {
   }
 
   // Get the interface address in network order:
-  uint32_t interface_addr = htonl(this->interface_.address().ToUint32());
+  uint32_t interface_addr_int = htonl(this->interface_.address().ToUint32());
+  uint32_t bind_addr_int = interface_addr_int;
+
+  if (port == 9382U) {
+    bind_addr_int = INADDR_ANY;
+  }
 
   // Bind the socket to interface:port
   sockaddr_in bind_addr{};
   bind_addr.sin_family      = AF_INET;
-  bind_addr.sin_addr.s_addr = interface_addr;
+  bind_addr.sin_addr.s_addr = bind_addr_int;
   bind_addr.sin_port        = htons(port);
   if (::bind(fd_, reinterpret_cast<sockaddr*>(&bind_addr), sizeof(bind_addr)) < 0) {
       return false;
@@ -89,8 +94,8 @@ bool NativeUdpSocket::bind(uint16_t port) {
   if (::setsockopt(fd_,
                    IPPROTO_IP,
                    IP_MULTICAST_IF,
-                   &interface_addr,
-                   sizeof(interface_addr)) < 0)
+                   &interface_addr_int,
+                   sizeof(interface_addr_int)) < 0)
   {
       return false;
   }
