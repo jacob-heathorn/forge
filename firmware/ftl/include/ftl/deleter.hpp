@@ -52,22 +52,25 @@ public:
     : polymorphic_deleter_{deleter}
   {}
 
+  // Default constructor, does nothing.
+  DelegatingDeleter() = default;
+
   // Default destructor.
   ~DelegatingDeleter() = default;
 
-  // Default copy and move constructors.
+  // Default copy and move.
   DelegatingDeleter(const DelegatingDeleter&) = default;
   DelegatingDeleter(DelegatingDeleter&&) noexcept = default;
-  
-  // Delete assignment operators.
-  DelegatingDeleter& operator=(const DelegatingDeleter&) = delete;  // Delete copy assignment operator
-  DelegatingDeleter& operator=(DelegatingDeleter&&) = delete;       // Delete move assignment operator
+  DelegatingDeleter& operator=(const DelegatingDeleter&) = default;
+  DelegatingDeleter& operator=(DelegatingDeleter&&) = default;
 
   // Call operator forwards deletion to the underlying polymorphic deleter.
   // @param ptr Pointer to object to delete.
   void operator()(T* ptr) const
   {
-    polymorphic_deleter_->operator()(ptr);
+    if (polymorphic_deleter_ != nullptr) {
+      polymorphic_deleter_->operator()(ptr);
+    }
   }
 
 private:

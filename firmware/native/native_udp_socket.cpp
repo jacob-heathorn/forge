@@ -51,13 +51,19 @@ bool NativeUdpSocket::bind(uint16_t port) {
   if (!is_open()) {
     return false;
   }
+
+  // We need to bind INADDR_ANY to support multicast.
+  //
+  // NOTE: This is a problem for this socket interface design because it can't actually bind a
+  // specific interface, but since port is unique, should be alright.
   sockaddr_in addr{};
   addr.sin_family = AF_INET;
-  addr.sin_addr.s_addr = htonl(this->interface_.address().ToUint32());
+  addr.sin_addr.s_addr = INADDR_ANY;
   addr.sin_port = htons(port);
   if (::bind(fd_, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) < 0) {
     return false;
   }
+
   return true;
 }
 
