@@ -181,7 +181,7 @@ bool NativeUdpSocket::send(Payload payload, const ipv4::Endpoint dest) {
 
 Payload NativeUdpSocket::receive(ipv4::Endpoint *const peer) {
     if (!is_open()) {
-        return Payload(0);
+        return {};
     }
 
     // Build fd_set for select
@@ -196,11 +196,11 @@ Payload NativeUdpSocket::receive(ipv4::Endpoint *const peer) {
     int ready = ::select(max_fd + 1, &read_fds, nullptr, nullptr, &timeout);
     if (ready < 0) {
         // Real error
-        return Payload(0);
+        return {};
     }
     if (ready == 0) {
         // No data on either socket
-        return Payload(0);
+        return {};
     }
 
     // Prefer RX if both have data
@@ -212,7 +212,7 @@ Payload NativeUdpSocket::receive(ipv4::Endpoint *const peer) {
     }
 
     if (which_fd < 0) {
-        return Payload(0);
+        return {};
     }
 
     constexpr std::size_t kMaxDatagram = 65507;
@@ -229,10 +229,10 @@ Payload NativeUdpSocket::receive(ipv4::Endpoint *const peer) {
     if (n < 0) {
         if (errno == EAGAIN || errno == EWOULDBLOCK) {
             // Would block ⇒ no data
-            return Payload(0);
+            return {};
         }
         // Real error
-        return Payload(0);
+        return {};
     }
 
     size_t len = static_cast<size_t>(n);
