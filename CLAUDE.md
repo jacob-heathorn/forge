@@ -35,6 +35,21 @@ This is an embedded systems project with a custom template library (FTL) and Pyt
 - Depends on ETL (Embedded Template Library) as external dependency
 - Custom `rip.py` script wraps common development tasks
 
+## Coding Style Guidance
+
+This project follows the [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html) with these specific modifications:
+
+### Naming Conventions
+- **Method names**: Use lowerCamelCase (e.g., `publishMessage()`, `getNodeId()`)
+- **Regular/standalone functions**: Use UpperCamelCase (e.g., `WriteU16LE()`, `ReadU32BE()`)
+- **Member variables**: Use snake_case (e.g., `node_id_`, `transfer_count_`)
+- **Accessors/mutators**: May be named like variables
+  - Example: `int count()` and `void set_count(int count)`
+
+### Comments
+- Use `//` for single-line comments instead of `/* */` style comments
+- Follow Google style guide recommendations for documentation comments
+
 ### Key Libraries
 
 - FTL provides abstractions for: buffers/memory pools, networking (IPv4/UDP), threading/mutex, singleton patterns
