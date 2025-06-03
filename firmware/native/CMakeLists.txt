@@ -32,10 +32,3 @@ target_sources(ftl-native
   PUBLIC
     ${FTL_NATIVE_HEADERS}
 )
-
-# TODO needed?
-# Link any platform dependencies (e.g. pthread on POSIX)
-target_link_libraries(ftl-native
-  PUBLIC
-    pthread
-)
