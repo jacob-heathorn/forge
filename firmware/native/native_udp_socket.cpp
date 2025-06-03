@@ -179,7 +179,7 @@ bool NativeUdpSocket::send(Payload payload, const ipv4::Endpoint dest) {
 
     // sendto() on tx_fd_. If the return doesn’t match payload.size(), treat as failure.
     ssize_t sent = ::sendto(tx_fd_,
-                             payload.data(),
+                             payload.front(),
                              payload.size(),
                              0,
                              reinterpret_cast<const sockaddr*>(&dst_addr),
@@ -252,7 +252,7 @@ Payload NativeUdpSocket::receive(ipv4::Endpoint *const peer) {
     // Copy the received data into a Payload of exactly the right size.
     size_t len = static_cast<size_t>(n);
     Payload p(len);
-    std::memcpy(p.data(), tmpBuf, len);
+    std::memcpy(p.front(), tmpBuf, len);
 
     // Populate the peer endpoint (host-order address and port).
     peer->set_address(Address{ ntohl(addr.sin_addr.s_addr) });

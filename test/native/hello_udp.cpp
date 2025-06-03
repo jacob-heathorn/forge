@@ -67,7 +67,7 @@ int main() {
             const char *msg = "Hello multicast";
             size_t      len = std::strlen(msg);
             Payload     p_send(len);
-            std::memcpy(p_send.data(), msg, len);
+            std::memcpy(p_send.front(), msg, len);
 
             bool ok = sender->send(std::move(p_send), multiDst);
             if (!ok) {
@@ -85,7 +85,7 @@ int main() {
             const char *msg = "Hello unicast";
             size_t      len = std::strlen(msg);
             Payload     p_send(len);
-            std::memcpy(p_send.data(), msg, len);
+            std::memcpy(p_send.front(), msg, len);
 
             bool ok = sender->send(std::move(p_send), uniDst);
             if (!ok) {
@@ -109,7 +109,7 @@ int main() {
                 if (!p_recv) {
                     break;  // no more data right now
                 }
-                std::string received{ reinterpret_cast<char*>(p_recv.data()), p_recv.size() };
+                std::string received{ reinterpret_cast<char*>(p_recv.front()), p_recv.size() };
                 std::cout << "[recv] " 
                           << peer.address().ToString().c_str() << ":" << peer.port()
                           << " → “" << received << "”\n";

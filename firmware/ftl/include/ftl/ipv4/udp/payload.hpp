@@ -25,14 +25,14 @@ public:
 
   using DataFrame::operator bool;
 
-  // Access the UDP payload pointer
-  uint8_t* data() noexcept { return front() + kPayloadOffset; }
-  const uint8_t* data() const noexcept { return front() + kPayloadOffset; }
+  // Access the UDP payload pointer - overrides DataFrame::front() with offset
+  uint8_t* front() noexcept { return DataFrame::front() + kPayloadOffset; }
+  const uint8_t* front() const noexcept { return DataFrame::front() + kPayloadOffset; }
   std::size_t size() const noexcept { return DataFrame::size() - kPayloadOffset; }
 
   // Returns the payload interpreted as characters in an etl::string_view
   etl::string_view string_view() const noexcept {
-    const char* data = reinterpret_cast<const char*>(this->data());
+    const char* data = reinterpret_cast<const char*>(this->front());
     return etl::string_view{ data, this->size() };
   }
 };

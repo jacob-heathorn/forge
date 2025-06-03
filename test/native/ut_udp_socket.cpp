@@ -68,7 +68,7 @@ TEST_F(NativeUdpSocketTest, UnicastSendReceive) {
 
     const char* msg = "hello_unicast";
     Payload p_send(std::strlen(msg));
-    std::memcpy(p_send.data(), msg, std::strlen(msg));
+    std::memcpy(p_send.front(), msg, std::strlen(msg));
 
     Endpoint dst{ Address{"127.0.0.1"}, kReceiverPort };
     ASSERT_TRUE(sender_->send(std::move(p_send), dst));
@@ -78,7 +78,7 @@ TEST_F(NativeUdpSocketTest, UnicastSendReceive) {
     Endpoint peer{};
     Payload  p_recv = receiver_->receive(&peer);
     ASSERT_TRUE(p_recv);
-    std::string received{ reinterpret_cast<char*>(p_recv.data()), p_recv.size() };
+    std::string received{ reinterpret_cast<char*>(p_recv.front()), p_recv.size() };
     EXPECT_EQ(received, msg);
     EXPECT_EQ(peer.address(), Address{"127.0.0.1"});
     EXPECT_EQ(peer.port(),    kSenderPort);
@@ -96,7 +96,7 @@ TEST_F(NativeUdpSocketTest, MulticastSendReceive) {
 
     const char* msg = "hello_multicast";
     Payload p_send(std::strlen(msg));
-    std::memcpy(p_send.data(), msg, std::strlen(msg));
+    std::memcpy(p_send.front(), msg, std::strlen(msg));
 
     Endpoint dst{ group, kReceiverPort };
     ASSERT_TRUE(sender_->send(std::move(p_send), dst));
@@ -106,7 +106,7 @@ TEST_F(NativeUdpSocketTest, MulticastSendReceive) {
     Endpoint peer{};
     Payload  p_recv = receiver_->receive(&peer);
     ASSERT_TRUE(p_recv);
-    std::string received{ reinterpret_cast<char*>(p_recv.data()), p_recv.size() };
+    std::string received{ reinterpret_cast<char*>(p_recv.front()), p_recv.size() };
     EXPECT_EQ(received, msg);
 
     // For multicast we only reliably check the source port
