@@ -10,6 +10,10 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Enable testing with ctest
 enable_testing()
 
+# Configure CTest to create Testing folder in the build directory
+set(CTEST_BINARY_DIRECTORY "${CMAKE_BINARY_DIR}")
+set(CTEST_OUTPUT_ON_FAILURE ON)
+
 # Make the platform module accessible from anywhere in the tree.
 list(APPEND CMAKE_MODULE_PATH ${PLATFORM_PATH})
 

@@ -13,7 +13,8 @@ class Interface
 {
   public:
 
-    Interface() = default;
+    Interface(ftl::ipv4::Address address, ftl::ipv4::Mask mask)
+      : address_{address}, mask_{mask} {}
     virtual ~Interface() = default;
 
     // No copying or moving.
@@ -23,6 +24,13 @@ class Interface
     Interface& operator=(Interface&&) = delete;      // Delete move assignment operator
 
     virtual ftl::ipv4::udp::SocketPtr CreateUdpSocket() = 0;
+
+    ftl::ipv4::Address address() const noexcept { return address_; }
+    ftl::ipv4::Mask mask() const noexcept { return mask_; }
+  
+  private:
+    ftl::ipv4::Address address_;
+    ftl::ipv4::Mask mask_;
 };
 
 }

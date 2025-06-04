@@ -7,6 +7,7 @@ namespace ftl::ipv4 {
 
 class Mask : public Address {
   public:
+    using Address::Address;
     Mask (uint8_t m1, uint8_t m2, uint8_t m3, uint8_t m4)
       : Address(m1, m2, m3, m4)
     {

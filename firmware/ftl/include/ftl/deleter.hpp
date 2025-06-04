@@ -24,6 +24,19 @@ public:
   virtual void operator()(T* ptr) = 0;
 };
 
+
+// A default polymorphic deleter that just calls delete on the object.
+template <typename T>
+class DefaultDeleter final : public PolymorphicDeleter<T>
+{
+public:
+  void operator()(T* ptr) override
+  {
+    delete ptr;
+  }
+};
+
+
 // Delegating deleter that owns and forwards deletion to a PolymorphicDeleter<T> instance.
 // We store a pointer because PolymorphicDeleter<T> is abstract and cannot be used directly
 // as a std::unique_ptr deleter; owning the base-pointer enables runtime polymorphism and
@@ -39,22 +52,25 @@ public:
     : polymorphic_deleter_{deleter}
   {}
 
+  // Default constructor, does nothing.
+  DelegatingDeleter() = default;
+
   // Default destructor.
   ~DelegatingDeleter() = default;
 
-  // Default copy and move constructors.
+  // Default copy and move.
   DelegatingDeleter(const DelegatingDeleter&) = default;
   DelegatingDeleter(DelegatingDeleter&&) noexcept = default;
-  
-  // Delete assignment operators.
-  DelegatingDeleter& operator=(const DelegatingDeleter&) = delete;  // Delete copy assignment operator
-  DelegatingDeleter& operator=(DelegatingDeleter&&) = delete;       // Delete move assignment operator
+  DelegatingDeleter& operator=(const DelegatingDeleter&) = default;
+  DelegatingDeleter& operator=(DelegatingDeleter&&) = default;
 
   // Call operator forwards deletion to the underlying polymorphic deleter.
   // @param ptr Pointer to object to delete.
   void operator()(T* ptr) const
   {
-    polymorphic_deleter_->operator()(ptr);
+    if (polymorphic_deleter_ != nullptr) {
+      polymorphic_deleter_->operator()(ptr);
+    }
   }
 
 private:

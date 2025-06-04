@@ -44,3 +44,9 @@ Tooling for forging embedded projects
 cd /.bin/native-release/
 ctest
 ```
+
+# Hello udp
+```
+cmake --workflow --preset native-debug && \
+rip -r native-debug:hello-udp
+```

@@ -7,6 +7,7 @@ add_platform_test(ut-ftl
   ut_buffer_bump_pool.cpp
   ut_bump_allocator.cpp
   ut_bump_pool.cpp
+  ut_byte_order.cpp
   ut_singleton.cpp
   ut_mutex.cpp
   ut_thread.cpp
@@ -14,6 +15,20 @@ add_platform_test(ut-ftl
 )
 target_link_libraries(ut-ftl ftl ftl-native)
 
+# Network test
+add_platform_test(ut-network
+  ut_udp_socket.cpp
+)
+target_link_libraries(ut-network ftl ftl-native)
+
 # Manual tests
 add_executable(hello-world hello_world.cpp)
 platformify(hello-world)
+
+add_executable(hello-udp hello_udp.cpp)
+platformify(hello-udp)
+target_link_libraries(hello-udp ftl ftl-native)
+
+add_executable(hello-udp2 hello_udp2.cpp)
+platformify(hello-udp2)
+target_link_libraries(hello-udp2 ftl ftl-native)
