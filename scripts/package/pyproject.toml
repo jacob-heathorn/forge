@@ -1,21 +1,21 @@
-[tool.poetry]
+[project]
 name = "forge"
 version = "0.1.0"
 description = "Embedded tooling"
-authors = ["Jacob <jacob.heathorn@gmail.com>"]
-
-[tool.poetry.dependencies]
-python = "^3.12"
-semver = ">=3.0.1"
-gitpython = "*"
-jinja2 = "*"
-json5 = "*"
-cmsis-svd = "0.6.0"
-pyserial = "*"
+authors = [{name = "Jacob", email = "jacob.heathorn@gmail.com"}]
+requires-python = ">=3.12"
+dependencies = [
+    "semver>=3.0.1",
+    "gitpython",
+    "jinja2",
+    "json5",
+    "cmsis-svd==0.6.0",
+    "pyserial",
+]
 
 [tool.pytest.ini_options]
 cache_dir = "../../.pycache"
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"

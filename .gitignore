@@ -5,3 +5,4 @@
 /.pycache
 /.tox
 /.claude
+/scripts/package/forge.egg-info
