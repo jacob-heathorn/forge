@@ -1,8 +1,23 @@
 #!/bin/bash
 set -e
 
-export ANSIBLE_CONFIG=$FORGE_ROOT/ansible/ansible.cfg
+# Setup script for installing the environment with uv
 
-ansible-playbook -i ${FORGE_ROOT}/ansible/local.ini \
-  ${FORGE_ROOT}/ansible/playbooks/install_poetry_environment.yml \
-  -e "package_path=${PROJECT_ROOT}/scripts/package"
+PACKAGE_PATH="${PROJECT_ROOT}/scripts/package"
+
+echo "Setting up Python environment with uv..."
+
+# Change to package directory
+cd "$PACKAGE_PATH"
+
+# Create virtual environment if it doesn't exist
+if [ ! -d ".venv" ]; then
+    echo "Creating virtual environment..."
+    uv venv
+fi
+
+# Install the package and all its dependencies from pyproject.toml
+echo "Installing forge package and dependencies from pyproject.toml..."
+uv pip install -e .
+
+echo "Environment setup complete!"
