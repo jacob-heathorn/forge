@@ -6,3 +6,4 @@
 /.tox
 /.claude
 /scripts/package/forge.egg-info
+/.nox

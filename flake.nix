@@ -12,7 +12,6 @@
   in {
     devShells.${system}.default = pkgs.mkShell {
       buildInputs = [
-        pkgs.ansible
         pkgs.cmake
         pkgs.uv
         pkgs.glibcLocales
@@ -20,7 +19,7 @@
         pkgs.gcc-arm-embedded-13
         pkgs.python312Packages.flake8
         pkgs.python312Packages.mypy
-        pkgs.python312Packages.tox
+        pkgs.python312Packages.nox
       ];
 
       shellHook = ''

@@ -11,6 +11,8 @@ dependencies = [
     "json5",
     "cmsis-svd==0.6.0",
     "pyserial",
+    "nox",
+    "nox-uv",
 ]
 
 [tool.pytest.ini_options]

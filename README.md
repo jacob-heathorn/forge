@@ -24,6 +24,23 @@ Tooling for forging embedded projects
 5) Run the setup script `setup`
 
 # Repository tests
+
+## Using nox (recommended)
+```bash
+# Run all tests and linting
+nox
+
+# Run only tests
+nox -s tests
+
+# Run only linting
+nox -s lint
+
+# Pass arguments to pytest
+nox -s tests -- -v
+```
+
+## Using tox (legacy)
 `tox`
 
 # Clean
