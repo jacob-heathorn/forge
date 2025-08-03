@@ -21,27 +21,10 @@ Tooling for forging embedded projects
   * Nix
   * Pylance
   * Python
-5) Run the setup script `setup`
+5) Create the dev environment: `nox -s dev`
 
 # Repository tests
-
-## Using nox (recommended)
-```bash
-# Run all tests and linting
-nox
-
-# Run only tests
-nox -s tests
-
-# Run only linting
-nox -s lint
-
-# Pass arguments to pytest
-nox -s tests -- -v
-```
-
-## Using tox (legacy)
-`tox`
+`nox`
 
 # Clean
 `rip -c`
