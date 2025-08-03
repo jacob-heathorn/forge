@@ -14,7 +14,7 @@
       buildInputs = [
         pkgs.ansible
         pkgs.cmake
-        pkgs.poetry
+        pkgs.uv
         pkgs.glibcLocales
         pkgs.gtest
         pkgs.gcc-arm-embedded-13
