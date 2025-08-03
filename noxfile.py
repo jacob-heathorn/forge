@@ -69,7 +69,6 @@ def lint(session):
       "--ignore=E126",
       "--max-line-length=100",
       "--indent-size=2",
-      "--exclude=.venv",
       "."
   )
 
