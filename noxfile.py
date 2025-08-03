@@ -35,11 +35,12 @@ def tests(session):
     # Set coverage file location
     session.env["COVERAGE_FILE"] = "../../.pycache/.coverage"
     
-    # Run pytest
+    # Run pytest with cache in .pycache
     session.run(
         "pytest",
         "../../test/pytest/",
         "--cov=forge",
+        "-o", f"cache_dir={os.environ.get('PROJECT_ROOT', '../..')}/.pycache",
         *session.posargs
     )
 
