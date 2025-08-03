@@ -1,6 +1,6 @@
 /.bin/
 /.vscode/launch.json
-/scripts/package/.venv
+/.venv
 /.direnv/
 /.pycache
 /.tox

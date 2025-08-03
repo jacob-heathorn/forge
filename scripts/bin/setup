@@ -7,17 +7,16 @@ PACKAGE_PATH="${PROJECT_ROOT}/scripts/package"
 
 echo "Setting up Python environment with uv..."
 
-# Change to package directory
-cd "$PACKAGE_PATH"
-
-# Create virtual environment if it doesn't exist
-if [ ! -d ".venv" ]; then
-    echo "Creating virtual environment..."
+# Create virtual environment at project root if it doesn't exist
+if [ ! -d "${PROJECT_ROOT}/.venv" ]; then
+    echo "Creating virtual environment at ${PROJECT_ROOT}/.venv..."
+    cd "${PROJECT_ROOT}"
     uv venv
 fi
 
 # Install the package and all its dependencies from pyproject.toml
 echo "Installing forge package and dependencies from pyproject.toml..."
+cd "$PACKAGE_PATH"
 uv pip install -e .
 
 echo "Environment setup complete!"
