@@ -17,6 +17,16 @@ ENV_VARS = [
 
 
 @nox.session
+def dev(session):
+  """Create a development environment with all dependencies."""
+  session.chdir("scripts/package")
+  session.install("-e", ".")
+  session.install("pytest", "pytest-cov", "flake8", "mypy")
+
+  session.log(f"Development environment created at: {session.bin}")
+
+
+@nox.session
 def tests(session):
   """Run the pytest test suite."""
   # Pass through environment variables
@@ -80,13 +90,3 @@ def lint(session):
       "--cache-dir=../../.pycache",
       "--package=forge"
   )
-
-
-@nox.session
-def dev(session):
-  """Create a development environment with all dependencies."""
-  session.chdir("scripts/package")
-  session.install("-e", ".")
-  session.install("pytest", "pytest-cov", "flake8", "mypy")
-
-  session.log(f"Development environment created at: {session.bin}")
