@@ -63,17 +63,22 @@ def lint(session):
   # Install the package in editable mode
   session.install("-e", ".")
 
-  # Run flake8
+  # Run flake8 with configuration
   session.run(
       "flake8",
-      "--config=../../tox.ini",
+      "--ignore=E126",
+      "--max-line-length=100",
+      "--indent-size=2",
+      "--exclude=.venv",
       "."
   )
 
-  # Run mypy
+  # Run mypy with configuration
   session.run(
       "mypy",
-      "--config-file=../../tox.ini",
+      "--ignore-missing-imports",
+      "--check-untyped-defs",
+      "--cache-dir=../../.pycache",
       "--package=forge"
   )
 
@@ -81,7 +86,6 @@ def lint(session):
 @nox.session
 def dev(session):
   """Create a development environment with all dependencies."""
-  # This session is useful for creating a dev environment similar to tox devenv
   session.chdir("scripts/package")
   session.install("-e", ".")
   session.install("pytest", "pytest-cov", "flake8", "mypy")
