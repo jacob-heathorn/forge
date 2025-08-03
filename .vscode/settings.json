@@ -12,11 +12,12 @@
       "--indent-size", "2",
       "--aggressive"
   ],
-  "flake8.path": ["flake8"],
+  "autopep8.interpreter": ["./.nox/dev/bin/python"],
   "flake8.args": [
       "--indent-size", "2",
-      "--max-line-length", "100",
+      "--max-line-length", "100"
   ],
+  "flake8.interpreter": ["./.nox/dev/bin/python"],
   "editor.tabSize": 2,
   "editor.wordWrapColumn": 100,
   "C_Cpp.default.compileCommands": "${workspaceFolder}/.bin/native-debug/compile_commands.json",
