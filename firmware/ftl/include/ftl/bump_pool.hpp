@@ -27,6 +27,9 @@ public:
     ftl::LockGuard<ftl::Mutex> lock(mutex_);
     for (std::size_t i = 0; i < initialSize; ++i) {
       void* mem = allocator_.allocate(sizeof(Node));
+      if (!mem) {
+        break; // Stop allocating if we run out of memory
+      }
       ++total_count_;
       auto* node = new (mem) Node{};
       node->next = head_;
@@ -71,6 +74,9 @@ public:
       } else {
         // grow pool
         void* mem = allocator_.allocate(sizeof(Node));
+        if (!mem) {
+          return nullptr; // Unable to allocate memory
+        }
         ++total_count_;
         node = new (mem) Node{};
       }
