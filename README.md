@@ -12,7 +12,6 @@ Tooling for forging embedded projects
   * `direnv allow .`
 3) Install nix:
   * `sh <(curl -L https://nixos.org/nix/install) --daemon`
-  * TODO: enable nix-direnv (I forgot)
 4) Install vscode extensions:
   * autopep8
   * Better Jinja
@@ -21,10 +20,10 @@ Tooling for forging embedded projects
   * Nix
   * Pylance
   * Python
-5) Run the setup script `setup`
+5) Create the dev environment: `nox -s dev`
 
 # Repository tests
-`tox`
+`nox`
 
 # Clean
 `rip -c`

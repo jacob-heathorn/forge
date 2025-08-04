@@ -1,5 +1,4 @@
 #!/bin/bash
 set -e
 
-pushd $PROJECT_ROOT/scripts/package
-poetry run python $PROJECT_ROOT/scripts/package/rip.py "$@"
+$PROJECT_ROOT/.nox/dev/bin/python $PROJECT_ROOT/scripts/package/rip.py "$@"
