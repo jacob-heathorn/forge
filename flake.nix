@@ -13,6 +13,7 @@
     devShells.${system}.default = pkgs.mkShell {
       buildInputs = [
         pkgs.cmake
+        pkgs.ninja
         pkgs.uv
         pkgs.glibcLocales
         pkgs.gtest
