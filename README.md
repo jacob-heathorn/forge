@@ -12,7 +12,6 @@ Tooling for forging embedded projects
   * `direnv allow .`
 3) Install nix:
   * `sh <(curl -L https://nixos.org/nix/install) --daemon`
-  * TODO: enable nix-direnv (I forgot)
 4) Install vscode extensions:
   * autopep8
   * Better Jinja
