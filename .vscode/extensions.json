@@ -1,0 +1,14 @@
+{
+    "recommendations": [
+        "ms-python.autopep8",
+        "samuelcolvin.jinjahtml",
+        "ms-vscode.cpptools",
+        "ms-vscode.cmake-tools",
+        "marus25.cortex-debug",
+        "ms-python.flake8",
+        "jnoortheen.nix-ide",
+        "mkhl.direnv",
+        "ms-python.vscode-pylance",
+        "ms-python.python"
+    ]
+}

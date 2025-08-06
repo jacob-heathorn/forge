@@ -12,14 +12,7 @@ Tooling for forging embedded projects
   * `direnv allow .`
 3) Install nix:
   * `sh <(curl -L https://nixos.org/nix/install) --daemon`
-4) Install vscode extensions:
-  * autopep8
-  * Better Jinja
-  * C/C++
-  * Flake8
-  * Nix
-  * Pylance
-  * Python
+4) Install the workspace recommended VSCode extensions.
 5) Create the dev environment: `nox -s dev`
 
 # Repository tests
