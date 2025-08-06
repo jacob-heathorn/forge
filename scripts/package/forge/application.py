@@ -202,8 +202,12 @@ class NativeApplication(Application):
     print_size(self.application_fullfile)
     print("Running locally...")
     args = [self.application_fullfile]
-    subprocess.check_call(args)
-    forge.print_green("Complete!")
+    try:
+      subprocess.check_call(args)
+      forge.print_green("Complete!")
+    except KeyboardInterrupt:
+      print("\nApplication interrupted by user")
+      return
 
   def debug(self):
     debugger = forge.NativeDebugger(name=f"{self.preset_name}:{self.application_name}")
