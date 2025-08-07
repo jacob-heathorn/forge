@@ -16,10 +16,10 @@ public:
     using is_always_equal = std::true_type;
 
     // Static method to initialize the pool - must be called before using the allocator
-    static void initializePool(ftl::BumpAllocator& allocator, size_t initial_nodes = 10) {
+    static void initializePool(ftl::BumpAllocator& allocator) {
         assert(!pool_ && "Pool already initialized");
-        std::cout << "VerboseAllocator: Initializing pool with " << initial_nodes << " pre-allocated nodes\n";
-        pool_ = new ftl::BumpPool<T>(allocator, initial_nodes);
+        std::cout << "VerboseAllocator: Initializing pool.\n";
+        pool_ = new ftl::BumpPool<T>(allocator);
     }
 
     VerboseAllocator() noexcept {
@@ -71,7 +71,7 @@ int main() {
     
     // Map uses std::_Rb_tree_node internally, so we need to initialize the pool for that type
     using NodeType = std::_Rb_tree_node<std::pair<const int, std::string>>;
-    VerboseAllocator<NodeType>::initializePool(allocator, 10);
+    VerboseAllocator<NodeType>::initializePool(allocator);
     
     using MapType = std::map<int, std::string, std::less<int>, 
                              VerboseAllocator<std::pair<const int, std::string>>>;
