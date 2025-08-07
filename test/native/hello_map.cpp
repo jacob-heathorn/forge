@@ -2,6 +2,9 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <cassert>
+#include "ftl/bump_pool.hpp"
+#include "ftl/bump_allocator.hpp"
 
 template<typename T>
 class VerboseAllocator {
@@ -14,37 +17,51 @@ public:
 
     VerboseAllocator() noexcept {
         std::cout << "VerboseAllocator: default constructor\n";
+        initializePoolIfNeeded();
     }
 
     template<typename U>
     VerboseAllocator(const VerboseAllocator<U>&) noexcept {
         std::cout << "VerboseAllocator: copy constructor\n";
+        initializePoolIfNeeded();
     }
 
     T* allocate(size_type n) {
+        assert(n == 1 && "VerboseAllocator only supports allocating one object at a time");
         std::cout << "VerboseAllocator: allocating " << n 
                   << " objects of size " << sizeof(T) 
                   << " (total: " << n * sizeof(T) << " bytes)\n";
-        return static_cast<T*>(::operator new(n * sizeof(T)));
+        
+        T* ptr = getPool().acquire();
+        std::cout << "  -> allocated from bump_pool at " << ptr << "\n";
+        return ptr;
     }
 
     void deallocate(T* p, size_type n) noexcept {
+        assert(n == 1 && "VerboseAllocator only supports deallocating one object at a time");
         std::cout << "VerboseAllocator: deallocating " << n 
                   << " objects of size " << sizeof(T) 
-                  << " (total: " << n * sizeof(T) << " bytes)\n";
-        ::operator delete(p);
+                  << " (total: " << n * sizeof(T) << " bytes) at " << p << "\n";
+        
+        getPool().release(p);
+        std::cout << "  -> returned to bump_pool\n";
     }
 
-    template<typename U, typename... Args>
-    void construct(U* p, Args&&... args) {
-        std::cout << "VerboseAllocator: constructing object at " << p << "\n";
-        new(p) U(std::forward<Args>(args)...);
+private:
+    static ftl::BumpPool<T>& getPool() {
+        static uint8_t memory[64 * 1024]; // 64KB static buffer
+        static ftl::BumpAllocator allocator(memory, sizeof(memory));
+        static ftl::BumpPool<T> pool(allocator, 10); // Pre-allocate 10 nodes
+        return pool;
     }
 
-    template<typename U>
-    void destroy(U* p) {
-        std::cout << "VerboseAllocator: destroying object at " << p << "\n";
-        p->~U();
+    static void initializePoolIfNeeded() {
+        // Pool is initialized with static initialization above
+        static bool initialized = false;
+        if (!initialized) {
+            std::cout << "  -> Static bump_pool initialized for type\n";
+            initialized = true;
+        }
     }
 };
 
