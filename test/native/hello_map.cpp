@@ -15,68 +15,63 @@ public:
     using propagate_on_container_move_assignment = std::true_type;
     using is_always_equal = std::true_type;
 
+    // Static method to initialize the pool - must be called before using the allocator
+    static void initializePool(ftl::BumpAllocator& allocator, size_t initial_nodes = 10) {
+        assert(!pool_ && "Pool already initialized");
+        std::cout << "VerboseAllocator: Initializing pool with " << initial_nodes << " pre-allocated nodes\n";
+        pool_ = new ftl::BumpPool<T>(allocator, initial_nodes);
+    }
+
     VerboseAllocator() noexcept {
         std::cout << "VerboseAllocator: default constructor\n";
-        initializePoolIfNeeded();
+        assert(pool_ && "Pool not initialized! Call VerboseAllocator::initializePool() first");
     }
 
     template<typename U>
     VerboseAllocator(const VerboseAllocator<U>&) noexcept {
         std::cout << "VerboseAllocator: copy constructor\n";
-        initializePoolIfNeeded();
+        assert(pool_ && "Pool not initialized! Call VerboseAllocator::initializePool() first");
     }
 
     T* allocate(size_type n) {
         assert(n == 1 && "VerboseAllocator only supports allocating one object at a time");
+        assert(pool_ && "Pool not initialized! Call VerboseAllocator::initializePool() first");
+        
         std::cout << "VerboseAllocator: allocating " << n 
                   << " objects of size " << sizeof(T) 
                   << " (total: " << n * sizeof(T) << " bytes)\n";
         
-        T* ptr = getPool().acquire();
+        T* ptr = pool_->acquire();
         std::cout << "  -> allocated from bump_pool at " << ptr << "\n";
         return ptr;
     }
 
     void deallocate(T* p, size_type n) noexcept {
         assert(n == 1 && "VerboseAllocator only supports deallocating one object at a time");
+        assert(pool_ && "Pool not initialized! Call VerboseAllocator::initializePool() first");
+        
         std::cout << "VerboseAllocator: deallocating " << n 
                   << " objects of size " << sizeof(T) 
                   << " (total: " << n * sizeof(T) << " bytes) at " << p << "\n";
         
-        getPool().release(p);
+        pool_->release(p);
         std::cout << "  -> returned to bump_pool\n";
     }
 
 private:
-    static ftl::BumpPool<T>& getPool() {
-        static uint8_t memory[64 * 1024]; // 64KB static buffer
-        static ftl::BumpAllocator allocator(memory, sizeof(memory));
-        static ftl::BumpPool<T> pool(allocator, 10); // Pre-allocate 10 nodes
-        return pool;
-    }
-
-    static void initializePoolIfNeeded() {
-        // Pool is initialized with static initialization above
-        static bool initialized = false;
-        if (!initialized) {
-            std::cout << "  -> Static bump_pool initialized for type\n";
-            initialized = true;
-        }
-    }
+    inline static ftl::BumpPool<T>* pool_ = nullptr;
 };
-
-template<typename T, typename U>
-bool operator==(const VerboseAllocator<T>&, const VerboseAllocator<U>&) {
-    return true;
-}
-
-template<typename T, typename U>
-bool operator!=(const VerboseAllocator<T>&, const VerboseAllocator<U>&) {
-    return false;
-}
 
 int main() {
     std::cout << "=== Creating map with custom allocator ===\n\n";
+    
+    // Create a bump allocator with a static buffer
+    static uint8_t memory[64 * 1024]; // 64KB buffer
+    ftl::BumpAllocator allocator(memory, sizeof(memory));
+    
+    // Map uses std::_Rb_tree_node internally, so we need to initialize the pool for that type
+    using NodeType = std::_Rb_tree_node<std::pair<const int, std::string>>;
+    VerboseAllocator<NodeType>::initializePool(allocator, 10);
     
     using MapType = std::map<int, std::string, std::less<int>, 
                              VerboseAllocator<std::pair<const int, std::string>>>;
