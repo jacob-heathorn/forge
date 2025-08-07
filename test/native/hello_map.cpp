@@ -1,7 +1,8 @@
 #include <iostream>
 #include <string>
 #include "ftl/map.hpp"
-#include "ftl/bump_pool_allocator.hpp"
+#include "ftl/bump_pool_allocator2.hpp"
+#include "ftl/bump_allocator.hpp"
 
 int main() {
     std::cout << "=== Creating map with custom allocator ===\n\n";
@@ -10,17 +11,11 @@ int main() {
     static uint8_t memory[64 * 1024]; // 64KB buffer
     ftl::BumpAllocator allocator(memory, sizeof(memory));
     
-    // Define the map type
-    using ValueType = std::pair<const int, std::string>;
-    using MapType = ftl::Map<int, std::string, std::less<int>, 
-                             ftl::BumpPoolAllocator<ValueType>>;
+    // Create the pool allocator
+    ftl::BumpPoolAllocator2 poolAlloc(allocator);
     
-    // Initialize pool for both the Node type and the value type
-    using NodeType = MapType::Node;
-    ftl::BumpPoolAllocator<NodeType>::initializePool(allocator);
-    ftl::BumpPoolAllocator<ValueType>::initializePool(allocator);
-    
-    MapType myMap;
+    // Create map with the pool allocator
+    ftl::Map<int, std::string> myMap(poolAlloc);
     
     std::cout << "\n=== Inserting elements ===\n\n";
     

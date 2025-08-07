@@ -1,16 +1,16 @@
 #ifndef FTL_MAP_HPP
 #define FTL_MAP_HPP
 
-#include <memory>
 #include <functional>
 #include <iterator>
 #include <utility>
-#include <stdexcept>
+#include <cassert>
+#include <cstddef>
+#include "ftl/bump_pool_allocator2.hpp"
 
 namespace ftl {
 
-template<typename Key, typename T, typename Compare = std::less<Key>,
-         typename Allocator = std::allocator<std::pair<const Key, T>>>
+template<typename Key, typename T, typename Compare = std::less<Key>>
 class Map {
 public:
     using key_type = Key;
@@ -19,11 +19,10 @@ public:
     using size_type = std::size_t;
     using difference_type = std::ptrdiff_t;
     using key_compare = Compare;
-    using allocator_type = Allocator;
     using reference = value_type&;
     using const_reference = const value_type&;
-    using pointer = typename std::allocator_traits<Allocator>::pointer;
-    using const_pointer = typename std::allocator_traits<Allocator>::const_pointer;
+    using pointer = value_type*;
+    using const_pointer = const value_type*;
 
 private:
     enum class Color : bool { RED = false, BLACK = true };
@@ -48,18 +47,14 @@ public:
     };
 
 private:
-
-    using NodeAllocator = typename std::allocator_traits<Allocator>::template rebind_alloc<Node>;
-    using NodeAllocTraits = std::allocator_traits<NodeAllocator>;
-
     Node* root_;
     Node* nil_;
     size_type size_;
     Compare comp_;
-    NodeAllocator alloc_;
+    BumpPoolAllocator2& alloc_;
 
     void initialize_nil() {
-        nil_ = NodeAllocTraits::allocate(alloc_, 1);
+        nil_ = alloc_.allocate<Node>();
         nil_->parent = nil_->left = nil_->right = nil_;
         nil_->color = Color::BLACK;
     }
@@ -216,8 +211,8 @@ private:
         if (node != nil_) {
             destroy_tree(node->left);
             destroy_tree(node->right);
-            NodeAllocTraits::destroy(alloc_, node);
-            NodeAllocTraits::deallocate(alloc_, node, 1);
+            node->~Node();
+            alloc_.deallocate<Node>(node);
         }
     }
 
@@ -377,26 +372,23 @@ public:
         bool operator!=(const const_iterator& other) const { return node_ != other.node_; }
     };
 
-    Map() : Map(Compare(), Allocator()) {}
-    
-    explicit Map(const Compare& comp, const Allocator& alloc = Allocator())
+    explicit Map(BumpPoolAllocator2& alloc, const Compare& comp = Compare())
         : root_(nullptr), size_(0), comp_(comp), alloc_(alloc) {
         initialize_nil();
         root_ = nil_;
     }
 
-    explicit Map(const Allocator& alloc)
-        : Map(Compare(), alloc) {}
-
     ~Map() {
         clear();
         if (nil_) {
-            NodeAllocTraits::deallocate(alloc_, nil_, 1);
+            alloc_.deallocate<Node>(nil_);
         }
     }
 
-    Map(const Map& other) : Map(other.comp_, 
-                                 std::allocator_traits<allocator_type>::select_on_container_copy_construction(other.alloc_)) {
+    Map(const Map& other) 
+        : root_(nullptr), size_(0), comp_(other.comp_), alloc_(other.alloc_) {
+        initialize_nil();
+        root_ = nil_;
         for (const auto& item : other) {
             insert(item);
         }
@@ -415,29 +407,13 @@ public:
 
     Map(Map&& other) noexcept
         : root_(other.root_), nil_(other.nil_), size_(other.size_),
-          comp_(std::move(other.comp_)), alloc_(std::move(other.alloc_)) {
+          comp_(std::move(other.comp_)), alloc_(other.alloc_) {
         other.root_ = nullptr;
         other.nil_ = nullptr;
         other.size_ = 0;
     }
 
-    Map& operator=(Map&& other) noexcept {
-        if (this != &other) {
-            clear();
-            if (nil_) {
-                NodeAllocTraits::deallocate(alloc_, nil_, 1);
-            }
-            root_ = other.root_;
-            nil_ = other.nil_;
-            size_ = other.size_;
-            comp_ = std::move(other.comp_);
-            alloc_ = std::move(other.alloc_);
-            other.root_ = nullptr;
-            other.nil_ = nullptr;
-            other.size_ = 0;
-        }
-        return *this;
-    }
+    Map& operator=(Map&& other) noexcept = delete;  // Can't reassign allocator reference
 
     iterator begin() {
         if (root_ == nil_) return end();
@@ -484,8 +460,8 @@ public:
             }
         }
 
-        Node* z = NodeAllocTraits::allocate(alloc_, 1);
-        NodeAllocTraits::construct(alloc_, z, value);
+        Node* z = alloc_.allocate<Node>();
+        new (z) Node(value);
         z->parent = y;
         z->left = nil_;
         z->right = nil_;
@@ -506,8 +482,8 @@ public:
 
     template<typename... Args>
     std::pair<iterator, bool> emplace(Args&&... args) {
-        Node* temp = NodeAllocTraits::allocate(alloc_, 1);
-        NodeAllocTraits::construct(alloc_, temp, std::forward<Args>(args)...);
+        Node* temp = alloc_.allocate<Node>();
+        new (temp) Node(std::forward<Args>(args)...);
         
         Node* y = nil_;
         Node* x = root_;
@@ -519,8 +495,8 @@ public:
             } else if (comp_(x->data.first, temp->data.first)) {
                 x = x->right;
             } else {
-                NodeAllocTraits::destroy(alloc_, temp);
-                NodeAllocTraits::deallocate(alloc_, temp, 1);
+                temp->~Node();
+                alloc_.deallocate<Node>(temp);
                 return {iterator(x, nil_), false};
             }
         }
@@ -621,8 +597,8 @@ public:
             delete_fixup(x);
         }
 
-        NodeAllocTraits::destroy(alloc_, z);
-        NodeAllocTraits::deallocate(alloc_, z, 1);
+        z->~Node();
+        alloc_.deallocate<Node>(z);
         --size_;
 
         return next;
@@ -631,8 +607,6 @@ public:
     size_type count(const Key& key) const {
         return find(key) != end() ? 1 : 0;
     }
-
-    allocator_type get_allocator() const { return alloc_; }
 };
 
 }
