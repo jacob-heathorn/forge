@@ -33,3 +33,6 @@ target_link_libraries(hello-udp ftl ftl-native)
 add_executable(hello-udp2 hello_udp2.cpp)
 platformify(hello-udp2)
 target_link_libraries(hello-udp2 ftl ftl-native)
+
+add_executable(hello-map hello_map.cpp)
+platformify(hello-map)
