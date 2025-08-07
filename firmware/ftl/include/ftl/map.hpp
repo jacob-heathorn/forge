@@ -11,7 +11,7 @@ namespace ftl {
 
 template<typename Key, typename T, typename Compare = std::less<Key>,
          typename Allocator = std::allocator<std::pair<const Key, T>>>
-class map {
+class Map {
 public:
     using key_type = Key;
     using mapped_type = T;
@@ -28,13 +28,16 @@ public:
 private:
     enum class Color : bool { RED = false, BLACK = true };
 
+public:
     struct Node {
         value_type data;
         Node* parent;
         Node* left;
         Node* right;
+    private:
         Color color;
-
+        friend class Map;
+    public:
         template<typename... Args>
         Node(Args&&... args) 
             : data(std::forward<Args>(args)...)
@@ -43,6 +46,8 @@ private:
             , right(nullptr)
             , color(Color::RED) {}
     };
+
+private:
 
     using NodeAllocator = typename std::allocator_traits<Allocator>::template rebind_alloc<Node>;
     using NodeAllocTraits = std::allocator_traits<NodeAllocator>;
@@ -220,10 +225,10 @@ public:
     class iterator {
     public:
         using iterator_category = std::bidirectional_iterator_tag;
-        using value_type = map::value_type;
-        using difference_type = map::difference_type;
-        using pointer = map::pointer;
-        using reference = map::reference;
+        using value_type = Map::value_type;
+        using difference_type = Map::difference_type;
+        using pointer = Map::pointer;
+        using reference = Map::reference;
 
     private:
         Node* node_;
@@ -292,16 +297,16 @@ public:
         bool operator==(const iterator& other) const { return node_ == other.node_; }
         bool operator!=(const iterator& other) const { return node_ != other.node_; }
 
-        friend class map;
+        friend class Map;
     };
 
     class const_iterator {
     public:
         using iterator_category = std::bidirectional_iterator_tag;
-        using value_type = map::value_type;
-        using difference_type = map::difference_type;
-        using pointer = map::const_pointer;
-        using reference = map::const_reference;
+        using value_type = Map::value_type;
+        using difference_type = Map::difference_type;
+        using pointer = Map::const_pointer;
+        using reference = Map::const_reference;
 
     private:
         const Node* node_;
@@ -372,32 +377,32 @@ public:
         bool operator!=(const const_iterator& other) const { return node_ != other.node_; }
     };
 
-    map() : map(Compare(), Allocator()) {}
+    Map() : Map(Compare(), Allocator()) {}
     
-    explicit map(const Compare& comp, const Allocator& alloc = Allocator())
+    explicit Map(const Compare& comp, const Allocator& alloc = Allocator())
         : root_(nullptr), size_(0), comp_(comp), alloc_(alloc) {
         initialize_nil();
         root_ = nil_;
     }
 
-    explicit map(const Allocator& alloc)
-        : map(Compare(), alloc) {}
+    explicit Map(const Allocator& alloc)
+        : Map(Compare(), alloc) {}
 
-    ~map() {
+    ~Map() {
         clear();
         if (nil_) {
             NodeAllocTraits::deallocate(alloc_, nil_, 1);
         }
     }
 
-    map(const map& other) : map(other.comp_, 
+    Map(const Map& other) : Map(other.comp_, 
                                  std::allocator_traits<allocator_type>::select_on_container_copy_construction(other.alloc_)) {
         for (const auto& item : other) {
             insert(item);
         }
     }
 
-    map& operator=(const map& other) {
+    Map& operator=(const Map& other) {
         if (this != &other) {
             clear();
             comp_ = other.comp_;
@@ -408,7 +413,7 @@ public:
         return *this;
     }
 
-    map(map&& other) noexcept
+    Map(Map&& other) noexcept
         : root_(other.root_), nil_(other.nil_), size_(other.size_),
           comp_(std::move(other.comp_)), alloc_(std::move(other.alloc_)) {
         other.root_ = nullptr;
@@ -416,7 +421,7 @@ public:
         other.size_ = 0;
     }
 
-    map& operator=(map&& other) noexcept {
+    Map& operator=(Map&& other) noexcept {
         if (this != &other) {
             clear();
             if (nil_) {

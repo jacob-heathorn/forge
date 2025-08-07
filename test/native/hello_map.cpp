@@ -1,6 +1,6 @@
 #include <iostream>
-#include <map>
 #include <string>
+#include "ftl/map.hpp"
 #include "ftl/bump_pool_allocator.hpp"
 
 int main() {
@@ -10,12 +10,15 @@ int main() {
     static uint8_t memory[64 * 1024]; // 64KB buffer
     ftl::BumpAllocator allocator(memory, sizeof(memory));
     
-    // Map uses std::_Rb_tree_node internally, so we need to initialize the pool for that type
-    using NodeType = std::_Rb_tree_node<std::pair<const int, std::string>>;
-    ftl::BumpPoolAllocator<NodeType>::initializePool(allocator);
+    // Define the map type
+    using ValueType = std::pair<const int, std::string>;
+    using MapType = ftl::Map<int, std::string, std::less<int>, 
+                             ftl::BumpPoolAllocator<ValueType>>;
     
-    using MapType = std::map<int, std::string, std::less<int>, 
-                             ftl::BumpPoolAllocator<std::pair<const int, std::string>>>;
+    // Initialize pool for both the Node type and the value type
+    using NodeType = MapType::Node;
+    ftl::BumpPoolAllocator<NodeType>::initializePool(allocator);
+    ftl::BumpPoolAllocator<ValueType>::initializePool(allocator);
     
     MapType myMap;
     
