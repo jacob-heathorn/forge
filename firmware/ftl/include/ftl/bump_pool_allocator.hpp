@@ -3,6 +3,7 @@
 #include <memory>
 #include <cstddef>
 #include <cassert>
+#include <cstdio>
 #include "ftl/bump_pool.hpp"
 #include "ftl/bump_allocator.hpp"
 
@@ -40,12 +41,17 @@ public:
     T* allocate(size_type n) {
         assert(n == 1 && "BumpPoolAllocator only supports allocating one object at a time");
         assert(pool_ && "Pool not initialized! Call BumpPoolAllocator::initializePool() first");
-        return pool_->acquire();
+        
+        T* ptr = pool_->acquire();
+        printf("BumpPoolAllocator: allocated %zu bytes at %p\n", sizeof(T), ptr);
+        return ptr;
     }
 
     void deallocate(T* p, size_type n) noexcept {
         assert(n == 1 && "BumpPoolAllocator only supports deallocating one object at a time");
         assert(pool_ && "Pool not initialized! Call BumpPoolAllocator::initializePool() first");
+        
+        printf("BumpPoolAllocator: deallocating %zu bytes at %p\n", sizeof(T), p);
         pool_->release(p);
     }
 
