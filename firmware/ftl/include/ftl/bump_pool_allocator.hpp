@@ -26,7 +26,9 @@ public:
     /// Must be called before using any BumpPoolAllocator<T>
     static void initializePool(ftl::BumpAllocator& allocator) {
         assert(!pool_ && "Pool already initialized");
-        pool_ = new ftl::BumpPool<T>(allocator);
+        // Use the allocator's template method to allocate and construct the pool
+        pool_ = allocator.allocate<ftl::BumpPool<T>>(allocator);
+        assert(pool_ && "Failed to allocate BumpPool");
     }
 
     BumpPoolAllocator() noexcept {
