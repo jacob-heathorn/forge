@@ -45,7 +45,7 @@ public:
         assert(pool_ && "Pool not initialized! Call BumpPoolAllocator::initializePool() first");
         
         T* ptr = pool_->acquire();
-        printf("BumpPoolAllocator: allocated %zu bytes at %p\n", sizeof(T), ptr);
+        printf("BumpPoolAllocator: allocated %u bytes at %p\n", (unsigned)sizeof(T), ptr);
         return ptr;
     }
 
@@ -53,7 +53,7 @@ public:
         assert(n == 1 && "BumpPoolAllocator only supports deallocating one object at a time");
         assert(pool_ && "Pool not initialized! Call BumpPoolAllocator::initializePool() first");
         
-        printf("BumpPoolAllocator: deallocating %zu bytes at %p\n", sizeof(T), p);
+        printf("BumpPoolAllocator: deallocating %u bytes at %p\n", (unsigned)sizeof(T), p);
         pool_->release(p);
     }
 
