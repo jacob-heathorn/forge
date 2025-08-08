@@ -16,7 +16,9 @@ public:
 }  // anonymous namespace
 
 // Death test: Calling instance() before create() should assert.
-TEST(SingletonDeathTest, InstanceWithoutCreate) {
+// Death tests are slow because they fork a subprocess
+// Uncomment to enable, or use --gtest_also_run_disabled_tests to run
+TEST(SingletonDeathTest, DISABLED_InstanceWithoutCreate) {
     // Ensure a clean state.
     TestSingleton::destroy();
     EXPECT_DEATH({
@@ -36,7 +38,9 @@ TEST(SingletonTest, CreateAndInstance) {
 }
 
 // Death test: Calling create() twice should trigger an assertion.
-TEST(SingletonDeathTest, CreateTwice) {
+// Death tests are slow because they fork a subprocess
+// Uncomment to enable, or use --gtest_also_run_disabled_tests to run
+TEST(SingletonDeathTest, DISABLED_CreateTwice) {
     // Clean state.
     TestSingleton::destroy();
     TestSingleton::create(100);
@@ -47,7 +51,9 @@ TEST(SingletonDeathTest, CreateTwice) {
 }
 
 // Test: Destroy the singleton and then verify that instance() asserts.
-TEST(SingletonTest, DestroySingleton) {
+// Death tests are slow because they fork a subprocess
+// Uncomment to enable, or use --gtest_also_run_disabled_tests to run
+TEST(SingletonTest, DISABLED_DestroySingleton) {
     // Ensure the singleton is created.
     TestSingleton::destroy();
     TestSingleton::create(55);

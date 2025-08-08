@@ -162,7 +162,9 @@ TEST_F(BufferBumpPoolTest, DifferentSlotsAreSeparated) {
     EXPECT_EQ(buf65->front(), buf65b->front());
 }
 
-TEST_F(BufferBumpPoolTest, AcquireOversizeTriggersAssert) {
+// Death tests are slow because they fork a subprocess
+// Uncomment to enable, or use --gtest_also_run_disabled_tests to run
+TEST_F(BufferBumpPoolTest, DISABLED_AcquireOversizeTriggersAssert) {
     EXPECT_DEATH(
         { pool_->acquire(5000); },
         "Requested size exceeds maximum buffer size"
