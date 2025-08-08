@@ -23,13 +23,13 @@ public:
     T* allocate(Args&&... args) {
         auto& p = pool<T>();
         T* ptr = p.acquire(std::forward<Args>(args)...);
-        printf("BumpPoolAllocator2: allocated %u bytes at %p\n", (unsigned)sizeof(T), ptr);
+        // printf("BumpPoolAllocator2: allocated %u bytes at %p\n", (unsigned)sizeof(T), ptr);
         return ptr;
     }
 
     template<typename T>
     void deallocate(T* p) noexcept {
-        printf("BumpPoolAllocator2: deallocating %u bytes at %p\n", (unsigned)sizeof(T), p);
+        // printf("BumpPoolAllocator2: deallocating %u bytes at %p\n", (unsigned)sizeof(T), p);
         pool<T>().release(p);
     }
 
