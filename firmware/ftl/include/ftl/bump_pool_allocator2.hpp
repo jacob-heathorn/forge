@@ -33,6 +33,24 @@ public:
         pool<T>().release(p);
     }
 
+    /// Get total number of objects allocated in the pool for type T
+    template<typename T>
+    size_type TotalSize() {
+        return pool<T>().TotalSize();
+    }
+
+    /// Get number of free objects in the pool for type T
+    template<typename T>
+    size_type FreeSize() {
+        return pool<T>().FreeSize();
+    }
+
+    /// Get number of currently used objects in the pool for type T
+    template<typename T>
+    size_type UsedSize() {
+        return pool<T>().UsedSize();
+    }
+
 private:
     /// Get or lazily initialize the pool for type T
     template<typename T>

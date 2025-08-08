@@ -40,6 +40,32 @@ protected:
 
     void SetUp() override {
         pool_alloc_ = MapTestEnvironment::pool_alloc_;
+        
+        // Verify clean state before test
+        using MapNode = ftl::Map<int, std::string>::Node;
+        auto used = pool_alloc_->UsedSize<MapNode>();
+        auto free = pool_alloc_->FreeSize<MapNode>();
+        auto total = pool_alloc_->TotalSize<MapNode>();
+        
+        // At start of test, all nodes should be free (if pool exists)
+        if (total > 0) {
+            ASSERT_EQ(used, 0u) << "Memory leak detected: " << used << " nodes still in use before test";
+            ASSERT_EQ(free, total) << "Not all nodes are free before test";
+        }
+    }
+    
+    void TearDown() override {
+        // Verify all memory was properly deallocated after test
+        using MapNode = ftl::Map<int, std::string>::Node;
+        auto used = pool_alloc_->UsedSize<MapNode>();
+        auto free = pool_alloc_->FreeSize<MapNode>();
+        auto total = pool_alloc_->TotalSize<MapNode>();
+        
+        // After test cleanup, all nodes should be returned to pool
+        ASSERT_EQ(used, 0u) << "Memory leak detected: " << used << " nodes still in use after test";
+        if (total > 0) {
+            ASSERT_EQ(free, total) << "Not all nodes returned to pool after test";
+        }
     }
 };
 
