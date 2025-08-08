@@ -19,10 +19,10 @@ public:
         : allocator_(allocator) {
     }
 
-    template<typename T>
-    T* allocate() {
+    template<typename T, typename... Args>
+    T* allocate(Args&&... args) {
         auto& p = pool<T>();
-        T* ptr = p.acquire();
+        T* ptr = p.acquire(std::forward<Args>(args)...);
         printf("BumpPoolAllocator2: allocated %u bytes at %p\n", (unsigned)sizeof(T), ptr);
         return ptr;
     }

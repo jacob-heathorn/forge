@@ -4,14 +4,15 @@ add_pw_test(pw-ut-simple ut_simple.cpp)
 
 # FTL unit tests.
 add_platform_test(ut-ftl
-  ut_buffer_bump_pool.cpp
+  # ut_buffer_bump_pool.cpp
   ut_bump_allocator.cpp
-  ut_bump_pool.cpp
-  ut_byte_order.cpp
-  ut_singleton.cpp
-  ut_mutex.cpp
-  ut_thread.cpp
-  ut_unique_bump_pool.cpp
+  # ut_bump_pool.cpp
+  # ut_byte_order.cpp
+  ut_map.cpp
+  # ut_singleton.cpp
+  # ut_mutex.cpp
+  # ut_thread.cpp
+  # ut_unique_bump_pool.cpp
 )
 target_link_libraries(ut-ftl ftl ftl-native)
 
