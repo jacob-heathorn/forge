@@ -3,6 +3,7 @@
 #include <vector>
 #include <algorithm>
 #include <random>
+#include <map>
 
 #include "ftl/bump_allocator.hpp"
 #include "ftl/bump_pool_allocator2.hpp"
@@ -93,6 +94,7 @@ TEST_F(MapTest, InsertAndFind) {
 }
 
 TEST_F(MapTest, InsertDuplicate) {
+    // Test ftl::Map
     ftl::Map<int, std::string> map(*pool_alloc_);
     
     auto result1 = map.insert({42, "first"});
@@ -103,6 +105,18 @@ TEST_F(MapTest, InsertDuplicate) {
     EXPECT_EQ(result2.first->second, "first");
     
     EXPECT_EQ(map.size(), 1u);
+    
+    // Verify std::map has the same behavior
+    std::map<int, std::string> std_map;
+    
+    auto std_result1 = std_map.insert({42, "first"});
+    EXPECT_TRUE(std_result1.second);
+    
+    auto std_result2 = std_map.insert({42, "second"});
+    EXPECT_FALSE(std_result2.second);
+    EXPECT_EQ(std_result2.first->second, "first");  // std::map also doesn't overwrite
+    
+    EXPECT_EQ(std_map.size(), 1u);
 }
 
 TEST_F(MapTest, OperatorBracket) {
