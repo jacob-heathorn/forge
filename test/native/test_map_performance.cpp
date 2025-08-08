@@ -7,7 +7,7 @@
 #include <iomanip>
 
 #include "ftl/bump_allocator.hpp"
-#include "ftl/bump_pool_allocator2.hpp"
+#include "ftl/bump_pool_allocator.hpp"
 #include "ftl/map.hpp"
 
 static constexpr size_t POOL_MEMORY_SIZE = 10 * 1024 * 1024; // 10MB for performance tests
@@ -18,7 +18,7 @@ int main() {
     // Initialize memory pool for ftl::Map
     uint8_t* buffer = new uint8_t[POOL_MEMORY_SIZE];
     ftl::BumpAllocator allocator(buffer, POOL_MEMORY_SIZE);
-    ftl::BumpPoolAllocator2 pool_alloc(allocator);
+    ftl::BumpPoolAllocator pool_alloc(allocator);
     
     // Test parameters
     const std::vector<size_t> test_sizes = {100, 1000, 10000, 50000};

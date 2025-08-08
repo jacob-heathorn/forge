@@ -6,7 +6,7 @@
 #include <map>
 
 #include "ftl/bump_allocator.hpp"
-#include "ftl/bump_pool_allocator2.hpp"
+#include "ftl/bump_pool_allocator.hpp"
 #include "ftl/map.hpp"
 
 static constexpr size_t POOL_MEMORY_SIZE = 1024 * 1024;
@@ -16,12 +16,12 @@ class MapTestEnvironment : public ::testing::Environment {
 public:
     static uint8_t* buffer_;
     static ftl::BumpAllocator* alloc_;
-    static ftl::BumpPoolAllocator2* pool_alloc_;
+    static ftl::BumpPoolAllocator* pool_alloc_;
 
     void SetUp() override {
         buffer_ = new uint8_t[POOL_MEMORY_SIZE];
         alloc_ = new ftl::BumpAllocator(buffer_, POOL_MEMORY_SIZE);
-        pool_alloc_ = new ftl::BumpPoolAllocator2(*alloc_);
+        pool_alloc_ = new ftl::BumpPoolAllocator(*alloc_);
     }
 
     void TearDown() override {
@@ -33,11 +33,11 @@ public:
 
 uint8_t* MapTestEnvironment::buffer_ = nullptr;
 ftl::BumpAllocator* MapTestEnvironment::alloc_ = nullptr;
-ftl::BumpPoolAllocator2* MapTestEnvironment::pool_alloc_ = nullptr;
+ftl::BumpPoolAllocator* MapTestEnvironment::pool_alloc_ = nullptr;
 
 class MapTest : public ::testing::Test {
 protected:
-    ftl::BumpPoolAllocator2* pool_alloc_;
+    ftl::BumpPoolAllocator* pool_alloc_;
 
     void SetUp() override {
         pool_alloc_ = MapTestEnvironment::pool_alloc_;

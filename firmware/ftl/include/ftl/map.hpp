@@ -5,7 +5,7 @@
 #include <utility>
 #include <cassert>
 #include <cstddef>
-#include "ftl/bump_pool_allocator2.hpp"
+#include "ftl/bump_pool_allocator.hpp"
 
 
 /// @brief Red-Black Tree based associative container (Map)
@@ -14,7 +14,7 @@
 /// O(log n) time complexity for insertions, deletions, and lookups.
 /// 
 /// Memory Management:
-/// - Uses BumpPoolAllocator2 for memory allocation
+/// - Uses BumpPoolAllocator for memory allocation
 /// - All nodes are explicitly deallocated in destructor and clear()
 /// - Special 'nil' sentinel node is used instead of nullptr for leaves
 /// 
@@ -70,7 +70,7 @@ private:
     Node* nil_;                     ///< Sentinel node representing all leaves (never deallocated until destructor)
     size_type size_;                ///< Number of elements in the map
     Compare comp_;                  ///< Comparison function object
-    BumpPoolAllocator2& alloc_;     ///< Memory allocator reference (cannot be changed)
+    BumpPoolAllocator& alloc_;     ///< Memory allocator reference (cannot be changed)
 
     /// @brief Initialize the sentinel nil node
     /// The nil node is allocated once and persists for the lifetime of the map
@@ -465,7 +465,7 @@ public:
     /// @brief Construct an empty map
     /// @param alloc Reference to memory allocator (must outlive the map)
     /// @param comp Comparison function object
-    explicit Map(BumpPoolAllocator2& alloc, const Compare& comp = Compare())
+    explicit Map(BumpPoolAllocator& alloc, const Compare& comp = Compare())
         : root_(nullptr), size_(0), comp_(comp), alloc_(alloc) {
         initialize_nil();  // Allocate sentinel node
         root_ = nil_;      // Empty tree points to nil

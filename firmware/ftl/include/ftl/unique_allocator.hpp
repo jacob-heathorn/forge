@@ -2,12 +2,12 @@
 
 #include <memory>
 #include <cstddef>
-#include "ftl/bump_pool_allocator2.hpp"
+#include "ftl/bump_pool_allocator.hpp"
 #include "ftl/deleter.hpp"
 
 namespace ftl {
 
-/// Allocator that wraps BumpPoolAllocator2 and returns std::unique_ptr objects
+/// Allocator that wraps BumpPoolAllocator and returns std::unique_ptr objects
 /// with automatic memory management. The unique_ptr will automatically return
 /// the memory to the pool when it goes out of scope.
 template<typename T>
@@ -15,7 +15,7 @@ class UniqueAllocator : public PolymorphicDeleter<T> {
 public:
     using unique_ptr = std::unique_ptr<T, DelegatingDeleter<T>>;
 
-    explicit UniqueAllocator(BumpPoolAllocator2& allocator) noexcept
+    explicit UniqueAllocator(BumpPoolAllocator& allocator) noexcept
         : allocator_(allocator) {}
 
     /// Override from PolymorphicDeleter - deallocates the object
@@ -44,7 +44,7 @@ public:
     }
 
 private:
-    BumpPoolAllocator2& allocator_;
+    BumpPoolAllocator& allocator_;
 };
 
 }  // namespace ftl

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <memory>
 #include <cstddef>
 #include <cassert>
 #include <cstdio>
@@ -9,56 +8,64 @@
 
 namespace ftl {
 
-/// STL-compatible allocator that uses ftl::BumpPool for memory management.
-/// IMPORTANT: This allocator only supports allocations of size 1.
-/// Designed for node-based containers (std::map, std::list, std::set) that allocate one node at a time.
-/// All instances with the same T type share a static pool.
-template<typename T>
+/// Allocator that uses ftl::BumpPool for memory management.
+/// Non-templated class with templated methods for allocation.
+/// Uses lazy initialization of per-type pools.
 class BumpPoolAllocator {
 public:
-    using value_type = T;
     using size_type = std::size_t;
-    using difference_type = std::ptrdiff_t;
-    using propagate_on_container_move_assignment = std::true_type;
-    using is_always_equal = std::true_type;
 
-    /// Initialize the shared pool for all allocators of this type
-    /// Must be called before using any BumpPoolAllocator<T>
-    static void initializePool(ftl::BumpAllocator& allocator) {
-        assert(!pool_ && "Pool already initialized");
-        // Use the allocator's template method to allocate and construct the pool
-        pool_ = allocator.allocate<ftl::BumpPool<T>>(allocator);
-        assert(pool_ && "Failed to allocate BumpPool");
+    explicit BumpPoolAllocator(ftl::BumpAllocator& allocator) noexcept 
+        : allocator_(allocator) {
     }
 
-    BumpPoolAllocator() noexcept {
-        assert(pool_ && "Pool not initialized! Call BumpPoolAllocator::initializePool() first");
-    }
-
-    template<typename U>
-    BumpPoolAllocator(const BumpPoolAllocator<U>&) noexcept {
-        assert(pool_ && "Pool not initialized! Call BumpPoolAllocator::initializePool() first");
-    }
-
-    T* allocate(size_type n) {
-        assert(n == 1 && "BumpPoolAllocator only supports allocating one object at a time");
-        assert(pool_ && "Pool not initialized! Call BumpPoolAllocator::initializePool() first");
-        
-        T* ptr = pool_->acquire();
-        printf("BumpPoolAllocator: allocated %u bytes at %p\n", (unsigned)sizeof(T), ptr);
+    template<typename T, typename... Args>
+    T* allocate(Args&&... args) {
+        auto& p = pool<T>();
+        T* ptr = p.acquire(std::forward<Args>(args)...);
+        // printf("BumpPoolAllocator: allocated %u bytes at %p\n", (unsigned)sizeof(T), ptr);
         return ptr;
     }
 
-    void deallocate(T* p, size_type n) noexcept {
-        assert(n == 1 && "BumpPoolAllocator only supports deallocating one object at a time");
-        assert(pool_ && "Pool not initialized! Call BumpPoolAllocator::initializePool() first");
-        
-        printf("BumpPoolAllocator: deallocating %u bytes at %p\n", (unsigned)sizeof(T), p);
-        pool_->release(p);
+    template<typename T>
+    void deallocate(T* p) noexcept {
+        // printf("BumpPoolAllocator: deallocating %u bytes at %p\n", (unsigned)sizeof(T), p);
+        pool<T>().release(p);
+    }
+
+    /// Get total number of objects allocated in the pool for type T
+    template<typename T>
+    size_type TotalSize() {
+        return pool<T>().TotalSize();
+    }
+
+    /// Get number of free objects in the pool for type T
+    template<typename T>
+    size_type FreeSize() {
+        return pool<T>().FreeSize();
+    }
+
+    /// Get number of currently used objects in the pool for type T
+    template<typename T>
+    size_type UsedSize() {
+        return pool<T>().UsedSize();
     }
 
 private:
-    inline static ftl::BumpPool<T>* pool_ = nullptr;
+    /// Get or lazily initialize the pool for type T
+    template<typename T>
+    ftl::BumpPool<T>& pool() {
+        static ftl::BumpPool<T>* pool_ptr = nullptr;
+        
+        if (!pool_ptr) {
+            pool_ptr = allocator_.allocate<ftl::BumpPool<T>>(allocator_);
+            assert(pool_ptr && "Failed to allocate BumpPool");
+        }
+        
+        return *pool_ptr;
+    }
+
+    ftl::BumpAllocator& allocator_;
 };
 
 }  // namespace ftl
