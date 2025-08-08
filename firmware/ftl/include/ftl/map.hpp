@@ -236,7 +236,7 @@ private:
     }
 
     void destroy_tree(Node* node) {
-        if (node != nil_) {
+        if (node && node != nil_) {
             destroy_tree(node->left);
             destroy_tree(node->right);
             node->~Node();
@@ -423,8 +423,8 @@ public:
     }
 
     ~Map() {
-        clear();
         if (nil_) {
+            clear();
             alloc_.deallocate<Node>(nil_);
         }
     }
@@ -484,10 +484,12 @@ public:
     size_type size() const { return size_; }
 
     void clear() {
-        destroy_tree(root_);
-        root_ = nil_;
-        size_ = 0;
-        update_nil_pointers();
+        if (nil_) {
+            destroy_tree(root_);
+            root_ = nil_;
+            size_ = 0;
+            update_nil_pointers();
+        }
     }
 
     std::pair<iterator, bool> insert(const value_type& value) {
