@@ -18,7 +18,10 @@ int main() {
     // Initialize memory pool for ftl::Map
     uint8_t* buffer = new uint8_t[POOL_MEMORY_SIZE];
     ftl::BumpAllocator allocator(buffer, POOL_MEMORY_SIZE);
-    ftl::BumpPoolAllocator pool_alloc(allocator);
+    
+    // Create allocators for different node types
+    using IntMapNode = ftl::Map<int, int>::Node;
+    ftl::BumpPoolAllocator<IntMapNode> int_pool_alloc(allocator, 10000);  // Pre-allocate for large tests
     
     // Test parameters
     const std::vector<size_t> test_sizes = {100, 1000, 10000, 50000};
@@ -56,7 +59,7 @@ int main() {
         
         // Test ftl::Map
         {
-            ftl::Map<int, int> ftl_map(pool_alloc);
+            ftl::Map<int, int> ftl_map(int_pool_alloc);
             
             // Warm up
             for (int i = 0; i < 10; ++i) {
@@ -198,16 +201,16 @@ int main() {
     
     // Test ftl::Map memory usage
     {
-        ftl::Map<int, int> ftl_map(pool_alloc);
+        ftl::Map<int, int> ftl_map(int_pool_alloc);
         
         for (int i = 0; i < mem_test_size; ++i) {
             ftl_map[i] = i * i;
         }
         
         using MapNode = ftl::Map<int, int>::Node;
-        auto ftl_nodes_used = pool_alloc.UsedSize<MapNode>();
-        auto ftl_nodes_total = pool_alloc.TotalSize<MapNode>();
-        auto ftl_nodes_free = pool_alloc.FreeSize<MapNode>();
+        auto ftl_nodes_used = int_pool_alloc.UsedSize();
+        auto ftl_nodes_total = int_pool_alloc.TotalSize();
+        auto ftl_nodes_free = int_pool_alloc.FreeSize();
         
         std::cout << "ftl::Map (" << mem_test_size << " elements):\n";
         std::cout << "  Nodes allocated: " << ftl_nodes_total << "\n";
@@ -221,8 +224,8 @@ int main() {
         ftl_map.clear();
         
         std::cout << "\nAfter clear():\n";
-        std::cout << "  Nodes in use: " << pool_alloc.UsedSize<MapNode>() << "\n";
-        std::cout << "  Nodes free: " << pool_alloc.FreeSize<MapNode>() << "\n";
+        std::cout << "  Nodes in use: " << int_pool_alloc.UsedSize() << "\n";
+        std::cout << "  Nodes free: " << int_pool_alloc.FreeSize() << "\n";
     }
     
     std::cout << "\nstd::map (" << mem_test_size << " elements):\n";

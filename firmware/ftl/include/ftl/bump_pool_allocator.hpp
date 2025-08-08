@@ -1,71 +1,61 @@
 #pragma once
 
 #include <cstddef>
-#include <cassert>
-#include <cstdio>
+#include <utility>
 #include "ftl/bump_pool.hpp"
 #include "ftl/bump_allocator.hpp"
 
 namespace ftl {
 
 /// Allocator that uses ftl::BumpPool for memory management.
-/// Non-templated class with templated methods for allocation.
-/// Uses lazy initialization of per-type pools.
+/// Templated at class level for a specific type T.
+/// Provides allocation and deallocation for objects of type T.
+template<typename T>
 class BumpPoolAllocator {
 public:
+    using value_type = T;
     using size_type = std::size_t;
+    using difference_type = std::ptrdiff_t;
+    using pointer = T*;
+    using const_pointer = const T*;
+    using reference = T&;
+    using const_reference = const T&;
 
-    explicit BumpPoolAllocator(ftl::BumpAllocator& allocator) noexcept 
-        : allocator_(allocator) {
+    /// Constructor that takes a BumpAllocator and optional initial pool size
+    explicit BumpPoolAllocator(ftl::BumpAllocator& allocator, size_type initial_size = 1) 
+        : pool_(allocator, initial_size) {
     }
 
-    template<typename T, typename... Args>
+    /// Allocate and construct an object
+    template<typename... Args>
     T* allocate(Args&&... args) {
-        auto& p = pool<T>();
-        T* ptr = p.acquire(std::forward<Args>(args)...);
-        // printf("BumpPoolAllocator: allocated %u bytes at %p\n", (unsigned)sizeof(T), ptr);
-        return ptr;
+        return pool_.acquire(std::forward<Args>(args)...);
     }
 
-    template<typename T>
+    /// Deallocate an object (return it to the pool)
     void deallocate(T* p) noexcept {
-        // printf("BumpPoolAllocator: deallocating %u bytes at %p\n", (unsigned)sizeof(T), p);
-        pool<T>().release(p);
+        if (p) {
+            pool_.release(p);
+        }
     }
 
-    /// Get total number of objects allocated in the pool for type T
-    template<typename T>
-    size_type TotalSize() {
-        return pool<T>().TotalSize();
+    /// Get total number of objects allocated in the pool
+    size_type TotalSize() const {
+        return pool_.TotalSize();
     }
 
-    /// Get number of free objects in the pool for type T
-    template<typename T>
-    size_type FreeSize() {
-        return pool<T>().FreeSize();
+    /// Get number of free objects in the pool
+    size_type FreeSize() const {
+        return pool_.FreeSize();
     }
 
-    /// Get number of currently used objects in the pool for type T
-    template<typename T>
-    size_type UsedSize() {
-        return pool<T>().UsedSize();
+    /// Get number of currently used objects in the pool
+    size_type UsedSize() const {
+        return pool_.UsedSize();
     }
 
 private:
-    /// Get or lazily initialize the pool for type T
-    template<typename T>
-    ftl::BumpPool<T>& pool() {
-        static ftl::BumpPool<T>* pool_ptr = nullptr;
-        
-        if (!pool_ptr) {
-            pool_ptr = allocator_.allocate<ftl::BumpPool<T>>(allocator_);
-            assert(pool_ptr && "Failed to allocate BumpPool");
-        }
-        
-        return *pool_ptr;
-    }
-
-    ftl::BumpAllocator& allocator_;
+    ftl::BumpPool<T> pool_;
 };
 
 }  // namespace ftl

@@ -15,13 +15,12 @@ class UniqueAllocator : public PolymorphicDeleter<T> {
 public:
     using unique_ptr = std::unique_ptr<T, DelegatingDeleter<T>>;
 
-    explicit UniqueAllocator(BumpPoolAllocator& allocator) noexcept
+    explicit UniqueAllocator(BumpPoolAllocator<T>& allocator) noexcept
         : allocator_(allocator) {}
 
     /// Override from PolymorphicDeleter - deallocates the object
     void operator()(T* ptr) override {
         if (ptr) {
-            ptr->~T();
             allocator_.deallocate(ptr);
         }
     }
@@ -34,7 +33,7 @@ public:
     template<typename... Args>
     unique_ptr allocate(Args&&... args) {
         // Allocate and construct the object
-        T* ptr = allocator_.allocate<T>(std::forward<Args>(args)...);
+        T* ptr = allocator_.allocate(std::forward<Args>(args)...);
         
         // Return unique_ptr with delegating deleter pointing to this allocator
         return unique_ptr(
@@ -44,7 +43,7 @@ public:
     }
 
 private:
-    BumpPoolAllocator& allocator_;
+    BumpPoolAllocator<T>& allocator_;
 };
 
 }  // namespace ftl

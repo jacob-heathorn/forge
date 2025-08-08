@@ -70,13 +70,13 @@ private:
     Node* nil_;                     ///< Sentinel node representing all leaves (never deallocated until destructor)
     size_type size_;                ///< Number of elements in the map
     Compare comp_;                  ///< Comparison function object
-    BumpPoolAllocator& alloc_;     ///< Memory allocator reference (cannot be changed)
+    BumpPoolAllocator<Node>& alloc_;     ///< Memory allocator reference for Node objects
 
     /// @brief Initialize the sentinel nil node
     /// The nil node is allocated once and persists for the lifetime of the map
     /// All leaf pointers point to this single nil node to save memory
     void initialize_nil() {
-        nil_ = alloc_.allocate<Node>();
+        nil_ = alloc_.allocate();
         nil_->parent = nil_->left = nil_->right = nil_;
         nil_->color = Color::BLACK;  // nil is always black by RB-tree definition
     }
@@ -285,8 +285,7 @@ private:
         if (node && node != nil_) {
             destroy_tree(node->left);    // Recursively destroy left subtree
             destroy_tree(node->right);   // Recursively destroy right subtree
-            node->~Node();               // Call destructor (important for non-trivial types)
-            alloc_.deallocate<Node>(node); // Return memory to pool
+            alloc_.deallocate(node); // Return memory to pool (destructor called by pool)
         }
     }
 
@@ -463,9 +462,9 @@ public:
     };
 
     /// @brief Construct an empty map
-    /// @param alloc Reference to memory allocator (must outlive the map)
+    /// @param alloc Reference to memory allocator for Node objects (must outlive the map)
     /// @param comp Comparison function object
-    explicit Map(BumpPoolAllocator& alloc, const Compare& comp = Compare())
+    explicit Map(BumpPoolAllocator<Node>& alloc, const Compare& comp = Compare())
         : root_(nullptr), size_(0), comp_(comp), alloc_(alloc) {
         initialize_nil();  // Allocate sentinel node
         root_ = nil_;      // Empty tree points to nil
@@ -476,7 +475,7 @@ public:
     ~Map() {
         if (nil_) {
             clear();  // Deallocate all data nodes
-            alloc_.deallocate<Node>(nil_);  // Finally deallocate sentinel
+            alloc_.deallocate(nil_);  // Finally deallocate sentinel
         }
     }
 
@@ -580,8 +579,7 @@ public:
         }
 
         // Allocate and construct new node
-        Node* z = alloc_.allocate<Node>();
-        new (z) Node(value);  // Placement new
+        Node* z = alloc_.allocate(value);
         z->parent = y;
         z->left = nil_;
         z->right = nil_;
@@ -607,8 +605,7 @@ public:
     template<typename... Args>
     std::pair<iterator, bool> emplace(Args&&... args) {
         // Allocate temp node to get the key for comparison
-        Node* temp = alloc_.allocate<Node>();
-        new (temp) Node(std::forward<Args>(args)...);
+        Node* temp = alloc_.allocate(std::forward<Args>(args)...);
         
         Node* y = nil_;
         Node* x = root_;
@@ -622,8 +619,7 @@ public:
                 x = x->right;
             } else {
                 // Key exists - MUST deallocate temp to prevent leak
-                temp->~Node();  // Destroy the constructed object
-                alloc_.deallocate<Node>(temp);  // Return memory to pool
+                alloc_.deallocate(temp);  // Return memory to pool
                 return {iterator(x, nil_), false};
             }
         }
@@ -733,8 +729,7 @@ public:
         }
 
         // MEMORY CLEANUP: Deallocate the removed node
-        z->~Node();  // Call destructor for value_type
-        alloc_.deallocate<Node>(z);  // Return memory to pool
+        alloc_.deallocate(z);  // Return memory to pool (destructor called by pool)
         --size_;
         update_nil_pointers();
 
