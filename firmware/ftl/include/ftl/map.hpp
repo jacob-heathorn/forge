@@ -1,5 +1,4 @@
-#ifndef FTL_MAP_HPP
-#define FTL_MAP_HPP
+#pragma once
 
 #include <functional>
 #include <iterator>
@@ -9,7 +8,22 @@
 #include "ftl/bump_pool_allocator2.hpp"
 
 
-// TODO header
+/// @brief Red-Black Tree based associative container (Map)
+/// 
+/// This is a self-balancing binary search tree implementation that maintains
+/// O(log n) time complexity for insertions, deletions, and lookups.
+/// 
+/// Memory Management:
+/// - Uses BumpPoolAllocator2 for memory allocation
+/// - All nodes are explicitly deallocated in destructor and clear()
+/// - Special 'nil' sentinel node is used instead of nullptr for leaves
+/// 
+/// Red-Black Tree Properties:
+/// 1. Every node is either red or black
+/// 2. Root is always black
+/// 3. All leaves (nil) are black
+/// 4. Red nodes cannot have red children
+/// 5. All paths from any node to its descendant nil nodes have the same number of black nodes
 
 namespace ftl {
 
@@ -28,9 +42,11 @@ public:
     using const_pointer = const value_type*;
 
 private:
+    /// @brief Node colors for Red-Black tree balancing
     enum class Color : bool { RED = false, BLACK = true };
 
 public:
+    /// @brief Internal node structure for the Red-Black tree
     struct Node {
         value_type data;
         Node* parent;
@@ -50,18 +66,25 @@ public:
     };
 
 private:
-    Node* root_;
-    Node* nil_;
-    size_type size_;
-    Compare comp_;
-    BumpPoolAllocator2& alloc_;
+    Node* root_;                    ///< Root of the tree (nil_ when empty)
+    Node* nil_;                     ///< Sentinel node representing all leaves (never deallocated until destructor)
+    size_type size_;                ///< Number of elements in the map
+    Compare comp_;                  ///< Comparison function object
+    BumpPoolAllocator2& alloc_;     ///< Memory allocator reference (cannot be changed)
 
+    /// @brief Initialize the sentinel nil node
+    /// The nil node is allocated once and persists for the lifetime of the map
+    /// All leaf pointers point to this single nil node to save memory
     void initialize_nil() {
         nil_ = alloc_.allocate<Node>();
         nil_->parent = nil_->left = nil_->right = nil_;
-        nil_->color = Color::BLACK;
+        nil_->color = Color::BLACK;  // nil is always black by RB-tree definition
     }
 
+    /// @brief Update nil's pointers for efficient iteration
+    /// nil->parent points to root for tree traversal
+    /// nil->left points to minimum element (for begin())
+    /// nil->right points to maximum element (for rbegin()/operator--)
     void update_nil_pointers() {
         // Update nil's parent to point to root
         nil_->parent = root_;
@@ -87,6 +110,9 @@ private:
         }
     }
 
+    /// @brief Perform left rotation around node x
+    /// Used to maintain Red-Black tree properties during insertions/deletions
+    /// @param x Node to rotate around
     void left_rotate(Node* x) {
         Node* y = x->right;
         x->right = y->left;
@@ -105,6 +131,9 @@ private:
         x->parent = y;
     }
 
+    /// @brief Perform right rotation around node x
+    /// Mirror operation of left_rotate
+    /// @param x Node to rotate around
     void right_rotate(Node* x) {
         Node* y = x->left;
         x->left = y->right;
@@ -123,6 +152,9 @@ private:
         x->parent = y;
     }
 
+    /// @brief Fix Red-Black tree violations after insertion
+    /// @param z Newly inserted node (initially red)
+    /// Fixes violations by recoloring and rotating nodes
     void insert_fixup(Node* z) {
         while (z->parent->color == Color::RED) {
             if (z->parent == z->parent->parent->left) {
@@ -162,6 +194,10 @@ private:
         root_->color = Color::BLACK;
     }
 
+    /// @brief Replace subtree rooted at u with subtree rooted at v
+    /// @param u Node to be replaced
+    /// @param v Node to replace with
+    /// Used during deletion operations
     void transplant(Node* u, Node* v) {
         if (u->parent == nil_) {
             root_ = v;
@@ -173,6 +209,9 @@ private:
         v->parent = u->parent;
     }
 
+    /// @brief Find the minimum node in subtree rooted at x
+    /// @param x Root of subtree
+    /// @return Leftmost node in the subtree
     Node* minimum(Node* x) const {
         while (x->left != nil_) {
             x = x->left;
@@ -180,6 +219,9 @@ private:
         return x;
     }
 
+    /// @brief Fix Red-Black tree violations after deletion
+    /// @param x Node that may violate RB properties
+    /// Restores RB properties through recoloring and rotations
     void delete_fixup(Node* x) {
         while (x != root_ && x->color == Color::BLACK) {
             if (x == x->parent->left) {
@@ -235,12 +277,16 @@ private:
         x->color = Color::BLACK;
     }
 
+    /// @brief Recursively destroy all nodes in the tree
+    /// @param node Root of subtree to destroy
+    /// IMPORTANT: This deallocates all nodes except nil_
+    /// Post-order traversal ensures children are freed before parents
     void destroy_tree(Node* node) {
         if (node && node != nil_) {
-            destroy_tree(node->left);
-            destroy_tree(node->right);
-            node->~Node();
-            alloc_.deallocate<Node>(node);
+            destroy_tree(node->left);    // Recursively destroy left subtree
+            destroy_tree(node->right);   // Recursively destroy right subtree
+            node->~Node();               // Call destructor (important for non-trivial types)
+            alloc_.deallocate<Node>(node); // Return memory to pool
         }
     }
 
@@ -416,44 +462,62 @@ public:
         bool operator!=(const const_iterator& other) const { return node_ != other.node_; }
     };
 
+    /// @brief Construct an empty map
+    /// @param alloc Reference to memory allocator (must outlive the map)
+    /// @param comp Comparison function object
     explicit Map(BumpPoolAllocator2& alloc, const Compare& comp = Compare())
         : root_(nullptr), size_(0), comp_(comp), alloc_(alloc) {
-        initialize_nil();
-        root_ = nil_;
+        initialize_nil();  // Allocate sentinel node
+        root_ = nil_;      // Empty tree points to nil
     }
 
+    /// @brief Destructor - deallocates all nodes including nil
+    /// MEMORY SAFETY: Ensures all allocated nodes are properly freed
     ~Map() {
         if (nil_) {
-            clear();
-            alloc_.deallocate<Node>(nil_);
+            clear();  // Deallocate all data nodes
+            alloc_.deallocate<Node>(nil_);  // Finally deallocate sentinel
         }
     }
 
+    /// @brief Copy constructor - deep copies all elements
+    /// @param other Map to copy from
+    /// MEMORY: Allocates new nodes for all elements
     Map(const Map& other) 
         : root_(nullptr), size_(0), comp_(other.comp_), alloc_(other.alloc_) {
-        initialize_nil();
+        initialize_nil();  // Create our own nil node
         root_ = nil_;
+        // Deep copy all elements
         for (const auto& item : other) {
-            insert(item);
+            insert(item);  // Each insert allocates a new node
         }
     }
 
+    /// @brief Copy assignment - replaces contents with copy of other
+    /// @param other Map to copy from
+    /// MEMORY SAFETY: Clears existing nodes before copying
     Map& operator=(const Map& other) {
         if (this != &other) {
-            clear();
+            clear();  // Deallocate all existing nodes (except nil)
             comp_ = other.comp_;
+            // Deep copy all elements
             for (const auto& item : other) {
-                insert(item);
+                insert(item);  // Allocate new node for each element
             }
         }
         return *this;
     }
 
+    /// @brief Move constructor - transfers ownership of nodes
+    /// @param other Map to move from
+    /// MEMORY: Takes ownership of all nodes from other
+    /// WARNING: Leaves other in moved-from state (nil_ = nullptr)
     Map(Map&& other) noexcept
         : root_(other.root_), nil_(other.nil_), size_(other.size_),
           comp_(std::move(other.comp_)), alloc_(other.alloc_) {
+        // Leave other in valid but empty state
         other.root_ = nullptr;
-        other.nil_ = nullptr;
+        other.nil_ = nullptr;  // IMPORTANT: other's destructor must check for null
         other.size_ = 0;
     }
 
@@ -483,19 +547,26 @@ public:
     bool empty() const { return size_ == 0; }
     size_type size() const { return size_; }
 
+    /// @brief Remove all elements from the map
+    /// MEMORY: Deallocates all nodes except nil (which persists)
     void clear() {
-        if (nil_) {
-            destroy_tree(root_);
-            root_ = nil_;
+        if (nil_) {  // Check needed for moved-from maps
+            destroy_tree(root_);  // Recursively deallocate all data nodes
+            root_ = nil_;         // Reset to empty tree
             size_ = 0;
             update_nil_pointers();
         }
     }
 
+    /// @brief Insert a key-value pair into the map
+    /// @param value Pair to insert
+    /// @return Pair of iterator to element and bool (true if inserted)
+    /// MEMORY: Allocates new node only if key doesn't exist
     std::pair<iterator, bool> insert(const value_type& value) {
-        Node* y = nil_;
-        Node* x = root_;
+        Node* y = nil_;  // Parent of x
+        Node* x = root_; // Current node
         
+        // Find insertion point
         while (x != nil_) {
             y = x;
             if (comp_(value.first, x->data.first)) {
@@ -503,12 +574,14 @@ public:
             } else if (comp_(x->data.first, value.first)) {
                 x = x->right;
             } else {
+                // Key already exists, no allocation needed
                 return {iterator(x, nil_), false};
             }
         }
 
+        // Allocate and construct new node
         Node* z = alloc_.allocate<Node>();
-        new (z) Node(value);
+        new (z) Node(value);  // Placement new
         z->parent = y;
         z->left = nil_;
         z->right = nil_;
@@ -528,14 +601,19 @@ public:
         return {iterator(z, nil_), true};
     }
 
+    /// @brief Construct element in-place
+    /// @param args Arguments to forward to value_type constructor
+    /// MEMORY LEAK CHECK: Properly deallocates temp node if key exists
     template<typename... Args>
     std::pair<iterator, bool> emplace(Args&&... args) {
+        // Allocate temp node to get the key for comparison
         Node* temp = alloc_.allocate<Node>();
         new (temp) Node(std::forward<Args>(args)...);
         
         Node* y = nil_;
         Node* x = root_;
         
+        // Find insertion point
         while (x != nil_) {
             y = x;
             if (comp_(temp->data.first, x->data.first)) {
@@ -543,8 +621,9 @@ public:
             } else if (comp_(x->data.first, temp->data.first)) {
                 x = x->right;
             } else {
-                temp->~Node();
-                alloc_.deallocate<Node>(temp);
+                // Key exists - MUST deallocate temp to prevent leak
+                temp->~Node();  // Destroy the constructed object
+                alloc_.deallocate<Node>(temp);  // Return memory to pool
                 return {iterator(x, nil_), false};
             }
         }
@@ -596,8 +675,11 @@ public:
         return end();
     }
 
+    /// @brief Access or insert element with given key
+    /// @param key Key to access/insert
+    /// MEMORY: Allocates new node if key doesn't exist
     T& operator[](const Key& key) {
-        auto result = insert({key, T{}});
+        auto result = insert({key, T{}});  // Insert default value if not found
         return result.first->second;
     }
 
@@ -610,14 +692,18 @@ public:
         return 1;
     }
 
+    /// @brief Erase element at iterator position
+    /// @param pos Iterator to element to erase
+    /// @return Iterator to next element
+    /// MEMORY: Deallocates the erased node
     iterator erase(iterator pos) {
-        Node* z = pos.node_;
-        Node* y = z;
-        Node* x;
+        Node* z = pos.node_;  // Node to delete
+        Node* y = z;          // Node that might violate RB properties
+        Node* x;              // Node that replaces y
         Color y_original_color = y->color;
         
         iterator next = pos;
-        ++next;
+        ++next;  // Get next element before deletion
 
         if (z->left == nil_) {
             x = z->right;
@@ -646,8 +732,9 @@ public:
             delete_fixup(x);
         }
 
-        z->~Node();
-        alloc_.deallocate<Node>(z);
+        // MEMORY CLEANUP: Deallocate the removed node
+        z->~Node();  // Call destructor for value_type
+        alloc_.deallocate<Node>(z);  // Return memory to pool
         --size_;
         update_nil_pointers();
 
@@ -660,5 +747,3 @@ public:
 };
 
 }
-
-#endif
