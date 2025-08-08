@@ -62,6 +62,31 @@ private:
         nil_->color = Color::BLACK;
     }
 
+    void update_nil_pointers() {
+        // Update nil's parent to point to root
+        nil_->parent = root_;
+        
+        // Update nil's left to point to minimum
+        if (root_ != nil_) {
+            Node* min = root_;
+            while (min->left != nil_) {
+                min = min->left;
+            }
+            nil_->left = min;
+            
+            // Update nil's right to point to maximum
+            Node* max = root_;
+            while (max->right != nil_) {
+                max = max->right;
+            }
+            nil_->right = max;
+        } else {
+            // Empty tree
+            nil_->left = nil_;
+            nil_->right = nil_;
+        }
+    }
+
     void left_rotate(Node* x) {
         Node* y = x->right;
         x->right = y->left;
@@ -273,7 +298,15 @@ public:
         }
 
         iterator& operator--() {
-            if (node_->left != nil_) {
+            // Special case: if we're at end (nil), go to the rightmost element
+            if (node_ == nil_) {
+                // nil_->right should point to the maximum element
+                node_ = nil_->right;
+                // If tree is empty, stay at nil
+                if (node_ == nil_) {
+                    return *this;
+                }
+            } else if (node_->left != nil_) {
                 node_ = tree_maximum(node_->left);
             } else {
                 Node* y = node_->parent;
@@ -352,7 +385,15 @@ public:
         }
 
         const_iterator& operator--() {
-            if (node_->left != nil_) {
+            // Special case: if we're at end (nil), go to the rightmost element
+            if (node_ == nil_) {
+                // nil_->right should point to the maximum element
+                node_ = nil_->right;
+                // If tree is empty, stay at nil
+                if (node_ == nil_) {
+                    return *this;
+                }
+            } else if (node_->left != nil_) {
                 node_ = tree_maximum(node_->left);
             } else {
                 const Node* y = node_->parent;
@@ -446,6 +487,7 @@ public:
         destroy_tree(root_);
         root_ = nil_;
         size_ = 0;
+        update_nil_pointers();
     }
 
     std::pair<iterator, bool> insert(const value_type& value) {
@@ -480,6 +522,7 @@ public:
 
         insert_fixup(z);
         ++size_;
+        update_nil_pointers();
         return {iterator(z, nil_), true};
     }
 
@@ -519,6 +562,7 @@ public:
 
         insert_fixup(temp);
         ++size_;
+        update_nil_pointers();
         return {iterator(temp, nil_), true};
     }
 
@@ -603,6 +647,7 @@ public:
         z->~Node();
         alloc_.deallocate<Node>(z);
         --size_;
+        update_nil_pointers();
 
         return next;
     }
