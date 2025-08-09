@@ -2,12 +2,15 @@
 
 #include <cstddef>
 #include <cstdlib>
+#include <atomic>
 #include <new>
+#include <sys/types.h>  // for ssize_t
 #include "ftl/allocation_strategy.hpp"
 
 namespace ftl {
 
 /// Allocation strategy that uses malloc/free for memory management
+/// Includes simple thread-safe allocation counting for testing
 /// @tparam T Type of objects to allocate
 template<typename T>
 class MallocAllocationStrategy : public AllocationStrategy<T> {
@@ -29,6 +32,7 @@ public:
         if (!mem) {
             return nullptr;  // Allocation failed
         }
+        allocation_count_.fetch_add(1, std::memory_order_relaxed);
         return reinterpret_cast<T*>(mem);
     }
 
@@ -38,8 +42,17 @@ public:
     void deallocate(T* ptr) noexcept override {
         if (ptr) {
             std::free(ptr);
+            allocation_count_.fetch_sub(1, std::memory_order_relaxed);
         }
     }
+    
+    /// Get current allocation count (thread-safe)
+    ssize_t allocation_count() const { 
+        return allocation_count_.load(std::memory_order_relaxed); 
+    }
+
+private:
+    std::atomic<ssize_t> allocation_count_{0};
 };
 
 }  // namespace ftl

@@ -13,6 +13,18 @@ protected:
     // Common allocator for int->string maps
     using IntStringNode = ftl::Map<int, std::string>::Node;
     ftl::MallocAllocationStrategy<IntStringNode> int_string_alloc_;
+    
+    void SetUp() override {
+        // Verify no leaks from previous test
+        ASSERT_EQ(int_string_alloc_.allocation_count(), 0) 
+            << "Memory leak from previous test: " << int_string_alloc_.allocation_count() << " allocations";
+    }
+    
+    void TearDown() override {
+        // Check for memory leaks after each test
+        ASSERT_EQ(int_string_alloc_.allocation_count(), 0) 
+            << "Memory leak detected: " << int_string_alloc_.allocation_count() << " allocations not freed";
+    }
 };
 
 TEST_F(MapTest, DefaultConstruction) {
