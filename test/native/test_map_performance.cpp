@@ -7,7 +7,7 @@
 #include <iomanip>
 
 #include "ftl/bump_allocator.hpp"
-#include "ftl/bump_pool_allocator.hpp"
+#include "ftl/bump_pool_allocation_strategy.hpp"
 #include "ftl/map.hpp"
 
 static constexpr size_t POOL_MEMORY_SIZE = 10 * 1024 * 1024; // 10MB for performance tests
@@ -21,7 +21,7 @@ int main() {
     
     // Create allocators for different node types
     using IntMapNode = ftl::Map<int, int>::Node;
-    ftl::BumpPoolAllocator<IntMapNode> int_pool_alloc(allocator, 10000);  // Pre-allocate for large tests
+    ftl::BumpPoolAllocationStrategy<IntMapNode> int_pool_alloc(allocator, 10000);  // Pre-allocate for large tests
     
     // Test parameters
     const std::vector<size_t> test_sizes = {100, 1000, 10000, 50000};
@@ -208,9 +208,9 @@ int main() {
         }
         
         using MapNode = ftl::Map<int, int>::Node;
-        auto ftl_nodes_used = int_pool_alloc.UsedSize();
-        auto ftl_nodes_total = int_pool_alloc.TotalSize();
-        auto ftl_nodes_free = int_pool_alloc.FreeSize();
+        auto ftl_nodes_used = int_pool_alloc.used_size();
+        auto ftl_nodes_total = int_pool_alloc.total_size();
+        auto ftl_nodes_free = int_pool_alloc.free_size();
         
         std::cout << "ftl::Map (" << mem_test_size << " elements):\n";
         std::cout << "  Nodes allocated: " << ftl_nodes_total << "\n";
@@ -224,8 +224,8 @@ int main() {
         ftl_map.clear();
         
         std::cout << "\nAfter clear():\n";
-        std::cout << "  Nodes in use: " << int_pool_alloc.UsedSize() << "\n";
-        std::cout << "  Nodes free: " << int_pool_alloc.FreeSize() << "\n";
+        std::cout << "  Nodes in use: " << int_pool_alloc.used_size() << "\n";
+        std::cout << "  Nodes free: " << int_pool_alloc.free_size() << "\n";
     }
     
     std::cout << "\nstd::map (" << mem_test_size << " elements):\n";

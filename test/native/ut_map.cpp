@@ -6,7 +6,7 @@
 #include <map>
 
 #include "ftl/bump_allocator.hpp"
-#include "ftl/bump_pool_allocator.hpp"
+#include "ftl/bump_pool_allocation_strategy.hpp"
 #include "ftl/map.hpp"
 
 static constexpr size_t POOL_MEMORY_SIZE = 1024 * 1024;
@@ -27,18 +27,18 @@ public:
     
     static uint8_t* buffer_;
     static ftl::BumpAllocator* alloc_;
-    static ftl::BumpPoolAllocator<IntStringNode>* int_string_pool_;
-    static ftl::BumpPoolAllocator<IntIntNode>* int_int_pool_;
-    static ftl::BumpPoolAllocator<StringIntNode>* string_int_pool_;
-    static ftl::BumpPoolAllocator<IntStringReverseNode>* int_string_reverse_pool_;
+    static ftl::BumpPoolAllocationStrategy<IntStringNode>* int_string_pool_;
+    static ftl::BumpPoolAllocationStrategy<IntIntNode>* int_int_pool_;
+    static ftl::BumpPoolAllocationStrategy<StringIntNode>* string_int_pool_;
+    static ftl::BumpPoolAllocationStrategy<IntStringReverseNode>* int_string_reverse_pool_;
 
     void SetUp() override {
         buffer_ = new uint8_t[POOL_MEMORY_SIZE];
         alloc_ = new ftl::BumpAllocator(buffer_, POOL_MEMORY_SIZE);
-        int_string_pool_ = new ftl::BumpPoolAllocator<IntStringNode>(*alloc_, 100);
-        int_int_pool_ = new ftl::BumpPoolAllocator<IntIntNode>(*alloc_, 100);
-        string_int_pool_ = new ftl::BumpPoolAllocator<StringIntNode>(*alloc_, 100);
-        int_string_reverse_pool_ = new ftl::BumpPoolAllocator<IntStringReverseNode>(*alloc_, 100);
+        int_string_pool_ = new ftl::BumpPoolAllocationStrategy<IntStringNode>(*alloc_, 100);
+        int_int_pool_ = new ftl::BumpPoolAllocationStrategy<IntIntNode>(*alloc_, 100);
+        string_int_pool_ = new ftl::BumpPoolAllocationStrategy<StringIntNode>(*alloc_, 100);
+        int_string_reverse_pool_ = new ftl::BumpPoolAllocationStrategy<IntStringReverseNode>(*alloc_, 100);
     }
 
     void TearDown() override {
@@ -53,10 +53,10 @@ public:
 
 uint8_t* MapTestEnvironment::buffer_ = nullptr;
 ftl::BumpAllocator* MapTestEnvironment::alloc_ = nullptr;
-ftl::BumpPoolAllocator<MapTestEnvironment::IntStringNode>* MapTestEnvironment::int_string_pool_ = nullptr;
-ftl::BumpPoolAllocator<MapTestEnvironment::IntIntNode>* MapTestEnvironment::int_int_pool_ = nullptr;
-ftl::BumpPoolAllocator<MapTestEnvironment::StringIntNode>* MapTestEnvironment::string_int_pool_ = nullptr;
-ftl::BumpPoolAllocator<MapTestEnvironment::IntStringReverseNode>* MapTestEnvironment::int_string_reverse_pool_ = nullptr;
+ftl::BumpPoolAllocationStrategy<MapTestEnvironment::IntStringNode>* MapTestEnvironment::int_string_pool_ = nullptr;
+ftl::BumpPoolAllocationStrategy<MapTestEnvironment::IntIntNode>* MapTestEnvironment::int_int_pool_ = nullptr;
+ftl::BumpPoolAllocationStrategy<MapTestEnvironment::StringIntNode>* MapTestEnvironment::string_int_pool_ = nullptr;
+ftl::BumpPoolAllocationStrategy<MapTestEnvironment::IntStringReverseNode>* MapTestEnvironment::int_string_reverse_pool_ = nullptr;
 
 class MapTest : public ::testing::Test {
 protected:
@@ -65,10 +65,10 @@ protected:
     using StringIntNode = ftl::Map<std::string, int>::Node;
     using IntStringReverseNode = MapTestEnvironment::IntStringReverseNode;
     
-    ftl::BumpPoolAllocator<IntStringNode>* int_string_pool_;
-    ftl::BumpPoolAllocator<IntIntNode>* int_int_pool_;
-    ftl::BumpPoolAllocator<StringIntNode>* string_int_pool_;
-    ftl::BumpPoolAllocator<IntStringReverseNode>* int_string_reverse_pool_;
+    ftl::BumpPoolAllocationStrategy<IntStringNode>* int_string_pool_;
+    ftl::BumpPoolAllocationStrategy<IntIntNode>* int_int_pool_;
+    ftl::BumpPoolAllocationStrategy<StringIntNode>* string_int_pool_;
+    ftl::BumpPoolAllocationStrategy<IntStringReverseNode>* int_string_reverse_pool_;
 
     void SetUp() override {
         int_string_pool_ = MapTestEnvironment::int_string_pool_;
@@ -93,10 +93,10 @@ protected:
     
 private:
     template<typename T>
-    void VerifyPoolClean(ftl::BumpPoolAllocator<T>* pool, const char* name, bool after_test = false) {
-        auto used = pool->UsedSize();
-        auto free = pool->FreeSize();
-        auto total = pool->TotalSize();
+    void VerifyPoolClean(ftl::BumpPoolAllocationStrategy<T>* pool, const char* name, bool after_test = false) {
+        auto used = pool->used_size();
+        auto free = pool->free_size();
+        auto total = pool->total_size();
         
         if (after_test) {
             ASSERT_EQ(used, 0u) << "Memory leak in " << name << " pool: " << used << " nodes still in use after test";
