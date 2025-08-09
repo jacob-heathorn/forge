@@ -2,14 +2,15 @@
 
 #include <cstddef>
 #include <utility>
-#include "ftl/bump_pool.hpp"
+#include "ftl/object_allocator.hpp"
+#include "ftl/bump_pool_allocation_strategy.hpp"
 #include "ftl/bump_allocator.hpp"
 
 namespace ftl {
 
-/// Allocator that uses ftl::BumpPool for memory management.
+/// Allocator that uses BumpPoolAllocationStrategy with ObjectAllocator
+/// for memory management with automatic construction/destruction.
 /// Templated at class level for a specific type T.
-/// Provides allocation and deallocation for objects of type T.
 template<typename T>
 class BumpPoolAllocator {
 public:
@@ -23,39 +24,39 @@ public:
 
     /// Constructor that takes a BumpAllocator and optional initial pool size
     explicit BumpPoolAllocator(ftl::BumpAllocator& allocator, size_type initial_size = 1) 
-        : pool_(allocator, initial_size) {
+        : strategy_(allocator, initial_size),
+          object_allocator_(strategy_) {
     }
 
     /// Allocate and construct an object
     template<typename... Args>
     T* allocate(Args&&... args) {
-        return pool_.acquire(std::forward<Args>(args)...);
+        return object_allocator_.allocate(std::forward<Args>(args)...);
     }
 
-    /// Deallocate an object (return it to the pool)
+    /// Deallocate an object (destruct and return it to the pool)
     void deallocate(T* p) noexcept {
-        if (p) {
-            pool_.release(p);
-        }
+        object_allocator_.deallocate(p);
     }
 
     /// Get total number of objects allocated in the pool
     size_type TotalSize() const {
-        return pool_.TotalSize();
+        return strategy_.total_size();
     }
 
     /// Get number of free objects in the pool
     size_type FreeSize() const {
-        return pool_.FreeSize();
+        return strategy_.free_size();
     }
 
     /// Get number of currently used objects in the pool
     size_type UsedSize() const {
-        return pool_.UsedSize();
+        return strategy_.used_size();
     }
 
 private:
-    ftl::BumpPool<T> pool_;
+    BumpPoolAllocationStrategy<T> strategy_;
+    ObjectAllocator<T> object_allocator_;
 };
 
 }  // namespace ftl
