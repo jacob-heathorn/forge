@@ -8,81 +8,21 @@
 #include "ftl/malloc_allocation_strategy.hpp"
 #include "ftl/map.hpp"
 
-// Global test environment that persists across all tests
-class MapTestEnvironment : public ::testing::Environment {
-public:
-    // Define node types for different map types
-    using IntStringNode = ftl::Map<int, std::string>::Node;
-    using IntIntNode = ftl::Map<int, int>::Node;
-    using StringIntNode = ftl::Map<std::string, int>::Node;
-    
-    // Custom comparator type for reverse comparison test
-    struct ReverseCompare {
-        bool operator()(int a, int b) const { return a > b; }
-    };
-    using IntStringReverseNode = ftl::Map<int, std::string, ReverseCompare>::Node;
-    
-    static ftl::MallocAllocationStrategy<IntStringNode>* int_string_alloc_;
-    static ftl::MallocAllocationStrategy<IntIntNode>* int_int_alloc_;
-    static ftl::MallocAllocationStrategy<StringIntNode>* string_int_alloc_;
-    static ftl::MallocAllocationStrategy<IntStringReverseNode>* int_string_reverse_alloc_;
-
-    void SetUp() override {
-        int_string_alloc_ = new ftl::MallocAllocationStrategy<IntStringNode>();
-        int_int_alloc_ = new ftl::MallocAllocationStrategy<IntIntNode>();
-        string_int_alloc_ = new ftl::MallocAllocationStrategy<StringIntNode>();
-        int_string_reverse_alloc_ = new ftl::MallocAllocationStrategy<IntStringReverseNode>();
-    }
-
-    void TearDown() override {
-        delete int_string_reverse_alloc_;
-        delete string_int_alloc_;
-        delete int_int_alloc_;
-        delete int_string_alloc_;
-    }
-};
-
-ftl::MallocAllocationStrategy<MapTestEnvironment::IntStringNode>* MapTestEnvironment::int_string_alloc_ = nullptr;
-ftl::MallocAllocationStrategy<MapTestEnvironment::IntIntNode>* MapTestEnvironment::int_int_alloc_ = nullptr;
-ftl::MallocAllocationStrategy<MapTestEnvironment::StringIntNode>* MapTestEnvironment::string_int_alloc_ = nullptr;
-ftl::MallocAllocationStrategy<MapTestEnvironment::IntStringReverseNode>* MapTestEnvironment::int_string_reverse_alloc_ = nullptr;
-
 class MapTest : public ::testing::Test {
 protected:
+    // Common allocator for int->string maps
     using IntStringNode = ftl::Map<int, std::string>::Node;
-    using IntIntNode = ftl::Map<int, int>::Node;
-    using StringIntNode = ftl::Map<std::string, int>::Node;
-    using IntStringReverseNode = MapTestEnvironment::IntStringReverseNode;
-    
-    ftl::MallocAllocationStrategy<IntStringNode>* int_string_alloc_;
-    ftl::MallocAllocationStrategy<IntIntNode>* int_int_alloc_;
-    ftl::MallocAllocationStrategy<StringIntNode>* string_int_alloc_;
-    ftl::MallocAllocationStrategy<IntStringReverseNode>* int_string_reverse_alloc_;
-
-    void SetUp() override {
-        int_string_alloc_ = MapTestEnvironment::int_string_alloc_;
-        int_int_alloc_ = MapTestEnvironment::int_int_alloc_;
-        string_int_alloc_ = MapTestEnvironment::string_int_alloc_;
-        int_string_reverse_alloc_ = MapTestEnvironment::int_string_reverse_alloc_;
-        
-        // Note: MallocAllocationStrategy doesn't track allocations for thread-safety
-        // Memory leak detection would require external tools like valgrind or ASAN
-    }
-    
-    void TearDown() override {
-        // Note: Cannot verify deallocation with MallocAllocationStrategy
-        // Use valgrind or AddressSanitizer for memory leak detection
-    }
+    ftl::MallocAllocationStrategy<IntStringNode> int_string_alloc_;
 };
 
 TEST_F(MapTest, DefaultConstruction) {
-    ftl::Map<int, std::string> map(*int_string_alloc_);
+    ftl::Map<int, std::string> map(int_string_alloc_);
     EXPECT_TRUE(map.empty());
     EXPECT_EQ(map.size(), 0u);
 }
 
 TEST_F(MapTest, InsertAndFind) {
-    ftl::Map<int, std::string> map(*int_string_alloc_);
+    ftl::Map<int, std::string> map(int_string_alloc_);
     
     auto result = map.insert({42, "forty-two"});
     EXPECT_TRUE(result.second);
@@ -100,7 +40,7 @@ TEST_F(MapTest, InsertAndFind) {
 
 TEST_F(MapTest, InsertDuplicate) {
     // Test ftl::Map
-    ftl::Map<int, std::string> map(*int_string_alloc_);
+    ftl::Map<int, std::string> map(int_string_alloc_);
     
     auto result1 = map.insert({42, "first"});
     EXPECT_TRUE(result1.second);
@@ -125,7 +65,7 @@ TEST_F(MapTest, InsertDuplicate) {
 }
 
 TEST_F(MapTest, OperatorBracket) {
-    ftl::Map<int, std::string> map(*int_string_alloc_);
+    ftl::Map<int, std::string> map(int_string_alloc_);
     
     map[1] = "one";
     map[2] = "two";
@@ -142,7 +82,7 @@ TEST_F(MapTest, OperatorBracket) {
 }
 
 TEST_F(MapTest, Erase) {
-    ftl::Map<int, std::string> map(*int_string_alloc_);
+    ftl::Map<int, std::string> map(int_string_alloc_);
     
     map[1] = "one";
     map[2] = "two";
@@ -161,7 +101,7 @@ TEST_F(MapTest, Erase) {
 }
 
 TEST_F(MapTest, EraseByIterator) {
-    ftl::Map<int, std::string> map(*int_string_alloc_);
+    ftl::Map<int, std::string> map(int_string_alloc_);
     
     map[1] = "one";
     map[2] = "two";
@@ -177,7 +117,7 @@ TEST_F(MapTest, EraseByIterator) {
 }
 
 TEST_F(MapTest, Clear) {
-    ftl::Map<int, std::string> map(*int_string_alloc_);
+    ftl::Map<int, std::string> map(int_string_alloc_);
     
     map[1] = "one";
     map[2] = "two";
@@ -193,7 +133,7 @@ TEST_F(MapTest, Clear) {
 }
 
 TEST_F(MapTest, Iteration) {
-    ftl::Map<int, std::string> map(*int_string_alloc_);
+    ftl::Map<int, std::string> map(int_string_alloc_);
     
     map[3] = "three";
     map[1] = "one";
@@ -213,7 +153,7 @@ TEST_F(MapTest, Iteration) {
 }
 
 TEST_F(MapTest, ReverseIteration) {
-    ftl::Map<int, std::string> map(*int_string_alloc_);
+    ftl::Map<int, std::string> map(int_string_alloc_);
     
     map[1] = "one";
     map[2] = "two";
@@ -233,7 +173,7 @@ TEST_F(MapTest, ReverseIteration) {
 }
 
 TEST_F(MapTest, Count) {
-    ftl::Map<int, std::string> map(*int_string_alloc_);
+    ftl::Map<int, std::string> map(int_string_alloc_);
     
     map[1] = "one";
     map[2] = "two";
@@ -244,7 +184,7 @@ TEST_F(MapTest, Count) {
 }
 
 TEST_F(MapTest, Emplace) {
-    ftl::Map<int, std::string> map(*int_string_alloc_);
+    ftl::Map<int, std::string> map(int_string_alloc_);
     
     auto result = map.emplace(42, "forty-two");
     EXPECT_TRUE(result.second);
@@ -257,7 +197,7 @@ TEST_F(MapTest, Emplace) {
 }
 
 TEST_F(MapTest, CopyConstruction) {
-    ftl::Map<int, std::string> map1(*int_string_alloc_);
+    ftl::Map<int, std::string> map1(int_string_alloc_);
     map1[1] = "one";
     map1[2] = "two";
     map1[3] = "three";
@@ -275,11 +215,11 @@ TEST_F(MapTest, CopyConstruction) {
 }
 
 TEST_F(MapTest, CopyAssignment) {
-    ftl::Map<int, std::string> map1(*int_string_alloc_);
+    ftl::Map<int, std::string> map1(int_string_alloc_);
     map1[1] = "one";
     map1[2] = "two";
     
-    ftl::Map<int, std::string> map2(*int_string_alloc_);
+    ftl::Map<int, std::string> map2(int_string_alloc_);
     map2[10] = "ten";
     
     map2 = map1;
@@ -291,7 +231,7 @@ TEST_F(MapTest, CopyAssignment) {
 }
 
 TEST_F(MapTest, MoveConstruction) {
-    ftl::Map<int, std::string> map1(*int_string_alloc_);
+    ftl::Map<int, std::string> map1(int_string_alloc_);
     map1[1] = "one";
     map1[2] = "two";
     map1[3] = "three";
@@ -307,7 +247,9 @@ TEST_F(MapTest, MoveConstruction) {
 }
 
 TEST_F(MapTest, LargeDataset) {
-    ftl::Map<int, int> map(*int_int_alloc_);
+    using IntIntNode = ftl::Map<int, int>::Node;
+    ftl::MallocAllocationStrategy<IntIntNode> int_int_alloc;
+    ftl::Map<int, int> map(int_int_alloc);
     
     constexpr int N = 1000;
     for (int i = 0; i < N; ++i) {
@@ -338,7 +280,9 @@ TEST_F(MapTest, LargeDataset) {
 }
 
 TEST_F(MapTest, RandomInsertDelete) {
-    ftl::Map<int, int> map(*int_int_alloc_);
+    using IntIntNode = ftl::Map<int, int>::Node;
+    ftl::MallocAllocationStrategy<IntIntNode> int_int_alloc;
+    ftl::Map<int, int> map(int_int_alloc);
     std::mt19937 gen(42);
     std::uniform_int_distribution<> dis(1, 100);
     
@@ -360,10 +304,13 @@ TEST_F(MapTest, RandomInsertDelete) {
 }
 
 TEST_F(MapTest, CustomComparator) {
-    using ReverseCompare = MapTestEnvironment::ReverseCompare;
+    struct ReverseCompare {
+        bool operator()(int a, int b) const { return a > b; }
+    };
     
-    // Custom comparator map needs its own node type
-    ftl::Map<int, std::string, ReverseCompare> map(*int_string_reverse_alloc_, ReverseCompare{});
+    using ReverseNode = ftl::Map<int, std::string, ReverseCompare>::Node;
+    ftl::MallocAllocationStrategy<ReverseNode> reverse_alloc;
+    ftl::Map<int, std::string, ReverseCompare> map(reverse_alloc, ReverseCompare{});
     
     map[1] = "one";
     map[2] = "two";
@@ -380,7 +327,9 @@ TEST_F(MapTest, CustomComparator) {
 }
 
 TEST_F(MapTest, StringKeys) {
-    ftl::Map<std::string, int> map(*string_int_alloc_);
+    using StringIntNode = ftl::Map<std::string, int>::Node;
+    ftl::MallocAllocationStrategy<StringIntNode> string_int_alloc;
+    ftl::Map<std::string, int> map(string_int_alloc);
     
     map["apple"] = 1;
     map["banana"] = 2;
@@ -396,7 +345,7 @@ TEST_F(MapTest, StringKeys) {
 }
 
 TEST_F(MapTest, IteratorPostIncrement) {
-    ftl::Map<int, std::string> map(*int_string_alloc_);
+    ftl::Map<int, std::string> map(int_string_alloc_);
     map[1] = "one";
     map[2] = "two";
     
@@ -408,7 +357,7 @@ TEST_F(MapTest, IteratorPostIncrement) {
 }
 
 TEST_F(MapTest, ConstIteration) {
-    ftl::Map<int, std::string> map(*int_string_alloc_);
+    ftl::Map<int, std::string> map(int_string_alloc_);
     map[1] = "one";
     map[2] = "two";
     
@@ -424,9 +373,3 @@ TEST_F(MapTest, ConstIteration) {
     EXPECT_EQ(keys[1], 2);
 }
 
-// Register the test environment
-// This will be called automatically by gtest
-namespace {
-    ::testing::Environment* const map_env = 
-        ::testing::AddGlobalTestEnvironment(new MapTestEnvironment);
-}
