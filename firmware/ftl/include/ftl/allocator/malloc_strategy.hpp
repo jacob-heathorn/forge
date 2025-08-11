@@ -35,22 +35,23 @@ inline void malloc_deallocate(void* self, void* ptr) noexcept {
 
 template <typename T>
 struct MallocObjState {
-    static constexpr std::size_t size = sizeof(T);
-    static constexpr std::size_t alignment = alignof(T);
+    std::size_t size;
+    std::size_t alignment;
 };
 
 template <typename T>
 inline void* malloc_obj_allocate(void* self) noexcept {
-    (void)self;
+    if (!self) return nullptr;
+    auto* state = static_cast<MallocObjState<T>*>(self);
     
-    // For over-aligned types, use aligned_alloc
-    if constexpr (alignof(T) > alignof(std::max_align_t)) {
+    // For over-aligned allocations, use aligned_alloc
+    if (state->alignment > alignof(std::max_align_t)) {
         // Size must be a multiple of alignment for aligned_alloc
-        std::size_t size = sizeof(T);
-        size = (size + alignof(T) - 1) & ~(alignof(T) - 1);
-        return std::aligned_alloc(alignof(T), size);
+        std::size_t size = state->size;
+        size = (size + state->alignment - 1) & ~(state->alignment - 1);
+        return std::aligned_alloc(state->alignment, size);
     } else {
-        return std::malloc(sizeof(T));
+        return std::malloc(state->size);
     }
 }
 
@@ -77,10 +78,13 @@ struct MallocStrategy {
         return strat;
     }
     
-    // Create strategy for objects of type T (alignment is automatically alignof(T))
+    // Create strategy for objects of type T with optional custom alignment
+    // Default alignment is alignof(T), but can specify stronger alignment (e.g., cache line)
     template <typename T>
-    static ObjStrategy<T> make_for() noexcept {
-        static detail::MallocObjState<T> state;
+    static ObjStrategy<T> make_for(std::size_t alignment = alignof(T)) noexcept {
+        static thread_local detail::MallocObjState<T> state;
+        state.size = sizeof(T);
+        state.alignment = (alignment > alignof(T)) ? alignment : alignof(T);  // Use stronger of the two
         
         ObjStrategy<T> strat;
         strat.allocate = &detail::malloc_obj_allocate<T>;
