@@ -34,37 +34,33 @@ protected:
     }
 };
 
-// Test basic buffer allocation with MallocStrategy
+// Test basic buffer allocation with MallocBlockStrategy
 TEST_F(MallocStrategyTest, BufferAllocationBasic) {
     constexpr size_t block_size = 256;
-    auto strategy = ftl::allocator::MallocStrategy::make(block_size);
-    
-    ASSERT_NE(strategy.allocate, nullptr);
-    ASSERT_NE(strategy.deallocate, nullptr);
-    ASSERT_NE(strategy.self, nullptr);
+    ftl::allocator::MallocBlockStrategy strategy(block_size);
     
     // Allocate a buffer
-    void* ptr = strategy.allocate(strategy.self);
+    void* ptr = strategy.allocate();
     ASSERT_NE(ptr, nullptr);
     
     // Write to the buffer to verify it's valid memory
     std::memset(ptr, 0xAB, block_size);
     
     // Deallocate
-    strategy.deallocate(strategy.self, ptr);
+    strategy.deallocate(ptr);
 }
 
 // Test multiple buffer allocations
 TEST_F(MallocStrategyTest, MultipleBufferAllocations) {
     constexpr size_t block_size = 128;
-    auto strategy = ftl::allocator::MallocStrategy::make(block_size);
+    ftl::allocator::MallocBlockStrategy strategy(block_size);
     
     std::vector<void*> ptrs;
     constexpr size_t num_allocs = 10;
     
     // Allocate multiple buffers
     for (size_t i = 0; i < num_allocs; ++i) {
-        void* ptr = strategy.allocate(strategy.self);
+        void* ptr = strategy.allocate();
         ASSERT_NE(ptr, nullptr);
         ptrs.push_back(ptr);
         
@@ -89,19 +85,16 @@ TEST_F(MallocStrategyTest, MultipleBufferAllocations) {
     
     // Deallocate all
     for (void* ptr : ptrs) {
-        strategy.deallocate(strategy.self, ptr);
+        strategy.deallocate(ptr);
     }
 }
 
 // Test object allocation with MallocStrategy
 TEST_F(MallocStrategyTest, ObjectAllocationBasic) {
-    auto obj_strategy = ftl::allocator::MallocStrategy::make_for<TestObject>();
-    
-    ASSERT_NE(obj_strategy.allocate, nullptr);
-    ASSERT_NE(obj_strategy.deallocate, nullptr);
+    ftl::allocator::MallocObjStrategy<TestObject> obj_strategy;
     
     // Allocate raw memory for TestObject
-    void* raw = obj_strategy.allocate(obj_strategy.self);
+    void* raw = obj_strategy.allocate();
     ASSERT_NE(raw, nullptr);
     
     // Construct object using placement new
@@ -114,17 +107,17 @@ TEST_F(MallocStrategyTest, ObjectAllocationBasic) {
     EXPECT_FALSE(obj->active);
     
     // Deallocate memory
-    obj_strategy.deallocate(obj_strategy.self, raw);
+    obj_strategy.deallocate(raw);
 }
 
 // Test ObjectAllocator with MallocStrategy
 TEST_F(MallocStrategyTest, ObjectAllocatorIntegration) {
-    auto obj_strategy = ftl::allocator::MallocStrategy::make_for<TestObject>();
+    ftl::allocator::MallocObjStrategy<TestObject> obj_strategy;
     // Note: ObjectAllocator would need to be implemented separately
     // For now, test raw allocation
     
     // Allocate raw memory
-    void* raw = obj_strategy.allocate(obj_strategy.self);
+    void* raw = obj_strategy.allocate();
     ASSERT_NE(raw, nullptr);
     
     // Construct object
@@ -138,19 +131,19 @@ TEST_F(MallocStrategyTest, ObjectAllocatorIntegration) {
     
     // Destroy and deallocate
     obj->~TestObject();
-    obj_strategy.deallocate(obj_strategy.self, raw);
+    obj_strategy.deallocate(raw);
 }
 
 // Test multiple object allocations
 TEST_F(MallocStrategyTest, MultipleObjectAllocations) {
-    auto obj_strategy = ftl::allocator::MallocStrategy::make_for<TestObject>();
+    ftl::allocator::MallocObjStrategy<TestObject> obj_strategy;
     
     std::vector<TestObject*> objects;
     constexpr size_t num_objects = 20;
     
     // Allocate multiple objects
     for (size_t i = 0; i < num_objects; ++i) {
-        void* raw = obj_strategy.allocate(obj_strategy.self);
+        void* raw = obj_strategy.allocate();
         ASSERT_NE(raw, nullptr);
         TestObject* obj = new (raw) TestObject();
         obj->value = static_cast<int>(i * 10);
@@ -173,16 +166,16 @@ TEST_F(MallocStrategyTest, MultipleObjectAllocations) {
     // Deallocate all
     for (TestObject* obj : objects) {
         obj->~TestObject();
-        obj_strategy.deallocate(obj_strategy.self, obj);
+        obj_strategy.deallocate(obj);
     }
 }
 
 // Test aligned object allocation
 TEST_F(MallocStrategyTest, AlignedObjectAllocation) {
-    auto obj_strategy = ftl::allocator::MallocStrategy::make_for<AlignedObject>();
+    ftl::allocator::MallocObjStrategy<AlignedObject> obj_strategy;
     
     // Allocate aligned object
-    void* raw = obj_strategy.allocate(obj_strategy.self);
+    void* raw = obj_strategy.allocate();
     ASSERT_NE(raw, nullptr);
     AlignedObject* obj = new (raw) AlignedObject();
     
@@ -200,17 +193,17 @@ TEST_F(MallocStrategyTest, AlignedObjectAllocation) {
     }
     
     obj->~AlignedObject();
-    obj_strategy.deallocate(obj_strategy.self, raw);
+    obj_strategy.deallocate(raw);
 }
 
 
 // Test that different block sizes use different state
 TEST_F(MallocStrategyTest, DifferentBlockSizesIndependent) {
-    auto strat1 = ftl::allocator::MallocStrategy::make(64);
-    auto strat2 = ftl::allocator::MallocStrategy::make(128);
+    ftl::allocator::MallocBlockStrategy strat1(64);
+    ftl::allocator::MallocBlockStrategy strat2(128);
     
-    void* ptr1 = strat1.allocate(strat1.self);
-    void* ptr2 = strat2.allocate(strat2.self);
+    void* ptr1 = strat1.allocate();
+    void* ptr2 = strat2.allocate();
     
     ASSERT_NE(ptr1, nullptr);
     ASSERT_NE(ptr2, nullptr);
@@ -232,21 +225,21 @@ TEST_F(MallocStrategyTest, DifferentBlockSizesIndependent) {
         EXPECT_EQ(buf2[i], 0xBB);
     }
     
-    strat1.deallocate(strat1.self, ptr1);
-    strat2.deallocate(strat2.self, ptr2);
+    strat1.deallocate(ptr1);
+    strat2.deallocate(ptr2);
 }
 
 // Test null pointer handling
 TEST_F(MallocStrategyTest, NullPointerHandling) {
-    auto strategy = ftl::allocator::MallocStrategy::make(64);
+    ftl::allocator::MallocBlockStrategy strategy(64);
     
     // Deallocating nullptr should be safe
-    strategy.deallocate(strategy.self, nullptr);
+    strategy.deallocate(nullptr);
     
-    auto obj_strategy = ftl::allocator::MallocStrategy::make_for<TestObject>();
+    ftl::allocator::MallocObjStrategy<TestObject> obj_strategy;
     
     // Deallocating nullptr should be safe
-    obj_strategy.deallocate(obj_strategy.self, nullptr);
+    obj_strategy.deallocate(nullptr);
 }
 
 // Test custom alignment for BlockStrategy
@@ -254,12 +247,12 @@ TEST_F(MallocStrategyTest, CustomAlignmentBlockStrategy) {
     // Create strategy with 64-byte alignment
     constexpr size_t block_size = 128;
     constexpr size_t alignment = 64;
-    auto strategy = ftl::allocator::MallocStrategy::make(block_size, alignment);
+    ftl::allocator::MallocBlockStrategy strategy(block_size, alignment);
     
     // Allocate multiple blocks and verify alignment
     std::vector<void*> ptrs;
     for (int i = 0; i < 5; ++i) {
-        void* ptr = strategy.allocate(strategy.self);
+        void* ptr = strategy.allocate();
         ASSERT_NE(ptr, nullptr);
         
         // Verify alignment
@@ -271,7 +264,7 @@ TEST_F(MallocStrategyTest, CustomAlignmentBlockStrategy) {
     
     // Cleanup
     for (void* ptr : ptrs) {
-        strategy.deallocate(strategy.self, ptr);
+        strategy.deallocate(ptr);
     }
 }
 
@@ -281,12 +274,12 @@ TEST_F(MallocStrategyTest, CacheLineAlignedObjectStrategy) {
     constexpr size_t CACHE_LINE_SIZE = 64;
     
     // Create strategy for TestObject with cache-line alignment
-    auto obj_strategy = ftl::allocator::MallocStrategy::make_for<TestObject>(CACHE_LINE_SIZE);
+    ftl::allocator::MallocObjStrategy<TestObject> obj_strategy(CACHE_LINE_SIZE);
     
     // Allocate multiple objects
     std::vector<TestObject*> objects;
     for (int i = 0; i < 5; ++i) {
-        void* raw = obj_strategy.allocate(obj_strategy.self);
+        void* raw = obj_strategy.allocate();
         ASSERT_NE(raw, nullptr);
         
         // Verify cache-line alignment
@@ -306,6 +299,6 @@ TEST_F(MallocStrategyTest, CacheLineAlignedObjectStrategy) {
     // Cleanup
     for (TestObject* obj : objects) {
         obj->~TestObject();
-        obj_strategy.deallocate(obj_strategy.self, obj);
+        obj_strategy.deallocate(obj);
     }
 }

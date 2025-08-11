@@ -6,21 +6,32 @@
 namespace ftl::allocator {
 
 // ============================================================================
-// Interface allocation strategies, buffers (block) OR objects
+// Interface allocation strategies using virtual methods
 // ============================================================================
-struct BlockStrategy {
-  void* (*allocate)(void* self) noexcept;  // returns nullptr on failure
-  void  (*deallocate)(void* self, void* ptr) noexcept;
-  void* self{nullptr};                      // points to per-slot state
+
+// Base interface for block allocations (fixed-size blocks)
+class IBlockStrategy {
+public:
+    virtual ~IBlockStrategy() = default;
+    
+    // Allocate a block with size and alignment baked into the implementation
+    virtual void* allocate() noexcept = 0;
+    
+    // Deallocate a previously allocated block
+    virtual void deallocate(void* ptr) noexcept = 0;
 };
 
-// For exactly one T. Alignment is baked into the strategy.
+// Base interface for object allocations (typed, single object)
 template <typename T>
-struct ObjStrategy {
-  void* (*allocate)(void* self) noexcept;   // returns storage for one T
-  void  (*deallocate)(void* self, void* p) noexcept;
-  void* self{nullptr};
+class IObjStrategy {
+public:
+    virtual ~IObjStrategy() = default;
+    
+    // Allocate storage for one T (size and alignment baked in)
+    virtual void* allocate() noexcept = 0;
+    
+    // Deallocate storage for one T
+    virtual void deallocate(void* ptr) noexcept = 0;
 };
-
 
 }
