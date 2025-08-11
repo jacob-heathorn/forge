@@ -19,6 +19,7 @@ target_link_libraries(ut-ftl ftl ftl-native)
 # Allocator unit tests
 add_platform_test(ut-allocator
   allocator/ut_malloc_strategy.cpp
+  allocator/ut_bump_pool_strategy.cpp
 )
 target_link_libraries(ut-allocator ftl ftl-native)
 
