@@ -10,12 +10,17 @@ add_platform_test(ut-ftl
   ut_byte_order.cpp
   ut_map.cpp
   ut_singleton.cpp
-  ut_strategy.cpp
   ut_mutex.cpp
   ut_thread.cpp
   ut_unique_bump_pool.cpp
 )
 target_link_libraries(ut-ftl ftl ftl-native)
+
+# Allocator unit tests
+add_platform_test(ut-allocator
+  allocator/ut_malloc_strategy.cpp
+)
+target_link_libraries(ut-allocator ftl ftl-native)
 
 # Network test
 add_platform_test(ut-network
