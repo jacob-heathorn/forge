@@ -255,40 +255,6 @@ TEST_F(BumpPoolStrategyTest, CustomAlignmentBlockStrategy) {
     }
 }
 
-// Test cache-line aligned object allocation
-TEST_F(BumpPoolStrategyTest, CacheLineAlignedObjectStrategy) {
-    // Common cache line size
-    constexpr size_t CACHE_LINE_SIZE = 64;
-    
-    // Create strategy for TestObject with cache-line alignment
-    ftl::allocator::BumpPoolObjStrategy<TestObject> obj_strategy(*bump_allocator_, CACHE_LINE_SIZE);
-    
-    // Allocate multiple objects
-    std::vector<TestObject*> objects;
-    for (int i = 0; i < 5; ++i) {
-        void* raw = obj_strategy.allocate();
-        ASSERT_NE(raw, nullptr);
-        
-        // Verify cache-line alignment
-        auto addr = reinterpret_cast<std::uintptr_t>(raw);
-        EXPECT_EQ(addr % CACHE_LINE_SIZE, 0) << "Object " << i << " not cache-line aligned";
-        
-        // Construct object
-        TestObject* obj = new (raw) TestObject(i * 100);
-        objects.push_back(obj);
-    }
-    
-    // Verify objects work correctly
-    for (size_t i = 0; i < objects.size(); ++i) {
-        EXPECT_EQ(objects[i]->value, static_cast<int>(i * 100));
-    }
-    
-    // Cleanup
-    for (TestObject* obj : objects) {
-        obj->~TestObject();
-        obj_strategy.deallocate(obj);
-    }
-}
 
 // Test exhaustion and recovery
 TEST_F(BumpPoolStrategyTest, ExhaustionAndRecovery) {

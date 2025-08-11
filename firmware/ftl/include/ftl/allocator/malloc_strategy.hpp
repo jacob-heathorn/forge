@@ -55,8 +55,8 @@ private:
     detail::MallocImpl impl_;
     
 public:
-    explicit MallocObjStrategy(std::size_t alignment = alignof(T)) noexcept
-        : impl_(sizeof(T), (alignment > alignof(T)) ? alignment : alignof(T)) {}
+    MallocObjStrategy() noexcept
+        : impl_(sizeof(T), alignof(T)) {}
     
     void* allocate() noexcept override {
         return impl_.allocate();

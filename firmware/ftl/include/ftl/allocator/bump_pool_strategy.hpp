@@ -96,9 +96,8 @@ private:
     detail::BumpPoolImpl impl_;
     
 public:
-    explicit BumpPoolObjStrategy(BumpAllocator& allocator, 
-                                 std::size_t alignment = alignof(T)) noexcept
-        : impl_(allocator, sizeof(T), (alignment > alignof(T)) ? alignment : alignof(T)) {}
+    explicit BumpPoolObjStrategy(BumpAllocator& allocator) noexcept
+        : impl_(allocator, sizeof(T), alignof(T)) {}
     
     void* allocate() noexcept override {
         return impl_.allocate();

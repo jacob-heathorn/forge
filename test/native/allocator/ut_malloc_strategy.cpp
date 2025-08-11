@@ -268,13 +268,10 @@ TEST_F(MallocStrategyTest, CustomAlignmentBlockStrategy) {
     }
 }
 
-// Test cache-line aligned object allocation
-TEST_F(MallocStrategyTest, CacheLineAlignedObjectStrategy) {
-    // Common cache line size
-    constexpr size_t CACHE_LINE_SIZE = 64;
-    
-    // Create strategy for TestObject with cache-line alignment
-    ftl::allocator::MallocObjStrategy<TestObject> obj_strategy(CACHE_LINE_SIZE);
+// Test natural alignment for objects
+TEST_F(MallocStrategyTest, ObjectNaturalAlignment) {
+    // Objects now use their natural alignment only
+    ftl::allocator::MallocObjStrategy<TestObject> obj_strategy;
     
     // Allocate multiple objects
     std::vector<TestObject*> objects;
@@ -282,9 +279,9 @@ TEST_F(MallocStrategyTest, CacheLineAlignedObjectStrategy) {
         void* raw = obj_strategy.allocate();
         ASSERT_NE(raw, nullptr);
         
-        // Verify cache-line alignment
+        // Verify natural alignment
         auto addr = reinterpret_cast<std::uintptr_t>(raw);
-        EXPECT_EQ(addr % CACHE_LINE_SIZE, 0) << "Object " << i << " not cache-line aligned";
+        EXPECT_EQ(addr % alignof(TestObject), 0) << "Object " << i << " not naturally aligned";
         
         // Construct object
         TestObject* obj = new (raw) TestObject(i * 100);

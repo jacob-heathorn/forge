@@ -2,7 +2,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#include <new>      // For placement new
+#include <new>      // For placement new, std::hardware_destructive_interference_size
 #include <utility>  // For std::forward
 
 namespace ftl {
@@ -12,11 +12,15 @@ namespace ftl {
 // with each allocation. The entire block can be reset for reuse.
 class BumpAllocator {
  public:
+  // Cache line size from hardware
+  static constexpr size_t kCacheLineSize = std::hardware_destructive_interference_size;
+  
   // Constructor.
   // @param base  Pointer to the beginning of the memory block.
   // @param size  Size of the memory block in bytes.
-  BumpAllocator(uint8_t* base, size_t size)
-    : ptr_{base}, base_{base}, end_{base + size} {}
+  // @param cache_align  If true, ensures allocations smaller than a cache line don't cross cache line boundaries.
+  BumpAllocator(uint8_t* base, size_t size, bool cache_align = false)
+    : ptr_{base}, base_{base}, end_{base + size}, cache_align_{cache_align} {}
 
   // Allocate a block of memory.
   // @param size      The number of bytes to allocate.
@@ -26,6 +30,23 @@ class BumpAllocator {
     uintptr_t current = reinterpret_cast<uintptr_t>(ptr_);
     // Align the current pointer to the requested alignment.
     uintptr_t aligned = (current + alignment - 1) & ~(alignment - 1);
+    
+    // If cache alignment is enabled and allocation fits within a cache line,
+    // ensure it doesn't cross cache line boundaries
+    if (cache_align_ && size <= kCacheLineSize) {
+      uintptr_t cache_line_start = aligned & ~(kCacheLineSize - 1);
+      uintptr_t cache_line_end = cache_line_start + kCacheLineSize;
+      
+      // If the allocation would cross a cache line boundary, bump to next cache line
+      if (aligned + size > cache_line_end) {
+        aligned = cache_line_end;
+        // Re-apply the alignment requirement in case it's larger than cache line
+        if (alignment > kCacheLineSize) {
+          aligned = (aligned + alignment - 1) & ~(alignment - 1);
+        }
+      }
+    }
+    
     // Check if there is enough memory remaining.
     if (aligned + size <= reinterpret_cast<uintptr_t>(end_)) {
       ptr_ = reinterpret_cast<uint8_t*>(aligned + size);
@@ -61,6 +82,8 @@ class BumpAllocator {
   uint8_t* base_ = nullptr;
   // One past the end of the memory block.
   uint8_t* end_ = nullptr;
+  // Whether to prevent allocations from crossing cache line boundaries.
+  bool cache_align_ = false;
 };
 
 }
