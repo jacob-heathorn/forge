@@ -9,17 +9,18 @@ namespace ftl::allocator {
 // Interface allocation strategies, buffers (block) OR objects
 // ============================================================================
 struct BlockStrategy {
-  void* (*allocate)(void* self, std::size_t align) noexcept;  // nullptr if cannot meet align
+  void* (*allocate)(void* self) noexcept;  // returns nullptr on failure
   void  (*deallocate)(void* self, void* ptr) noexcept;
-  void* self{nullptr};                                         // points to per-slot state
+  void* self{nullptr};                      // points to per-slot state
 };
 
-// For exactly one T. Caller may request stronger alignment than alignof(T).
+// For exactly one T. Alignment is baked into the strategy.
 template <typename T>
 struct ObjStrategy {
-  void* (*allocate)(void* self, std::size_t align) noexcept;   // align >= alignof(T) recommended
+  void* (*allocate)(void* self) noexcept;   // returns storage for one T
   void  (*deallocate)(void* self, void* p) noexcept;
   void* self{nullptr};
 };
+
 
 }

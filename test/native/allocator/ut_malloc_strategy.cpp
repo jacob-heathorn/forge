@@ -43,8 +43,8 @@ TEST_F(MallocStrategyTest, BufferAllocationBasic) {
     ASSERT_NE(strategy.deallocate, nullptr);
     ASSERT_NE(strategy.self, nullptr);
     
-    // Allocate a buffer with default alignment
-    void* ptr = strategy.allocate(strategy.self, alignof(std::max_align_t));
+    // Allocate a buffer
+    void* ptr = strategy.allocate(strategy.self);
     ASSERT_NE(ptr, nullptr);
     
     // Write to the buffer to verify it's valid memory
@@ -64,7 +64,7 @@ TEST_F(MallocStrategyTest, MultipleBufferAllocations) {
     
     // Allocate multiple buffers
     for (size_t i = 0; i < num_allocs; ++i) {
-        void* ptr = strategy.allocate(strategy.self, alignof(std::max_align_t));
+        void* ptr = strategy.allocate(strategy.self);
         ASSERT_NE(ptr, nullptr);
         ptrs.push_back(ptr);
         
@@ -101,7 +101,7 @@ TEST_F(MallocStrategyTest, ObjectAllocationBasic) {
     ASSERT_NE(obj_strategy.deallocate, nullptr);
     
     // Allocate raw memory for TestObject
-    void* raw = obj_strategy.allocate(obj_strategy.self, alignof(TestObject));
+    void* raw = obj_strategy.allocate(obj_strategy.self);
     ASSERT_NE(raw, nullptr);
     
     // Construct object using placement new
@@ -124,7 +124,7 @@ TEST_F(MallocStrategyTest, ObjectAllocatorIntegration) {
     // For now, test raw allocation
     
     // Allocate raw memory
-    void* raw = obj_strategy.allocate(obj_strategy.self, alignof(TestObject));
+    void* raw = obj_strategy.allocate(obj_strategy.self);
     ASSERT_NE(raw, nullptr);
     
     // Construct object
@@ -150,7 +150,7 @@ TEST_F(MallocStrategyTest, MultipleObjectAllocations) {
     
     // Allocate multiple objects
     for (size_t i = 0; i < num_objects; ++i) {
-        void* raw = obj_strategy.allocate(obj_strategy.self, alignof(TestObject));
+        void* raw = obj_strategy.allocate(obj_strategy.self);
         ASSERT_NE(raw, nullptr);
         TestObject* obj = new (raw) TestObject();
         obj->value = static_cast<int>(i * 10);
@@ -182,7 +182,7 @@ TEST_F(MallocStrategyTest, AlignedObjectAllocation) {
     auto obj_strategy = ftl::allocator::MallocStrategy::make_for<AlignedObject>();
     
     // Allocate aligned object
-    void* raw = obj_strategy.allocate(obj_strategy.self, alignof(AlignedObject));
+    void* raw = obj_strategy.allocate(obj_strategy.self);
     ASSERT_NE(raw, nullptr);
     AlignedObject* obj = new (raw) AlignedObject();
     
@@ -209,8 +209,8 @@ TEST_F(MallocStrategyTest, DifferentBlockSizesIndependent) {
     auto strat1 = ftl::allocator::MallocStrategy::make(64);
     auto strat2 = ftl::allocator::MallocStrategy::make(128);
     
-    void* ptr1 = strat1.allocate(strat1.self, alignof(std::max_align_t));
-    void* ptr2 = strat2.allocate(strat2.self, alignof(std::max_align_t));
+    void* ptr1 = strat1.allocate(strat1.self);
+    void* ptr2 = strat2.allocate(strat2.self);
     
     ASSERT_NE(ptr1, nullptr);
     ASSERT_NE(ptr2, nullptr);
@@ -247,4 +247,30 @@ TEST_F(MallocStrategyTest, NullPointerHandling) {
     
     // Deallocating nullptr should be safe
     obj_strategy.deallocate(obj_strategy.self, nullptr);
+}
+
+// Test custom alignment for BlockStrategy
+TEST_F(MallocStrategyTest, CustomAlignmentBlockStrategy) {
+    // Create strategy with 64-byte alignment
+    constexpr size_t block_size = 128;
+    constexpr size_t alignment = 64;
+    auto strategy = ftl::allocator::MallocStrategy::make(block_size, alignment);
+    
+    // Allocate multiple blocks and verify alignment
+    std::vector<void*> ptrs;
+    for (int i = 0; i < 5; ++i) {
+        void* ptr = strategy.allocate(strategy.self);
+        ASSERT_NE(ptr, nullptr);
+        
+        // Verify alignment
+        auto addr = reinterpret_cast<std::uintptr_t>(ptr);
+        EXPECT_EQ(addr % alignment, 0) << "Block " << i << " not aligned to " << alignment << " bytes";
+        
+        ptrs.push_back(ptr);
+    }
+    
+    // Cleanup
+    for (void* ptr : ptrs) {
+        strategy.deallocate(strategy.self, ptr);
+    }
 }
