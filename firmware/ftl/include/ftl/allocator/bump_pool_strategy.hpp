@@ -3,7 +3,8 @@
 #include <cstddef>
 #include <new>
 #include "strategy.hpp"
-#include "../bump_allocator.hpp"
+#include "ftl/bump_allocator.hpp"
+#include "ftl/mutex.hpp"
 
 namespace ftl::allocator {
 
@@ -19,6 +20,7 @@ private:
     };
     
     BumpAllocator& allocator_;
+    mutable Mutex mutex_;         // Protects free list
     NodeBase* free_list_{nullptr};
     std::size_t node_size_;      // Total size of node including header and storage
     std::size_t storage_offset_; // Offset from node start to storage
@@ -37,6 +39,8 @@ public:
     }
     
     void* allocate() noexcept {
+        LockGuard<Mutex> lock(mutex_);
+        
         // Try to get from free list first
         if (free_list_) {
             NodeBase* node = free_list_;
@@ -45,7 +49,7 @@ public:
             return reinterpret_cast<unsigned char*>(node) + storage_offset_;
         }
         
-        // Allocate new from bump allocator
+        // Allocate new from bump allocator (must be inside lock since bump allocator is not thread-safe)
         // Request alignment for the whole node to ensure storage is aligned
         void* mem = allocator_.allocate(node_size_, alignment_);
         if (!mem) return nullptr;
@@ -62,6 +66,7 @@ public:
             static_cast<unsigned char*>(ptr) - storage_offset_
         );
         
+        LockGuard<Mutex> lock(mutex_);
         // Add to free list
         node->next = free_list_;
         free_list_ = node;
