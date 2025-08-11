@@ -12,10 +12,19 @@ struct MallocStrategyState {
     std::size_t block_size;
 };
 
-inline void* malloc_allocate(void* self) noexcept {
+inline void* malloc_allocate(void* self, std::size_t align) noexcept {
     if (!self) return nullptr;
     auto* state = static_cast<MallocStrategyState*>(self);
-    return std::malloc(state->block_size);
+    
+    // Use aligned allocation if alignment is greater than default
+    if (align > alignof(std::max_align_t)) {
+        // Round up size to multiple of alignment for aligned_alloc
+        std::size_t size = state->block_size;
+        size = (size + align - 1) & ~(align - 1);
+        return std::aligned_alloc(align, size);
+    } else {
+        return std::malloc(state->block_size);
+    }
 }
 
 inline void malloc_deallocate(void* self, void* ptr) noexcept {
@@ -29,18 +38,18 @@ struct MallocObjState {
 };
 
 template <typename T>
-inline void* malloc_obj_allocate(void* self) noexcept {
+inline void* malloc_obj_allocate(void* self, std::size_t align) noexcept {
     (void)self;
     
-    // For over-aligned types, use aligned allocation
-    if constexpr (alignof(T) > alignof(std::max_align_t)) {
-        // Use aligned_alloc for over-aligned types
+    // Use the requested alignment or the type's natural alignment, whichever is stronger
+    std::size_t effective_align = (align > alignof(T)) ? align : alignof(T);
+    
+    // For over-aligned allocations, use aligned_alloc
+    if (effective_align > alignof(std::max_align_t)) {
         // Size must be a multiple of alignment for aligned_alloc
         std::size_t size = sizeof(T);
-        std::size_t alignment = alignof(T);
-        // Round up size to multiple of alignment
-        size = (size + alignment - 1) & ~(alignment - 1);
-        return std::aligned_alloc(alignment, size);
+        size = (size + effective_align - 1) & ~(effective_align - 1);
+        return std::aligned_alloc(effective_align, size);
     } else {
         return std::malloc(sizeof(T));
     }
