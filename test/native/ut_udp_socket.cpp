@@ -11,6 +11,7 @@
 #include "ftl/ipv4/udp/socket.hpp"
 #include "ftl/ipv4/udp/payload.hpp"
 #include "ftl/bump_allocator.hpp"
+#include "ftl/allocator/bump_pool_buffer_strategy.hpp"
 
 using ftl::ethernet::NativeEthernetInterface;
 using ftl::ipv4::Address;
@@ -24,15 +25,20 @@ class NativeUdpSocketTest : public ::testing::Test {
     static constexpr size_t POOL_MEMORY_SIZE = 16 * 1024;
     uint8_t*              buffer_   = nullptr;
     ftl::BumpAllocator*   allocator_= nullptr;
+    ftl::allocator::BumpPoolBufferStrategy<8>* strategy_ = nullptr;
     NativeEthernetInterface* lo_     = nullptr;
     SocketPtr             sender_;
     SocketPtr             receiver_;
 
     void SetUp() override {
-        // bump allocator + DataFrame
+        // bump allocator + Payload
         buffer_    = new uint8_t[POOL_MEMORY_SIZE];
         allocator_ = new ftl::BumpAllocator(buffer_, POOL_MEMORY_SIZE);
-        ftl::DataFrame::initialize(*allocator_);
+        
+        // Initialize Payload allocator with bump pool strategy
+        std::array<std::size_t, 8> sizes = {256, 512, 768, 1024, 1280, 1536, 1792, 2048};
+        strategy_ = new ftl::allocator::BumpPoolBufferStrategy<8>(*allocator_, sizes);
+        Payload::initialize(*strategy_);
 
         // construct the interface here
         lo_ = new NativeEthernetInterface(
@@ -52,6 +58,7 @@ class NativeUdpSocketTest : public ::testing::Test {
         sender_->close();
         receiver_->close();
         delete lo_;
+        delete strategy_;
         delete allocator_;
         delete[] buffer_;
     }

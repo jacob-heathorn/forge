@@ -8,6 +8,7 @@
 #include "ftl/native_udp_socket.hpp"
 #include "ftl/ipv4/endpoint.hpp"
 #include "ftl/ipv4/udp/payload.hpp"
+#include "ftl/allocator/bump_pool_buffer_strategy.hpp"
 
 static constexpr size_t POOL_MEMORY_SIZE = 16 * 1024;
 uint8_t kBumpBuffer[POOL_MEMORY_SIZE];
@@ -22,10 +23,13 @@ int main() {
     const Address      kLocalAddress{"127.0.0.1"};
     const Address      kMulticastGroup{239, 0, 0, 42};
 
-    // “Loopback” interface just for IPv4 on 127.0.0.1/24
+    // "Loopback" interface just for IPv4 on 127.0.0.1/24
     ftl::ethernet::NativeEthernetInterface lo{ Address{"127.0.0.1"}, Mask{"255.255.255.0"} };
 
-    ftl::DataFrame::initialize(kAllocator);
+    // Initialize Payload allocator with bump pool strategy
+    std::array<std::size_t, 8> sizes = {256, 512, 768, 1024, 1280, 1536, 1792, 2048};
+    static ftl::allocator::BumpPoolBufferStrategy<8> strategy(kAllocator, sizes);
+    Payload::initialize(strategy);
 
     // Create and configure the sender socket:
     SocketPtr sender = lo.CreateUdpSocket();
