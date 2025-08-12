@@ -20,17 +20,17 @@ TEST_F(BufferAllocatorTest, BasicAllocation) {
     // Allocate a small buffer
     ftl::Buffer* buf1 = allocator.allocate(32);
     ASSERT_NE(buf1, nullptr);
-    EXPECT_EQ(buf1->size(), 64);
+    EXPECT_EQ(buf1->size(), 32);  // Buffer reports requested size
     
     // Allocate a medium buffer
     ftl::Buffer* buf2 = allocator.allocate(100);
     ASSERT_NE(buf2, nullptr);
-    EXPECT_EQ(buf2->size(), 128);
+    EXPECT_EQ(buf2->size(), 100);
     
     // Allocate a larger buffer
     ftl::Buffer* buf3 = allocator.allocate(200);
     ASSERT_NE(buf3, nullptr);
-    EXPECT_EQ(buf3->size(), 256);
+    EXPECT_EQ(buf3->size(), 200);
     
     // Write to buffers to verify they're valid
     std::memset(buf1->front(), 0xAA, buf1->size());
@@ -163,11 +163,11 @@ TEST_F(BufferAllocatorTest, NonAscendingOrder) {
     // Test allocation still works correctly
     ftl::Buffer* buf1 = allocator.allocate(50);
     ASSERT_NE(buf1, nullptr);
-    EXPECT_EQ(buf1->size(), 64);
+    EXPECT_EQ(buf1->size(), 50);  // Buffer reports requested size
     
     ftl::Buffer* buf2 = allocator.allocate(200);
     ASSERT_NE(buf2, nullptr);
-    EXPECT_EQ(buf2->size(), 256);
+    EXPECT_EQ(buf2->size(), 200);
     
     allocator.deallocate(buf1);
     allocator.deallocate(buf2);

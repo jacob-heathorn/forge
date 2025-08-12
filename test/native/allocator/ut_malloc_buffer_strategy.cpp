@@ -17,7 +17,7 @@ TEST_F(MallocBufferStrategyTest, BasicAllocation) {
     // Allocate a small buffer
     ftl::Buffer* buf1 = strategy.allocate(32);
     ASSERT_NE(buf1, nullptr);
-    EXPECT_EQ(buf1->size(), 64);  // Should get smallest size class
+    EXPECT_EQ(buf1->size(), 32);  // Buffer reports requested size
     EXPECT_NE(buf1->front(), nullptr);
     
     // Write to buffer to verify it's valid
@@ -35,25 +35,26 @@ TEST_F(MallocBufferStrategyTest, SizeClassSelection) {
     // Test various sizes
     struct TestCase {
         std::size_t request;
-        std::size_t expected;
     };
     
     TestCase cases[] = {
-        {1, 64},
-        {64, 64},
-        {65, 128},
-        {128, 128},
-        {129, 256},
-        {256, 256},
-        {257, 512},
-        {512, 512},
+        {1},
+        {64},
+        {65},
+        {128},
+        {129},
+        {256},
+        {257},
+        {512},
     };
     
     for (const auto& tc : cases) {
         ftl::Buffer* buf = strategy.allocate(tc.request);
         ASSERT_NE(buf, nullptr) << "Failed to allocate " << tc.request << " bytes";
-        EXPECT_EQ(buf->size(), tc.expected) 
-            << "Request: " << tc.request << " Expected: " << tc.expected;
+        EXPECT_EQ(buf->size(), tc.request) 
+            << "Buffer size should equal requested size: " << tc.request;
+        // Verify we can write to the entire requested size
+        std::memset(buf->front(), 0xFF, buf->size());
         strategy.deallocate(buf);
     }
 }
@@ -120,22 +121,22 @@ TEST_F(MallocBufferStrategyTest, NonAscendingOrder) {
     // Should still work correctly (base class sorts them)
     ftl::Buffer* buf1 = strategy.allocate(50);
     ASSERT_NE(buf1, nullptr);
-    EXPECT_EQ(buf1->size(), 64);  // Smallest size
+    EXPECT_EQ(buf1->size(), 50);  // Buffer reports requested size
     strategy.deallocate(buf1);
     
     ftl::Buffer* buf2 = strategy.allocate(100);
     ASSERT_NE(buf2, nullptr);
-    EXPECT_EQ(buf2->size(), 128);
+    EXPECT_EQ(buf2->size(), 100);
     strategy.deallocate(buf2);
     
     ftl::Buffer* buf3 = strategy.allocate(200);
     ASSERT_NE(buf3, nullptr);
-    EXPECT_EQ(buf3->size(), 256);
+    EXPECT_EQ(buf3->size(), 200);
     strategy.deallocate(buf3);
     
     ftl::Buffer* buf4 = strategy.allocate(300);
     ASSERT_NE(buf4, nullptr);
-    EXPECT_EQ(buf4->size(), 512);
+    EXPECT_EQ(buf4->size(), 300);
     strategy.deallocate(buf4);
 }
 

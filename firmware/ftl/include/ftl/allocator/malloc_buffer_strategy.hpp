@@ -54,8 +54,8 @@ public:
             return nullptr;
         }
         
-        // Construct the Buffer in-place
-        return new (buffer_mem) ftl::Buffer(data, alloc_size);
+        // Construct the Buffer in-place with requested size
+        return new (buffer_mem) ftl::Buffer(data, req_size);
     }
     
     /// Deallocate a Buffer
