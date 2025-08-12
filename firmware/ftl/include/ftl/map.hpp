@@ -5,8 +5,8 @@
 #include <utility>
 #include <cassert>
 #include <cstddef>
-#include "ftl/allocation_strategy.hpp"
-#include "ftl/object_allocator.hpp"
+#include "ftl/allocator/obj_allocator.hpp"
+#include "ftl/allocator/strategy.hpp"
 
 
 /// @brief Red-Black Tree based associative container (Map)
@@ -71,8 +71,8 @@ private:
     Node* nil_;                     ///< Sentinel node representing all leaves (never deallocated until destructor)
     size_type size_;                ///< Number of elements in the map
     Compare comp_;                  ///< Comparison function object
-    AllocationStrategy<Node>& strategy_;  ///< Memory allocation strategy reference for Node objects
-    ObjectAllocator<Node> alloc_;         ///< Object allocator that wraps the strategy
+    allocator::IObjStrategy<Node>& strategy_;  ///< Memory allocation strategy reference for Node objects
+    allocator::ObjAllocator<Node> alloc_;      ///< Object allocator that wraps the strategy
 
     /// @brief Initialize the sentinel nil node
     /// The nil node is allocated once and persists for the lifetime of the map
@@ -466,7 +466,7 @@ public:
     /// @brief Construct an empty map
     /// @param strategy Reference to allocation strategy for Node objects (must outlive the map)
     /// @param comp Comparison function object
-    explicit Map(AllocationStrategy<Node>& strategy, const Compare& comp = Compare())
+    explicit Map(allocator::IObjStrategy<Node>& strategy, const Compare& comp = Compare())
         : root_(nullptr), size_(0), comp_(comp), strategy_(strategy), alloc_(strategy_) {
         initialize_nil();  // Allocate sentinel node
         root_ = nil_;      // Empty tree points to nil

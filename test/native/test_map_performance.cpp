@@ -7,7 +7,7 @@
 #include <iomanip>
 
 #include "ftl/bump_allocator.hpp"
-#include "ftl/bump_pool_allocation_strategy.hpp"
+#include "ftl/allocator/bump_pool_strategy.hpp"
 #include "ftl/map.hpp"
 
 static constexpr size_t POOL_MEMORY_SIZE = 10 * 1024 * 1024; // 10MB for performance tests
@@ -21,7 +21,7 @@ int main() {
     
     // Create allocators for different node types
     using IntMapNode = ftl::Map<int, int>::Node;
-    ftl::BumpPoolAllocationStrategy<IntMapNode> int_pool_alloc(allocator, 10000);  // Pre-allocate for large tests
+    ftl::allocator::BumpPoolObjStrategy<IntMapNode> int_pool_alloc(allocator);  // Use bump pool strategy
     
     // Test parameters
     const std::vector<size_t> test_sizes = {100, 1000, 10000, 50000};
@@ -208,24 +208,17 @@ int main() {
         }
         
         using MapNode = ftl::Map<int, int>::Node;
-        auto ftl_nodes_used = int_pool_alloc.used_size();
-        auto ftl_nodes_total = int_pool_alloc.total_size();
-        auto ftl_nodes_free = int_pool_alloc.free_size();
         
         std::cout << "ftl::Map (" << mem_test_size << " elements):\n";
-        std::cout << "  Nodes allocated: " << ftl_nodes_total << "\n";
-        std::cout << "  Nodes in use: " << ftl_nodes_used << "\n";
-        std::cout << "  Nodes free: " << ftl_nodes_free << "\n";
+        std::cout << "  Elements in map: " << ftl_map.size() << "\n";
         std::cout << "  Memory per node: " << sizeof(MapNode) << " bytes\n";
-        std::cout << "  Total memory allocated: " << ftl_nodes_total * sizeof(MapNode) << " bytes\n";
-        std::cout << "  Memory efficiency: " << (ftl_nodes_used * 100.0 / ftl_nodes_total) << "%\n";
+        std::cout << "  Total memory used: ~" << ftl_map.size() * sizeof(MapNode) << " bytes\n";
         
         // Clean up
         ftl_map.clear();
         
         std::cout << "\nAfter clear():\n";
-        std::cout << "  Nodes in use: " << int_pool_alloc.used_size() << "\n";
-        std::cout << "  Nodes free: " << int_pool_alloc.free_size() << "\n";
+        std::cout << "  Elements in map: " << ftl_map.size() << "\n";
     }
     
     std::cout << "\nstd::map (" << mem_test_size << " elements):\n";
