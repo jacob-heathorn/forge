@@ -37,7 +37,7 @@ private:
     
 public:
     MallocBlockStrategy(std::size_t size, std::size_t alignment = alignof(std::max_align_t)) noexcept
-        : impl_(size, alignment) {}
+        : IBlockStrategy(size), impl_(size, alignment) {}
     
     void* allocate() noexcept override {
         return impl_.allocate();
