@@ -13,7 +13,7 @@ namespace ftl::allocator {
 /// Allocates ftl::Buffer objects from a bump allocator with free list reuse
 template <std::size_t NUM_SLOTS>
 class BumpPoolBufferStrategy : public IBufferStrategy<NUM_SLOTS> {
-private:
+public:
     using Base = IBufferStrategy<NUM_SLOTS>;
     
     // Node for free list management
@@ -21,6 +21,8 @@ private:
         BufferNode* next;
         ftl::Buffer buffer;
     };
+    
+private:
     
     BumpAllocator& allocator_;
     mutable Mutex mutex_;  // Protects free lists
@@ -83,26 +85,37 @@ public:
             return &node->buffer;
         }
         
-        // Allocate new from bump allocator
-        // Need space for BufferNode which includes the Buffer object
-        void* node_mem = allocator_.allocate(sizeof(BufferNode), alignof(BufferNode));
-        if (!node_mem) {
+        // Allocate new from bump allocator - single allocation for both node and data
+        // Layout: [BufferNode][padding for alignment][buffer data]
+        
+        // Calculate offset from BufferNode to data with proper alignment
+        std::size_t data_offset = sizeof(BufferNode);
+        // Align data_offset to the required buffer alignment
+        data_offset = (data_offset + this->alignment_ - 1) & ~(this->alignment_ - 1);
+        
+        // Total allocation size
+        std::size_t total_size = data_offset + alloc_size;
+        
+        // Allocate the entire block
+        // We need the stronger of BufferNode alignment or buffer alignment
+        // to ensure the buffer data ends up properly aligned
+        std::size_t block_alignment = (this->alignment_ > alignof(BufferNode)) 
+                                     ? this->alignment_ 
+                                     : alignof(BufferNode);
+        void* block = allocator_.allocate(total_size, block_alignment);
+        if (!block) {
             return nullptr;  // Out of memory
         }
         
-        // Allocate the actual buffer data with proper alignment
-        // Round up size to multiple of alignment as needed
-        std::size_t aligned_size = (alloc_size + this->alignment_ - 1) & ~(this->alignment_ - 1);
-        void* data = allocator_.allocate(aligned_size, this->alignment_);
-        if (!data) {
-            return nullptr;  // Out of memory
-        }
-        
-        // Construct the BufferNode with the Buffer
-        BufferNode* node = new (node_mem) BufferNode;
+        // Construct the BufferNode at the beginning of the block
+        BufferNode* node = new (block) BufferNode;
         node->next = nullptr;
-        // Construct the Buffer in-place
-        new (&node->buffer) ftl::Buffer(static_cast<uint8_t*>(data), alloc_size);
+        
+        // Calculate the data pointer (it's within the same allocation)
+        uint8_t* data = reinterpret_cast<uint8_t*>(block) + data_offset;
+        
+        // Construct the Buffer in-place pointing to the data
+        new (&node->buffer) ftl::Buffer(data, alloc_size);
         
         return &node->buffer;
     }

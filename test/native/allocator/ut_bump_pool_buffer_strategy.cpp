@@ -269,3 +269,99 @@ TEST_F(BumpPoolBufferStrategyTest, NonAscendingOrder) {
     EXPECT_EQ(buf4->size(), 512);
     strategy.deallocate(buf4);
 }
+
+// Test that buffer data is properly aligned even when BufferNode is less aligned
+TEST_F(BumpPoolBufferStrategyTest, BufferAlignmentStrongerThanNode) {
+    // Common case: BufferNode might be 8-byte aligned, but we want 64-byte aligned buffers
+    constexpr std::size_t CACHE_LINE = 64;
+    std::array<std::size_t, 1> sizes = {256};
+    ftl::allocator::BumpPoolBufferStrategy<1> strategy(*bump_allocator_, sizes, CACHE_LINE);
+    
+    // Allocate multiple buffers and verify each is cache-line aligned
+    for (int i = 0; i < 10; ++i) {
+        ftl::Buffer* buf = strategy.allocate(200);
+        ASSERT_NE(buf, nullptr) << "Failed allocation " << i;
+        
+        // Check buffer data alignment
+        auto data_addr = reinterpret_cast<uintptr_t>(buf->front());
+        EXPECT_EQ(data_addr % CACHE_LINE, 0) 
+            << "Buffer " << i << " data not aligned to " << CACHE_LINE 
+            << " bytes. Address: 0x" << std::hex << data_addr;
+        
+        // Write pattern to verify memory is usable
+        std::memset(buf->front(), static_cast<uint8_t>(i), buf->size());
+        
+        strategy.deallocate(buf);
+    }
+}
+
+// Test edge case with very large alignment requirement
+TEST_F(BumpPoolBufferStrategyTest, LargeAlignmentRequirement) {
+    constexpr std::size_t LARGE_ALIGN = 256;  // Very large alignment
+    std::array<std::size_t, 1> sizes = {512};
+    ftl::allocator::BumpPoolBufferStrategy<1> strategy(*bump_allocator_, sizes, LARGE_ALIGN);
+    
+    ftl::Buffer* buf = strategy.allocate(400);
+    ASSERT_NE(buf, nullptr);
+    
+    auto data_addr = reinterpret_cast<uintptr_t>(buf->front());
+    EXPECT_EQ(data_addr % LARGE_ALIGN, 0) 
+        << "Buffer data not aligned to " << LARGE_ALIGN 
+        << " bytes. Address: 0x" << std::hex << data_addr;
+    
+    strategy.deallocate(buf);
+}
+
+// Test that BufferNode and data don't overlap even with alignment padding
+TEST_F(BumpPoolBufferStrategyTest, NoOverlapBetweenNodeAndData) {
+    constexpr std::size_t ALIGN = 64;
+    std::array<std::size_t, 1> sizes = {256};
+    ftl::allocator::BumpPoolBufferStrategy<1> strategy(*bump_allocator_, sizes, ALIGN);
+    
+    ftl::Buffer* buf = strategy.allocate(200);
+    ASSERT_NE(buf, nullptr);
+    
+    // The Buffer is embedded in BufferNode at offset of BufferNode::buffer
+    // Calculate where BufferNode starts
+    auto buffer_offset = offsetof(ftl::allocator::BumpPoolBufferStrategy<1>::BufferNode, buffer);
+    auto node_start = reinterpret_cast<uintptr_t>(buf) - buffer_offset;
+    auto node_end = node_start + sizeof(ftl::allocator::BumpPoolBufferStrategy<1>::BufferNode);
+    
+    // Get buffer data location
+    uintptr_t data_start = reinterpret_cast<uintptr_t>(buf->front());
+    
+    // Verify no overlap
+    EXPECT_LE(node_end, data_start) 
+        << "BufferNode and buffer data overlap! "
+        << "Node ends at 0x" << std::hex << node_end 
+        << ", data starts at 0x" << std::hex << data_start;
+    
+    // Verify data is aligned as requested
+    EXPECT_EQ(data_start % ALIGN, 0) << "Data not properly aligned";
+    
+    strategy.deallocate(buf);
+}
+
+// Test alignment with misaligned arena start
+TEST_F(BumpPoolBufferStrategyTest, MisalignedArenaStart) {
+    // Create intentionally misaligned arena
+    alignas(128) uint8_t storage[8192];
+    // Add 1 byte offset to ensure arena is not naturally aligned to large powers of 2
+    uint8_t* misaligned_ptr = storage + 1;
+    ftl::BumpAllocator misaligned_bump(misaligned_ptr, sizeof(storage) - 1);
+    
+    constexpr std::size_t ALIGN = 64;
+    std::array<std::size_t, 1> sizes = {256};
+    ftl::allocator::BumpPoolBufferStrategy<1> strategy(misaligned_bump, sizes, ALIGN);
+    
+    // Even with misaligned arena, buffer data should be properly aligned
+    ftl::Buffer* buf = strategy.allocate(200);
+    ASSERT_NE(buf, nullptr);
+    
+    auto data_addr = reinterpret_cast<uintptr_t>(buf->front());
+    EXPECT_EQ(data_addr % ALIGN, 0) 
+        << "Buffer data not aligned despite misaligned arena. Address: 0x" 
+        << std::hex << data_addr;
+    
+    strategy.deallocate(buf);
+}
