@@ -186,3 +186,23 @@ TEST_F(MallocBufferStrategyTest, ExactSizeAllocation) {
     strategy.deallocate(buf128);
     strategy.deallocate(buf256);
 }
+
+// Test with custom alignment
+TEST_F(MallocBufferStrategyTest, CustomAlignment) {
+    constexpr std::size_t CACHE_LINE_SIZE = 64;
+    std::array<std::size_t, 3> sizes = {128, 256, 512};
+    ftl::allocator::MallocBufferStrategy<3> strategy(sizes, CACHE_LINE_SIZE);
+    
+    // Allocate multiple buffers and verify alignment
+    for (int i = 0; i < 5; ++i) {
+        ftl::Buffer* buf = strategy.allocate(static_cast<std::size_t>(100 + i * 50));
+        ASSERT_NE(buf, nullptr) << "Failed allocation " << i;
+        
+        // Verify data is cache-line aligned
+        auto addr = reinterpret_cast<std::uintptr_t>(buf->front());
+        EXPECT_EQ(addr % CACHE_LINE_SIZE, 0) 
+            << "Buffer " << i << " not aligned to " << CACHE_LINE_SIZE << " bytes";
+        
+        strategy.deallocate(buf);
+    }
+}

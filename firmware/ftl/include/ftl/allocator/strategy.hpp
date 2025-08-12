@@ -50,11 +50,15 @@ template <std::size_t NUM_SLOTS>
 class IBufferStrategy {
 protected:
     std::array<std::size_t, NUM_SLOTS> sizes_;  // Size classes (sorted)
+    std::size_t alignment_;                      // Alignment requirement for buffers
     
 public:
-    // Constructor taking an array of sizes (will be sorted automatically)
-    explicit IBufferStrategy(const std::array<std::size_t, NUM_SLOTS>& sizes) noexcept 
-        : sizes_(sizes) {
+    // Constructor taking an array of sizes and alignment requirement
+    // @param sizes Array of buffer sizes (will be sorted automatically)
+    // @param alignment Alignment requirement for allocated buffers
+    explicit IBufferStrategy(const std::array<std::size_t, NUM_SLOTS>& sizes, 
+                            std::size_t alignment = alignof(std::max_align_t)) noexcept 
+        : sizes_(sizes), alignment_(alignment) {
         static_assert(NUM_SLOTS > 0, "IBufferStrategy requires at least one size class");
         // Sort sizes for efficient lookup
         std::sort(sizes_.begin(), sizes_.end());
@@ -79,6 +83,9 @@ public:
     std::size_t size(std::size_t idx) const noexcept {
         return (idx < NUM_SLOTS) ? sizes_[idx] : 0;
     }
+    
+    // Get the alignment requirement
+    std::size_t alignment() const noexcept { return alignment_; }
 };
 
 }

@@ -15,10 +15,12 @@ private:
     using Base = IBufferStrategy<NUM_SLOTS>;
     
 public:
-    /// Constructor taking an array of buffer sizes
+    /// Constructor taking an array of buffer sizes and optional alignment
     /// @param sizes Array of buffer sizes (will be sorted by base class)
-    explicit MallocBufferStrategy(const std::array<std::size_t, NUM_SLOTS>& sizes) noexcept
-        : Base(sizes) {}
+    /// @param alignment Alignment requirement for buffers (defaults to max_align_t)
+    explicit MallocBufferStrategy(const std::array<std::size_t, NUM_SLOTS>& sizes,
+                                  std::size_t alignment = alignof(std::max_align_t)) noexcept
+        : Base(sizes, alignment) {}
     
     /// Allocate a Buffer of the smallest size >= requested size
     /// @param req_size Minimum size needed
@@ -37,10 +39,12 @@ public:
             return nullptr;  // No size class large enough
         }
         
-        // Allocate memory for the data
-        uint8_t* data = static_cast<uint8_t*>(std::malloc(alloc_size));
+        // Allocate memory for the data with proper alignment
+        // Round up size to multiple of alignment as required by aligned_alloc
+        std::size_t aligned_size = (alloc_size + this->alignment_ - 1) & ~(this->alignment_ - 1);
+        uint8_t* data = static_cast<uint8_t*>(std::aligned_alloc(this->alignment_, aligned_size));
         if (!data) {
-            return nullptr;  // malloc failed
+            return nullptr;  // allocation failed
         }
         
         // Allocate the Buffer object itself
