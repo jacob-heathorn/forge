@@ -6,7 +6,7 @@
 #include <random>
 #include <iomanip>
 
-#include "ftl/bump_allocator.hpp"
+#include "ftl/allocator/bump_allocator.hpp"
 #include "ftl/allocator/bump_pool_strategy.hpp"
 #include "ftl/map.hpp"
 

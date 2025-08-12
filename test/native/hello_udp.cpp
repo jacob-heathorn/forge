@@ -4,7 +4,7 @@
 #include <cstring>
 
 #include "ftl/native_ethernet_interface.hpp"
-#include "ftl/bump_allocator.hpp"
+#include "ftl/allocator/bump_allocator.hpp"
 #include "ftl/native_udp_socket.hpp"
 #include "ftl/ipv4/endpoint.hpp"
 #include "ftl/ipv4/udp/payload.hpp"

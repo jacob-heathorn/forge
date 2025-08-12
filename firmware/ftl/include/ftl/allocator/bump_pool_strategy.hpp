@@ -3,7 +3,7 @@
 #include <cstddef>
 #include <new>
 #include "strategy.hpp"
-#include "ftl/bump_allocator.hpp"
+#include "ftl/allocator/bump_allocator.hpp"
 #include "ftl/mutex.hpp"
 
 namespace ftl::allocator {

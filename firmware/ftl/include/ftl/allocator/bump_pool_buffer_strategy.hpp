@@ -8,7 +8,7 @@
 #include <cstddef>   // offsetof
 #include "strategy.hpp"
 #include "ftl/buffer.hpp"
-#include "ftl/bump_allocator.hpp"
+#include "ftl/allocator/bump_allocator.hpp"
 #include "ftl/mutex.hpp"
 
 namespace ftl::allocator {

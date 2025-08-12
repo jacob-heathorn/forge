@@ -12,7 +12,7 @@
 // According to the Google C++ Style Guide, file names, function names, and comments
 // follow consistent formatting for clarity and maintainability.
 
-#include "ftl/bump_allocator.hpp"
+#include "ftl/allocator/bump_allocator.hpp"
 #include "gtest/gtest.h"
 #include <cstdint>
 #include <cstring>

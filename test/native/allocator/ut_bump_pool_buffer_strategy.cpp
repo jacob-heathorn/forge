@@ -1,5 +1,5 @@
 #include "ftl/allocator/bump_pool_buffer_strategy.hpp"
-#include "ftl/bump_allocator.hpp"
+#include "ftl/allocator/bump_allocator.hpp"
 #include "gtest/gtest.h"
 #include <cstring>
 #include <memory>

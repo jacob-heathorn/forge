@@ -10,7 +10,7 @@
 #include "ftl/ipv4/mask.hpp"
 #include "ftl/ipv4/udp/socket.hpp"
 #include "ftl/ipv4/udp/payload.hpp"
-#include "ftl/bump_allocator.hpp"
+#include "ftl/allocator/bump_allocator.hpp"
 #include "ftl/allocator/bump_pool_buffer_strategy.hpp"
 
 using ftl::ethernet::NativeEthernetInterface;
