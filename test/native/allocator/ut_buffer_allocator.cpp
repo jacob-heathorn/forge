@@ -40,27 +40,27 @@ TEST_F(BufferAllocatorTest, BasicAllocationMalloc) {
     auto strat128 = make_malloc_strategy(128);
     auto strat256 = make_malloc_strategy(256);
     
-    ftl::allocator::BufferAllocator<64, 128, 256> allocator({
+    ftl::allocator::BufferAllocator<3> allocator({
         strat64.get(), strat128.get(), strat256.get()
     });
     
-    // Allocate a small buffer (should use 64-byte class)
+    // Allocate a small buffer (should use 64-byte slot)
     auto buf1 = allocator.allocate(32);
     ASSERT_TRUE(buf1);
     EXPECT_EQ(buf1.size, 64);
-    EXPECT_EQ(buf1.class_index, 0);
+    EXPECT_EQ(buf1.slot_index, 0);
     
-    // Allocate a medium buffer (should use 128-byte class)
+    // Allocate a medium buffer (should use 128-byte slot)
     auto buf2 = allocator.allocate(100);
     ASSERT_TRUE(buf2);
     EXPECT_EQ(buf2.size, 128);
-    EXPECT_EQ(buf2.class_index, 1);
+    EXPECT_EQ(buf2.slot_index, 1);
     
-    // Allocate a larger buffer (should use 256-byte class)
+    // Allocate a larger buffer (should use 256-byte slot)
     auto buf3 = allocator.allocate(200);
     ASSERT_TRUE(buf3);
     EXPECT_EQ(buf3.size, 256);
-    EXPECT_EQ(buf3.class_index, 2);
+    EXPECT_EQ(buf3.slot_index, 2);
     
     // Write to buffers to verify they're valid
     std::memset(buf1.ptr, 0xAA, buf1.size);
@@ -79,35 +79,35 @@ TEST_F(BufferAllocatorTest, SizeClassSelection) {
     auto strat128 = make_malloc_strategy(128);
     auto strat256 = make_malloc_strategy(256);
     
-    ftl::allocator::BufferAllocator<64, 128, 256> allocator({
+    ftl::allocator::BufferAllocator<3> allocator({
         strat64.get(), strat128.get(), strat256.get()
     });
     
     // Test exact size boundaries
     auto buf_exact64 = allocator.allocate(64);
     EXPECT_EQ(buf_exact64.size, 64);
-    EXPECT_EQ(buf_exact64.class_index, 0);
+    EXPECT_EQ(buf_exact64.slot_index, 0);
     allocator.deallocate(buf_exact64);
     
     auto buf_exact128 = allocator.allocate(128);
     EXPECT_EQ(buf_exact128.size, 128);
-    EXPECT_EQ(buf_exact128.class_index, 1);
+    EXPECT_EQ(buf_exact128.slot_index, 1);
     allocator.deallocate(buf_exact128);
     
     auto buf_exact256 = allocator.allocate(256);
     EXPECT_EQ(buf_exact256.size, 256);
-    EXPECT_EQ(buf_exact256.class_index, 2);
+    EXPECT_EQ(buf_exact256.slot_index, 2);
     allocator.deallocate(buf_exact256);
     
     // Test just over boundaries
     auto buf_65 = allocator.allocate(65);
     EXPECT_EQ(buf_65.size, 128);
-    EXPECT_EQ(buf_65.class_index, 1);
+    EXPECT_EQ(buf_65.slot_index, 1);
     allocator.deallocate(buf_65);
     
     auto buf_129 = allocator.allocate(129);
     EXPECT_EQ(buf_129.size, 256);
-    EXPECT_EQ(buf_129.class_index, 2);
+    EXPECT_EQ(buf_129.slot_index, 2);
     allocator.deallocate(buf_129);
 }
 
@@ -116,7 +116,7 @@ TEST_F(BufferAllocatorTest, AllocationTooLarge) {
     auto strat64 = make_malloc_strategy(64);
     auto strat128 = make_malloc_strategy(128);
     
-    ftl::allocator::BufferAllocator<64, 128> allocator({
+    ftl::allocator::BufferAllocator<2> allocator({
         strat64.get(), strat128.get()
     });
     
@@ -134,7 +134,7 @@ TEST_F(BufferAllocatorTest, BumpPoolStrategies) {
     ftl::allocator::BumpPoolBlockStrategy strat128(*bump_allocator_, 128);
     ftl::allocator::BumpPoolBlockStrategy strat256(*bump_allocator_, 256);
     
-    ftl::allocator::BufferAllocator<64, 128, 256> allocator({
+    ftl::allocator::BufferAllocator<3> allocator({
         &strat64, &strat128, &strat256
     });
     
@@ -177,7 +177,7 @@ TEST_F(BufferAllocatorTest, BumpPoolStrategies) {
 TEST_F(BufferAllocatorTest, NullBufferHandling) {
     auto strat64 = make_malloc_strategy(64);
     
-    ftl::allocator::BufferAllocator<64> allocator({strat64.get()});
+    ftl::allocator::BufferAllocator<1> allocator({strat64.get()});
     
     // Deallocating invalid buffer should be safe
     ftl::allocator::Buffer invalid_buf;
@@ -187,7 +187,7 @@ TEST_F(BufferAllocatorTest, NullBufferHandling) {
     ftl::allocator::Buffer null_buf{nullptr, 64, 0};
     allocator.deallocate(null_buf);
     
-    // Deallocating buffer with out-of-range class index should be safe
+    // Deallocating buffer with out-of-range slot index should be safe
     void* dummy = &dummy;  // Just a non-null pointer
     ftl::allocator::Buffer bad_index{dummy, 64, 999};
     allocator.deallocate(bad_index);  // Should not crash
@@ -198,37 +198,38 @@ TEST_F(BufferAllocatorTest, MissingStrategy) {
     auto strat64 = make_malloc_strategy(64);
     
     // Second strategy is nullptr
-    ftl::allocator::BufferAllocator<64, 128> allocator({
+    ftl::allocator::BufferAllocator<2> allocator({
         strat64.get(), nullptr
     });
     
-    // Allocation for first class should work
+    // Allocation for first slot should work
     auto buf1 = allocator.allocate(50);
     ASSERT_TRUE(buf1);
     EXPECT_EQ(buf1.size, 64);
     allocator.deallocate(buf1);
     
-    // Allocation for second class should fail
+    // Allocation that would need second slot should fail
     auto buf2 = allocator.allocate(100);
     EXPECT_FALSE(buf2);
 }
 
-// Test static constexpr functions
-TEST_F(BufferAllocatorTest, StaticFunctions) {
-    using Allocator = ftl::allocator::BufferAllocator<64, 128, 256, 512>;
+// Test slot functions
+TEST_F(BufferAllocatorTest, SlotFunctions) {
+    auto strat64 = make_malloc_strategy(64);
+    auto strat128 = make_malloc_strategy(128);
+    auto strat256 = make_malloc_strategy(256);
+    auto strat512 = make_malloc_strategy(512);
     
-    EXPECT_EQ(Allocator::num_classes(), 4);
-    EXPECT_EQ(Allocator::class_size(0), 64);
-    EXPECT_EQ(Allocator::class_size(1), 128);
-    EXPECT_EQ(Allocator::class_size(2), 256);
-    EXPECT_EQ(Allocator::class_size(3), 512);
-    EXPECT_EQ(Allocator::class_size(4), 0);  // Out of bounds
+    ftl::allocator::BufferAllocator<4> allocator({
+        strat64.get(), strat128.get(), strat256.get(), strat512.get()
+    });
     
-    // Verify kSizes array
-    EXPECT_EQ(Allocator::kSizes[0], 64);
-    EXPECT_EQ(Allocator::kSizes[1], 128);
-    EXPECT_EQ(Allocator::kSizes[2], 256);
-    EXPECT_EQ(Allocator::kSizes[3], 512);
+    EXPECT_EQ(allocator.num_slots(), 4);
+    EXPECT_EQ(allocator.slot_size(0), 64);
+    EXPECT_EQ(allocator.slot_size(1), 128);
+    EXPECT_EQ(allocator.slot_size(2), 256);
+    EXPECT_EQ(allocator.slot_size(3), 512);
+    EXPECT_EQ(allocator.slot_size(4), 0);  // Out of bounds
 }
 
 // Test power-of-two configuration
@@ -242,7 +243,7 @@ TEST_F(BufferAllocatorTest, PowerOfTwoConfiguration) {
     auto strat2048 = make_malloc_strategy(2048);
     auto strat4096 = make_malloc_strategy(4096);
     
-    ftl::allocator::BufferAllocatorPowerOfTwo allocator({
+    ftl::allocator::BufferAllocator<7> allocator({
         strat64.get(), strat128.get(), strat256.get(), strat512.get(),
         strat1024.get(), strat2048.get(), strat4096.get()
     });
@@ -270,7 +271,7 @@ TEST_F(BufferAllocatorTest, PowerOfTwoConfiguration) {
         ASSERT_TRUE(buf) << "Failed to allocate " << tc.request << " bytes";
         EXPECT_EQ(buf.size, tc.expected_size) 
             << "Request: " << tc.request;
-        EXPECT_EQ(buf.class_index, tc.expected_index)
+        EXPECT_EQ(buf.slot_index, tc.expected_index)
             << "Request: " << tc.request;
         allocator.deallocate(buf);
     }
@@ -284,7 +285,7 @@ TEST_F(BufferAllocatorTest, PowerOfTwoConfiguration) {
 TEST_F(BufferAllocatorTest, BufferReusePattern) {
     ftl::allocator::BumpPoolBlockStrategy strat128(*bump_allocator_, 128);
     
-    ftl::allocator::BufferAllocator<128> allocator({&strat128});
+    ftl::allocator::BufferAllocator<1> allocator({&strat128});
     
     // Allocate a buffer
     auto buf1 = allocator.allocate(100);
@@ -300,4 +301,38 @@ TEST_F(BufferAllocatorTest, BufferReusePattern) {
     EXPECT_EQ(buf2.ptr, ptr1) << "Should reuse memory from free list";
     
     allocator.deallocate(buf2);
+}
+
+// Test with strategies in non-ascending order (automatically sorted)
+TEST_F(BufferAllocatorTest, NonAscendingOrder) {
+    auto strat256 = make_malloc_strategy(256);
+    auto strat64 = make_malloc_strategy(64);
+    auto strat128 = make_malloc_strategy(128);
+    
+    ftl::allocator::BufferAllocator<3> allocator({
+        strat256.get(), strat64.get(), strat128.get()
+    });
+    
+    // After sorting, strategies should be: [64, 128, 256]
+    // Should find 64-byte slot (now at index 0 after sorting)
+    auto buf1 = allocator.allocate(32);
+    ASSERT_TRUE(buf1);
+    EXPECT_EQ(buf1.size, 64);
+    EXPECT_EQ(buf1.slot_index, 0);  // First slot after sorting
+    
+    // Should find 128-byte slot (now at index 1 after sorting)
+    auto buf2 = allocator.allocate(100);
+    ASSERT_TRUE(buf2);
+    EXPECT_EQ(buf2.size, 128);
+    EXPECT_EQ(buf2.slot_index, 1);  // Second slot after sorting
+    
+    // Should find 256-byte slot (now at index 2 after sorting)
+    auto buf3 = allocator.allocate(200);
+    ASSERT_TRUE(buf3);
+    EXPECT_EQ(buf3.size, 256);
+    EXPECT_EQ(buf3.slot_index, 2);  // Third slot after sorting
+    
+    allocator.deallocate(buf1);
+    allocator.deallocate(buf2);
+    allocator.deallocate(buf3);
 }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -7,107 +8,103 @@
 
 namespace ftl::allocator {
 
-/// A buffer handle that includes size class information for efficient deallocation
+/// A buffer handle that includes slot index information for efficient deallocation
 struct Buffer {
     void* ptr;                    // Pointer to allocated memory
     std::size_t size;             // Size of the allocated block
-    std::uint16_t class_index;    // Index of the size class used
+    std::uint16_t slot_index;     // Index of the slot used
     
     /// Default constructor creates an invalid buffer
-    Buffer() noexcept : ptr(nullptr), size(0), class_index(0) {}
+    Buffer() noexcept : ptr(nullptr), size(0), slot_index(0) {}
     
     /// Construct a valid buffer
     Buffer(void* p, std::size_t sz, std::uint16_t idx) noexcept 
-        : ptr(p), size(sz), class_index(idx) {}
+        : ptr(p), size(sz), slot_index(idx) {}
     
     /// Check if buffer is valid
     explicit operator bool() const noexcept { return ptr != nullptr; }
 };
 
-/// Allocator that manages buffers of fixed size classes using BlockStrategies
-/// @tparam CLASSES Compile-time list of buffer sizes (must be in ascending order)
-template <std::size_t... CLASSES>
+/// Allocator that manages buffers using multiple BlockStrategies
+/// @tparam NUM_SLOTS Number of strategy slots
+template <std::size_t NUM_SLOTS>
 class BufferAllocator {
 public:
-    static constexpr std::size_t kNum = sizeof...(CLASSES);
-    static constexpr std::array<std::size_t, kNum> kSizes{CLASSES...};
-    
+    static constexpr std::size_t kNum = NUM_SLOTS;
     using StrategyArray = std::array<IBlockStrategy*, kNum>;
     
     /// Constructor taking an array of block strategies
     /// @param strategies Array of IBlockStrategy pointers (must outlive this allocator)
+    /// Strategies will be automatically sorted by size (ascending) for efficiency
     explicit BufferAllocator(const StrategyArray& strategies) noexcept
         : strategies_(strategies) {
-        static_assert(kNum > 0, "BufferAllocator requires at least one size class");
-        // Verify sizes are in ascending order at compile time
-        if constexpr (kNum > 1) {
-            constexpr bool sorted = []() {
-                for (std::size_t i = 1; i < kNum; ++i) {
-                    if (kSizes[i] <= kSizes[i-1]) return false;
-                }
-                return true;
-            }();
-            static_assert(sorted, "Buffer size classes must be in ascending order");
-        }
+        static_assert(kNum > 0, "BufferAllocator requires at least one slot");
+        
+        // Sort strategies by size in ascending order
+        // Skip null strategies during sort
+        std::sort(strategies_.begin(), strategies_.end(), 
+            [](IBlockStrategy* a, IBlockStrategy* b) {
+                if (!a) return false;  // Nulls go to the end
+                if (!b) return true;   // Nulls go to the end
+                return a->size() < b->size();
+            });
     }
     
-    /// Allocate a buffer of the smallest size class >= requested size
+    /// Allocate a buffer from the smallest strategy with size >= requested size
     /// @param req_size Minimum size needed
     /// @return Buffer handle, or invalid buffer on failure
     Buffer allocate(std::size_t req_size) noexcept {
-        const std::size_t idx = choose_class(req_size);
-        if (idx == npos) return {};  // Requested size too large
+        const std::size_t idx = choose_slot(req_size);
+        if (idx == npos) return {};  // No suitable strategy found
         
         IBlockStrategy* strategy = strategies_[idx];
-        if (!strategy) return {};  // No strategy for this class
-        
         void* p = strategy->allocate();
         if (!p) return {};  // Allocation failed
         
-        return Buffer{p, kSizes[idx], static_cast<std::uint16_t>(idx)};
+        return Buffer{p, strategy->size(), static_cast<std::uint16_t>(idx)};
     }
     
-    /// Deallocate a buffer using its embedded class index
+    /// Deallocate a buffer using its embedded slot index
     /// @param b Buffer to deallocate
     void deallocate(Buffer b) noexcept {
         if (!b.ptr) return;
         
-        const std::size_t ci = b.class_index;
-        if (ci >= kNum) return;  // Sanity check
+        const std::size_t si = b.slot_index;
+        if (si >= kNum) return;  // Sanity check
         
-        IBlockStrategy* strategy = strategies_[ci];
+        IBlockStrategy* strategy = strategies_[si];
         if (strategy) {
             strategy->deallocate(b.ptr);
         }
     }
     
-    /// Get the number of size classes
-    static constexpr std::size_t num_classes() noexcept { return kNum; }
+    /// Get the number of slots
+    static constexpr std::size_t num_slots() noexcept { return kNum; }
     
-    /// Get the size of a specific class
-    static constexpr std::size_t class_size(std::size_t idx) noexcept {
-        return (idx < kNum) ? kSizes[idx] : 0;
+    /// Get the size of a specific slot's strategy
+    std::size_t slot_size(std::size_t idx) const noexcept {
+        if (idx < kNum && strategies_[idx]) {
+            return strategies_[idx]->size();
+        }
+        return 0;
     }
     
 private:
     static constexpr std::size_t npos = static_cast<std::size_t>(-1);
     
-    /// Find the smallest size class that can hold the requested size
-    /// O(k) linear scan where k = number of classes (typically small)
-    /// If k grows large, consider switching to binary search
-    static constexpr std::size_t choose_class(std::size_t n) noexcept {
+    /// Find the smallest strategy that can hold the requested size
+    /// O(k) linear scan where k = number of slots (typically small)
+    /// Strategies are automatically sorted by size in constructor
+    std::size_t choose_slot(std::size_t n) const noexcept {
         for (std::size_t i = 0; i < kNum; ++i) {
-            if (n <= kSizes[i]) return i;
+            if (strategies_[i] && strategies_[i]->size() >= n) {
+                return i;
+            }
         }
         return npos;
     }
     
     StrategyArray strategies_{};
 };
-
-// Common buffer size configurations
-using BufferAllocator64_128_256 = BufferAllocator<64, 128, 256>;
-using BufferAllocator256_512_1024_2048 = BufferAllocator<256, 512, 1024, 2048>;
-using BufferAllocatorPowerOfTwo = BufferAllocator<64, 128, 256, 512, 1024, 2048, 4096>;
 
 }  // namespace ftl::allocator
