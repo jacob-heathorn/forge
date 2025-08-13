@@ -23,7 +23,7 @@ protected:
 // Test basic allocation and deallocation
 TEST_F(BumpPoolBufferStrategyTest, BasicAllocation) {
     std::array<std::size_t, 3> sizes = {64, 128, 256};
-    ftl::allocator::BumpPoolBufferStrategy<3> strategy(*bump_allocator_, sizes);
+    ftl::allocator::BumpPoolBufferStrategy strategy(*bump_allocator_, sizes);
     
     // Allocate a small buffer
     ftl::Buffer* buf1 = strategy.allocate(32);
@@ -48,7 +48,7 @@ TEST_F(BumpPoolBufferStrategyTest, BasicAllocation) {
 // Test free list reuse
 TEST_F(BumpPoolBufferStrategyTest, FreeListReuse) {
     std::array<std::size_t, 3> sizes = {100, 200, 300};
-    ftl::allocator::BumpPoolBufferStrategy<3> strategy(*bump_allocator_, sizes);
+    ftl::allocator::BumpPoolBufferStrategy strategy(*bump_allocator_, sizes);
     
     std::vector<ftl::Buffer*> buffers;
     
@@ -100,7 +100,7 @@ TEST_F(BumpPoolBufferStrategyTest, FreeListReuse) {
 // Test size class selection
 TEST_F(BumpPoolBufferStrategyTest, SizeClassSelection) {
     std::array<std::size_t, 4> sizes = {64, 128, 256, 512};
-    ftl::allocator::BumpPoolBufferStrategy<4> strategy(*bump_allocator_, sizes);
+    ftl::allocator::BumpPoolBufferStrategy strategy(*bump_allocator_, sizes);
     
     struct TestCase {
         std::size_t request;
@@ -131,7 +131,7 @@ TEST_F(BumpPoolBufferStrategyTest, SizeClassSelection) {
 // Test allocation too large
 TEST_F(BumpPoolBufferStrategyTest, AllocationTooLarge) {
     std::array<std::size_t, 2> sizes = {64, 128};
-    ftl::allocator::BumpPoolBufferStrategy<2> strategy(*bump_allocator_, sizes);
+    ftl::allocator::BumpPoolBufferStrategy strategy(*bump_allocator_, sizes);
     
     // Request larger than any size class
     ftl::Buffer* buf = strategy.allocate(256);
@@ -141,7 +141,7 @@ TEST_F(BumpPoolBufferStrategyTest, AllocationTooLarge) {
 // Test multiple allocations with patterns
 TEST_F(BumpPoolBufferStrategyTest, MultipleAllocationsWithPatterns) {
     std::array<std::size_t, 3> sizes = {128, 256, 512};
-    ftl::allocator::BumpPoolBufferStrategy<3> strategy(*bump_allocator_, sizes);
+    ftl::allocator::BumpPoolBufferStrategy strategy(*bump_allocator_, sizes);
     
     std::vector<ftl::Buffer*> buffers;
     
@@ -175,7 +175,7 @@ TEST_F(BumpPoolBufferStrategyTest, MultipleAllocationsWithPatterns) {
 // Test null pointer handling
 TEST_F(BumpPoolBufferStrategyTest, NullPointerHandling) {
     std::array<std::size_t, 1> sizes = {64};
-    ftl::allocator::BumpPoolBufferStrategy<1> strategy(*bump_allocator_, sizes);
+    ftl::allocator::BumpPoolBufferStrategy strategy(*bump_allocator_, sizes);
     
     // Deallocating nullptr should be safe
     strategy.deallocate(nullptr);
@@ -185,7 +185,7 @@ TEST_F(BumpPoolBufferStrategyTest, NullPointerHandling) {
 TEST_F(BumpPoolBufferStrategyTest, CustomAlignment) {
     constexpr std::size_t CACHE_LINE_SIZE = 64;
     std::array<std::size_t, 3> sizes = {128, 256, 512};
-    ftl::allocator::BumpPoolBufferStrategy<3> strategy(*bump_allocator_, sizes, CACHE_LINE_SIZE);
+    ftl::allocator::BumpPoolBufferStrategy strategy(*bump_allocator_, sizes, CACHE_LINE_SIZE);
     
     // Allocate multiple buffers and verify alignment
     for (int i = 0; i < 5; ++i) {
@@ -208,7 +208,7 @@ TEST_F(BumpPoolBufferStrategyTest, ExhaustionAndRecovery) {
     ftl::BumpAllocator small_bump(small_arena, sizeof(small_arena));
     
     std::array<std::size_t, 1> sizes = {64};
-    ftl::allocator::BumpPoolBufferStrategy<1> strategy(small_bump, sizes);
+    ftl::allocator::BumpPoolBufferStrategy strategy(small_bump, sizes);
     
     std::vector<ftl::Buffer*> buffers;
     
@@ -247,7 +247,7 @@ TEST_F(BumpPoolBufferStrategyTest, ExhaustionAndRecovery) {
 TEST_F(BumpPoolBufferStrategyTest, NonAscendingOrder) {
     // Provide sizes in random order
     std::array<std::size_t, 4> sizes = {256, 64, 512, 128};
-    ftl::allocator::BumpPoolBufferStrategy<4> strategy(*bump_allocator_, sizes);
+    ftl::allocator::BumpPoolBufferStrategy strategy(*bump_allocator_, sizes);
     
     // Should still work correctly (base class sorts them)
     ftl::Buffer* buf1 = strategy.allocate(50);
@@ -276,7 +276,7 @@ TEST_F(BumpPoolBufferStrategyTest, BufferAlignmentStrongerThanNode) {
     // Common case: BufferNode might be 8-byte aligned, but we want 64-byte aligned buffers
     constexpr std::size_t CACHE_LINE = 64;
     std::array<std::size_t, 1> sizes = {256};
-    ftl::allocator::BumpPoolBufferStrategy<1> strategy(*bump_allocator_, sizes, CACHE_LINE);
+    ftl::allocator::BumpPoolBufferStrategy strategy(*bump_allocator_, sizes, CACHE_LINE);
     
     // Allocate multiple buffers and verify each is cache-line aligned
     for (int i = 0; i < 10; ++i) {
@@ -300,7 +300,7 @@ TEST_F(BumpPoolBufferStrategyTest, BufferAlignmentStrongerThanNode) {
 TEST_F(BumpPoolBufferStrategyTest, LargeAlignmentRequirement) {
     constexpr std::size_t LARGE_ALIGN = 256;  // Very large alignment
     std::array<std::size_t, 1> sizes = {512};
-    ftl::allocator::BumpPoolBufferStrategy<1> strategy(*bump_allocator_, sizes, LARGE_ALIGN);
+    ftl::allocator::BumpPoolBufferStrategy strategy(*bump_allocator_, sizes, LARGE_ALIGN);
     
     ftl::Buffer* buf = strategy.allocate(400);
     ASSERT_NE(buf, nullptr);
@@ -317,16 +317,16 @@ TEST_F(BumpPoolBufferStrategyTest, LargeAlignmentRequirement) {
 TEST_F(BumpPoolBufferStrategyTest, NoOverlapBetweenNodeAndData) {
     constexpr std::size_t ALIGN = 64;
     std::array<std::size_t, 1> sizes = {256};
-    ftl::allocator::BumpPoolBufferStrategy<1> strategy(*bump_allocator_, sizes, ALIGN);
+    ftl::allocator::BumpPoolBufferStrategy strategy(*bump_allocator_, sizes, ALIGN);
     
     ftl::Buffer* buf = strategy.allocate(200);
     ASSERT_NE(buf, nullptr);
     
     // The Buffer is embedded in BufferNode at offset of BufferNode::buffer
     // Calculate where BufferNode starts
-    auto buffer_offset = offsetof(ftl::allocator::BumpPoolBufferStrategy<1>::BufferNode, buffer);
+    auto buffer_offset = offsetof(ftl::allocator::BumpPoolBufferStrategy::BufferNode, buffer);
     auto node_start = reinterpret_cast<uintptr_t>(buf) - buffer_offset;
-    auto node_end = node_start + sizeof(ftl::allocator::BumpPoolBufferStrategy<1>::BufferNode);
+    auto node_end = node_start + sizeof(ftl::allocator::BumpPoolBufferStrategy::BufferNode);
     
     // Get buffer data location
     uintptr_t data_start = reinterpret_cast<uintptr_t>(buf->front());
@@ -353,7 +353,7 @@ TEST_F(BumpPoolBufferStrategyTest, MisalignedArenaStart) {
     
     constexpr std::size_t ALIGN = 64;
     std::array<std::size_t, 1> sizes = {256};
-    ftl::allocator::BumpPoolBufferStrategy<1> strategy(misaligned_bump, sizes, ALIGN);
+    ftl::allocator::BumpPoolBufferStrategy strategy(misaligned_bump, sizes, ALIGN);
     
     // Even with misaligned arena, buffer data should be properly aligned
     ftl::Buffer* buf = strategy.allocate(200);

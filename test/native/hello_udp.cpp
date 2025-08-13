@@ -28,7 +28,7 @@ int main() {
 
     // Initialize Payload allocator with bump pool strategy
     std::array<std::size_t, 8> sizes = {256, 512, 768, 1024, 1280, 1536, 1792, 2048};
-    static ftl::allocator::BumpPoolBufferStrategy<8> strategy(kAllocator, sizes);
+    static ftl::allocator::BumpPoolBufferStrategy strategy(kAllocator, sizes);
     Payload::initialize(strategy);
 
     // Create and configure the sender socket:

@@ -12,7 +12,7 @@ protected:
 // Test basic allocation and deallocation
 TEST_F(MallocBufferStrategyTest, BasicAllocation) {
     std::array<std::size_t, 3> sizes = {64, 128, 256};
-    ftl::allocator::MallocBufferStrategy<3> strategy(sizes);
+    ftl::allocator::MallocBufferStrategy strategy(sizes);
     
     // Allocate a small buffer
     ftl::Buffer* buf1 = strategy.allocate(32);
@@ -30,7 +30,7 @@ TEST_F(MallocBufferStrategyTest, BasicAllocation) {
 // Test size class selection
 TEST_F(MallocBufferStrategyTest, SizeClassSelection) {
     std::array<std::size_t, 4> sizes = {64, 128, 256, 512};
-    ftl::allocator::MallocBufferStrategy<4> strategy(sizes);
+    ftl::allocator::MallocBufferStrategy strategy(sizes);
     
     // Test various sizes
     struct TestCase {
@@ -62,7 +62,7 @@ TEST_F(MallocBufferStrategyTest, SizeClassSelection) {
 // Test allocation too large
 TEST_F(MallocBufferStrategyTest, AllocationTooLarge) {
     std::array<std::size_t, 2> sizes = {64, 128};
-    ftl::allocator::MallocBufferStrategy<2> strategy(sizes);
+    ftl::allocator::MallocBufferStrategy strategy(sizes);
     
     // Request larger than any size class
     ftl::Buffer* buf = strategy.allocate(256);
@@ -72,7 +72,7 @@ TEST_F(MallocBufferStrategyTest, AllocationTooLarge) {
 // Test multiple allocations
 TEST_F(MallocBufferStrategyTest, MultipleAllocations) {
     std::array<std::size_t, 3> sizes = {100, 200, 300};
-    ftl::allocator::MallocBufferStrategy<3> strategy(sizes);
+    ftl::allocator::MallocBufferStrategy strategy(sizes);
     
     std::vector<ftl::Buffer*> buffers;
     
@@ -106,7 +106,7 @@ TEST_F(MallocBufferStrategyTest, MultipleAllocations) {
 // Test null pointer handling
 TEST_F(MallocBufferStrategyTest, NullPointerHandling) {
     std::array<std::size_t, 1> sizes = {64};
-    ftl::allocator::MallocBufferStrategy<1> strategy(sizes);
+    ftl::allocator::MallocBufferStrategy strategy(sizes);
     
     // Deallocating nullptr should be safe
     strategy.deallocate(nullptr);
@@ -116,7 +116,7 @@ TEST_F(MallocBufferStrategyTest, NullPointerHandling) {
 TEST_F(MallocBufferStrategyTest, NonAscendingOrder) {
     // Provide sizes in random order
     std::array<std::size_t, 4> sizes = {256, 64, 512, 128};
-    ftl::allocator::MallocBufferStrategy<4> strategy(sizes);
+    ftl::allocator::MallocBufferStrategy strategy(sizes);
     
     // Should still work correctly (base class sorts them)
     ftl::Buffer* buf1 = strategy.allocate(50);
@@ -143,7 +143,7 @@ TEST_F(MallocBufferStrategyTest, NonAscendingOrder) {
 // Test the buffer contents can be modified
 TEST_F(MallocBufferStrategyTest, BufferContentsModifiable) {
     std::array<std::size_t, 1> sizes = {256};
-    ftl::allocator::MallocBufferStrategy<1> strategy(sizes);
+    ftl::allocator::MallocBufferStrategy strategy(sizes);
     
     ftl::Buffer* buf = strategy.allocate(100);
     ASSERT_NE(buf, nullptr);
@@ -168,7 +168,7 @@ TEST_F(MallocBufferStrategyTest, BufferContentsModifiable) {
 // Test exact size allocation
 TEST_F(MallocBufferStrategyTest, ExactSizeAllocation) {
     std::array<std::size_t, 3> sizes = {64, 128, 256};
-    ftl::allocator::MallocBufferStrategy<3> strategy(sizes);
+    ftl::allocator::MallocBufferStrategy strategy(sizes);
     
     // Request exact sizes
     ftl::Buffer* buf64 = strategy.allocate(64);
@@ -192,7 +192,7 @@ TEST_F(MallocBufferStrategyTest, ExactSizeAllocation) {
 TEST_F(MallocBufferStrategyTest, CustomAlignment) {
     constexpr std::size_t CACHE_LINE_SIZE = 64;
     std::array<std::size_t, 3> sizes = {128, 256, 512};
-    ftl::allocator::MallocBufferStrategy<3> strategy(sizes, CACHE_LINE_SIZE);
+    ftl::allocator::MallocBufferStrategy strategy(sizes, CACHE_LINE_SIZE);
     
     // Allocate multiple buffers and verify alignment
     for (int i = 0; i < 5; ++i) {

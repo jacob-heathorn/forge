@@ -25,7 +25,7 @@ class NativeUdpSocketTest : public ::testing::Test {
     static constexpr size_t POOL_MEMORY_SIZE = 16 * 1024;
     uint8_t*              buffer_   = nullptr;
     ftl::BumpAllocator*   allocator_= nullptr;
-    ftl::allocator::BumpPoolBufferStrategy<8>* strategy_ = nullptr;
+    ftl::allocator::BumpPoolBufferStrategy* strategy_ = nullptr;
     NativeEthernetInterface* lo_     = nullptr;
     SocketPtr             sender_;
     SocketPtr             receiver_;
@@ -37,7 +37,7 @@ class NativeUdpSocketTest : public ::testing::Test {
         
         // Initialize Payload allocator with bump pool strategy
         std::array<std::size_t, 8> sizes = {256, 512, 768, 1024, 1280, 1536, 1792, 2048};
-        strategy_ = new ftl::allocator::BumpPoolBufferStrategy<8>(*allocator_, sizes);
+        strategy_ = new ftl::allocator::BumpPoolBufferStrategy(*allocator_, sizes);
         Payload::initialize(*strategy_);
 
         // construct the interface here

@@ -13,10 +13,9 @@
 
 namespace ftl::allocator {
 
-template <std::size_t NUM_SLOTS>
-class BumpPoolBufferStrategy : public IBufferStrategy<NUM_SLOTS> {
+class BumpPoolBufferStrategy : public IBufferStrategy {
 public:
-    using Base = IBufferStrategy<NUM_SLOTS>;
+    using Base = IBufferStrategy;
 
     struct BufferNode {
         BufferNode* next;
@@ -30,19 +29,20 @@ public:
 
 private:
     // Per-size locks to minimize contention
-    std::array<Mutex, NUM_SLOTS> freelist_mutex_{};
+    std::array<Mutex, kMaxSlots> freelist_mutex_{};
 
     // Separate lock since allocator_ is NOT thread-safe
     Mutex alloc_mutex_;
 
     BumpAllocator& allocator_;
 
-    std::array<BufferNode*, NUM_SLOTS> free_lists_{};
+    std::array<BufferNode*, kMaxSlots> free_lists_{};
 
 public:
     // Constructor:
+    template <std::size_t N>
     BumpPoolBufferStrategy(BumpAllocator& allocator,
-                        const std::array<std::size_t, NUM_SLOTS>& sizes,
+                        const std::array<std::size_t, N>& sizes,
                         std::size_t alignment = alignof(std::max_align_t)) noexcept
         : Base(sizes, alignment)
         , allocator_(allocator) {
@@ -55,12 +55,12 @@ public:
     // Allocate fast path with tiny critical section:
     ftl::Buffer* allocate(std::size_t req_size) noexcept override {
         // choose class (no lock)
-        std::size_t size_index = NUM_SLOTS;
-        for (std::size_t i = 0; i < NUM_SLOTS; ++i) {
-            if (this->sizes_[i] >= req_size) { size_index = i; break; }
+        std::size_t size_index = num_slots();
+        for (std::size_t i = 0; i < num_slots(); ++i) {
+            if (this->size(i) >= req_size) { size_index = i; break; }
         }
-        if (size_index == NUM_SLOTS) return nullptr;
-        const std::size_t alloc_size = this->sizes_[size_index];
+        if (size_index == num_slots()) return nullptr;
+        const std::size_t alloc_size = this->size(size_index);
 
         // Try reuse under a very short lock
         {
@@ -106,7 +106,7 @@ public:
 
         // Use the stored slot_index to return to the correct free list
         const std::size_t size_index = node->slot_index;
-        if (size_index >= NUM_SLOTS) return;
+        if (size_index >= num_slots()) return;
 
         // push under a very short lock
         {

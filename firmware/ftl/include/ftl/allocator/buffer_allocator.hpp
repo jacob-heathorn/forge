@@ -9,15 +9,14 @@ namespace ftl::allocator {
 
 /// Allocator that manages buffers using an IBufferStrategy
 /// This is a simple wrapper that delegates to the strategy
-template <std::size_t NUM_SLOTS>
 class BufferAllocator {
 private:
-    IBufferStrategy<NUM_SLOTS>& strategy_;
+    IBufferStrategy& strategy_;
     
 public:
     /// Constructor taking a reference to a buffer strategy
     /// @param strategy Buffer strategy to use (must outlive this allocator)
-    explicit BufferAllocator(IBufferStrategy<NUM_SLOTS>& strategy) noexcept
+    explicit BufferAllocator(IBufferStrategy& strategy) noexcept
         : strategy_(strategy) {}
     
     /// Allocate a buffer of the smallest size >= requested size
@@ -34,12 +33,12 @@ public:
     }
     
     /// Get the number of size classes
-    static constexpr std::size_t num_slots() noexcept { 
-        return NUM_SLOTS; 
+    std::size_t num_slots() const noexcept { 
+        return strategy_.num_slots(); 
     }
     
     /// Get the sizes array from the strategy
-    const std::array<std::size_t, NUM_SLOTS>& sizes() const noexcept { 
+    const std::array<std::size_t, IBufferStrategy::kMaxSlots>& sizes() const noexcept { 
         return strategy_.sizes(); 
     }
     

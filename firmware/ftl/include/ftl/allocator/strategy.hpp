@@ -46,22 +46,32 @@ public:
 
 // Base interface for buffer allocations with multiple size classes
 // Allocates ftl::Buffer* pointers from the smallest suitable size class
-template <std::size_t NUM_SLOTS>
 class IBufferStrategy {
+public:
+    static constexpr std::size_t kMaxSlots = 8;  // Maximum number of size classes
+    
 protected:
-    std::array<std::size_t, NUM_SLOTS> sizes_;  // Size classes (sorted)
+    std::array<std::size_t, kMaxSlots> sizes_;   // Size classes (sorted)
+    std::size_t num_slots_;                      // Actual number of slots in use
     std::size_t alignment_;                      // Alignment requirement for buffers
     
 public:
-    // Constructor taking an array of sizes and alignment requirement
-    // @param sizes Array of buffer sizes (will be sorted automatically)
+    // Templated constructor accepting std::array
+    // @param sizes std::array of buffer sizes (will be sorted automatically)
     // @param alignment Alignment requirement for allocated buffers
-    explicit IBufferStrategy(const std::array<std::size_t, NUM_SLOTS>& sizes, 
-                            std::size_t alignment = alignof(std::max_align_t)) noexcept 
-        : sizes_(sizes), alignment_(alignment) {
-        static_assert(NUM_SLOTS > 0, "IBufferStrategy requires at least one size class");
-        // Sort sizes for efficient lookup
-        std::sort(sizes_.begin(), sizes_.end());
+    template <std::size_t N>
+    IBufferStrategy(const std::array<std::size_t, N>& sizes,
+                    std::size_t alignment = alignof(std::max_align_t)) noexcept 
+        : num_slots_(N), alignment_(alignment) {
+        static_assert(N <= kMaxSlots, "Number of size classes exceeds maximum");
+        // Initialize all slots to 0
+        sizes_.fill(0);
+        // Copy provided sizes
+        for (std::size_t i = 0; i < N; ++i) {
+            sizes_[i] = sizes[i];
+        }
+        // Sort only the used slots
+        std::sort(sizes_.begin(), sizes_.begin() + N);
     }
     
     virtual ~IBufferStrategy() = default;
@@ -73,15 +83,15 @@ public:
     // Deallocate a buffer
     virtual void deallocate(ftl::Buffer* buffer) noexcept = 0;
     
-    // Get the number of size classes
-    static constexpr std::size_t num_slots() noexcept { return NUM_SLOTS; }
+    // Get the number of size classes in use
+    std::size_t num_slots() const noexcept { return num_slots_; }
     
-    // Get the sizes array
-    const std::array<std::size_t, NUM_SLOTS>& sizes() const noexcept { return sizes_; }
+    // Get the sizes array (all kMaxSlots elements, use num_slots() for actual count)
+    const std::array<std::size_t, kMaxSlots>& sizes() const noexcept { return sizes_; }
     
     // Get a specific size
     std::size_t size(std::size_t idx) const noexcept {
-        return (idx < NUM_SLOTS) ? sizes_[idx] : 0;
+        return (idx < num_slots_) ? sizes_[idx] : 0;
     }
     
     // Get the alignment requirement

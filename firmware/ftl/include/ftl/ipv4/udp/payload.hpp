@@ -15,7 +15,7 @@ namespace ftl::ipv4::udp {
 
 // Custom deleter for Buffer that returns it to the allocator
 struct PayloadBufferDeleter {
-    allocator::BufferAllocator<8>* allocator;
+    allocator::BufferAllocator* allocator;
 
     void operator()(Buffer* buf) const noexcept {
         if (allocator && buf) allocator->deallocate(buf);
@@ -33,15 +33,15 @@ private:
   std::unique_ptr<Buffer, PayloadBufferDeleter> buffer_;
   std::size_t actual_size_ = 0;  // Actual payload size (may be less than buffer size)
 
-  static allocator::BufferAllocator<8>*& allocator() {
-    static allocator::BufferAllocator<8>* ptr = nullptr;
+  static allocator::BufferAllocator*& allocator() {
+    static allocator::BufferAllocator* ptr = nullptr;
     return ptr;
   }
 
 public:
   // Initialize with a buffer strategy
-  static void initialize(allocator::IBufferStrategy<8>& strategy) {
-    static allocator::BufferAllocator<8> alloc{strategy};
+  static void initialize(allocator::IBufferStrategy& strategy) {
+    static allocator::BufferAllocator alloc{strategy};
     allocator() = &alloc;
   }
 
