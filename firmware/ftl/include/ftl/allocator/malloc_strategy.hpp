@@ -30,24 +30,6 @@ public:
 };
 } // namespace detail
 
-// Malloc-based block allocation strategy
-class MallocBlockStrategy : public IBlockStrategy {
-private:
-    detail::MallocImpl impl_;
-    
-public:
-    MallocBlockStrategy(std::size_t size, std::size_t alignment = alignof(std::max_align_t)) noexcept
-        : IBlockStrategy(size), impl_(size, alignment) {}
-    
-    void* allocate() noexcept override {
-        return impl_.allocate();
-    }
-    
-    void deallocate(void* ptr) noexcept override {
-        impl_.deallocate(ptr);
-    }
-};
-
 // Malloc-based object allocation strategy - delegates to MallocImpl
 template <typename T>
 class MallocObjStrategy : public IObjStrategy<T> {

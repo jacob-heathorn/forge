@@ -75,25 +75,6 @@ public:
 
 } // namespace detail
 
-// Bump pool-based block allocation strategy
-class BumpPoolBlockStrategy : public IBlockStrategy {
-private:
-    detail::BumpPoolImpl impl_;
-    
-public:
-    BumpPoolBlockStrategy(BumpAllocator& allocator, std::size_t size, 
-                         std::size_t alignment = alignof(std::max_align_t)) noexcept
-        : IBlockStrategy(size), impl_(allocator, size, alignment) {}
-    
-    void* allocate() noexcept override {
-        return impl_.allocate();
-    }
-    
-    void deallocate(void* ptr) noexcept override {
-        impl_.deallocate(ptr);
-    }
-};
-
 // Bump pool-based object allocation strategy
 template <typename T>
 class BumpPoolObjStrategy : public IObjStrategy<T> {

@@ -43,69 +43,6 @@ protected:
     std::unique_ptr<ftl::BumpAllocator> bump_allocator_;
 };
 
-// Test basic buffer allocation with BumpPoolBlockStrategy
-TEST_F(BumpPoolStrategyTest, BufferAllocationBasic) {
-    constexpr size_t block_size = 256;
-    ftl::allocator::BumpPoolBlockStrategy strategy(*bump_allocator_, block_size);
-    
-    // Allocate a buffer
-    void* ptr = strategy.allocate();
-    ASSERT_NE(ptr, nullptr);
-    
-    // Write to the buffer to verify it's valid memory
-    std::memset(ptr, 0xAB, block_size);
-    
-    // Deallocate
-    strategy.deallocate(ptr);
-    
-    // Should be able to reuse the same memory
-    void* ptr2 = strategy.allocate();
-    ASSERT_NE(ptr2, nullptr);
-    EXPECT_EQ(ptr, ptr2);  // Should get the same memory back from free list
-    
-    strategy.deallocate(ptr2);
-}
-
-// Test free list reuse
-TEST_F(BumpPoolStrategyTest, FreeListReuse) {
-    constexpr size_t block_size = 128;
-    ftl::allocator::BumpPoolBlockStrategy strategy(*bump_allocator_, block_size);
-    
-    std::vector<void*> ptrs;
-    constexpr size_t num_allocs = 5;
-    
-    // Allocate multiple blocks
-    for (size_t i = 0; i < num_allocs; ++i) {
-        void* ptr = strategy.allocate();
-        ASSERT_NE(ptr, nullptr);
-        ptrs.push_back(ptr);
-        std::memset(ptr, static_cast<uint8_t>(i), block_size);
-    }
-    
-    // Deallocate all
-    for (void* ptr : ptrs) {
-        strategy.deallocate(ptr);
-    }
-    
-    // Allocate again - should reuse from free list in LIFO order
-    std::vector<void*> reused_ptrs;
-    for (size_t i = 0; i < num_allocs; ++i) {
-        void* ptr = strategy.allocate();
-        ASSERT_NE(ptr, nullptr);
-        reused_ptrs.push_back(ptr);
-    }
-    
-    // Verify we got the same pointers back (in reverse order due to LIFO)
-    for (size_t i = 0; i < num_allocs; ++i) {
-        EXPECT_EQ(reused_ptrs[i], ptrs[num_allocs - 1 - i]);
-    }
-    
-    // Cleanup
-    for (void* ptr : reused_ptrs) {
-        strategy.deallocate(ptr);
-    }
-}
-
 // Test object allocation with BumpPoolObjStrategy
 TEST_F(BumpPoolStrategyTest, ObjectAllocationBasic) {
     ftl::allocator::BumpPoolObjStrategy<TestObject> obj_strategy(*bump_allocator_);
@@ -218,83 +155,9 @@ TEST_F(BumpPoolStrategyTest, AlignedObjectAllocation) {
 
 // Test null pointer handling
 TEST_F(BumpPoolStrategyTest, NullPointerHandling) {
-    ftl::allocator::BumpPoolBlockStrategy strategy(*bump_allocator_, 64);
-    
-    // Deallocating nullptr should be safe
-    strategy.deallocate(nullptr);
-    
     ftl::allocator::BumpPoolObjStrategy<TestObject> obj_strategy(*bump_allocator_);
     
     // Deallocating nullptr should be safe
     obj_strategy.deallocate(nullptr);
 }
 
-// Test custom alignment for BlockStrategy
-TEST_F(BumpPoolStrategyTest, CustomAlignmentBlockStrategy) {
-    // Create strategy with 64-byte alignment
-    constexpr size_t block_size = 128;
-    constexpr size_t alignment = 64;
-    ftl::allocator::BumpPoolBlockStrategy strategy(*bump_allocator_, block_size, alignment);
-    
-    // Allocate multiple blocks and verify alignment
-    std::vector<void*> ptrs;
-    for (int i = 0; i < 5; ++i) {
-        void* ptr = strategy.allocate();
-        ASSERT_NE(ptr, nullptr);
-        
-        // Verify alignment
-        auto addr = reinterpret_cast<std::uintptr_t>(ptr);
-        EXPECT_EQ(addr % alignment, 0) << "Block " << i << " not aligned to " << alignment << " bytes";
-        
-        ptrs.push_back(ptr);
-    }
-    
-    // Cleanup
-    for (void* ptr : ptrs) {
-        strategy.deallocate(ptr);
-    }
-}
-
-
-// Test exhaustion and recovery
-TEST_F(BumpPoolStrategyTest, ExhaustionAndRecovery) {
-    // Use a small arena to test exhaustion
-    constexpr size_t small_arena_size = 512;
-    alignas(64) uint8_t small_arena[small_arena_size];
-    ftl::BumpAllocator small_bump(small_arena, small_arena_size);
-    
-    constexpr size_t block_size = 64;
-    ftl::allocator::BumpPoolBlockStrategy strategy(small_bump, block_size);
-    
-    std::vector<void*> ptrs;
-    
-    // Allocate until exhausted
-    while (true) {
-        void* ptr = strategy.allocate();
-        if (!ptr) break;
-        ptrs.push_back(ptr);
-    }
-    
-    EXPECT_GT(ptrs.size(), 0);
-    size_t max_allocs = ptrs.size();
-    
-    // Should not be able to allocate more
-    EXPECT_EQ(strategy.allocate(), nullptr);
-    
-    // Free all
-    for (void* ptr : ptrs) {
-        strategy.deallocate(ptr);
-    }
-    
-    // Should be able to allocate again (from free list)
-    for (size_t i = 0; i < max_allocs; ++i) {
-        void* ptr = strategy.allocate();
-        ASSERT_NE(ptr, nullptr);
-        ptrs[i] = ptr;
-    }
-    
-    // Cleanup
-    for (void* ptr : ptrs) {
-        strategy.deallocate(ptr);
-    }
-}
