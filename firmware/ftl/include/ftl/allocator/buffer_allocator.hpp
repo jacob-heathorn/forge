@@ -21,31 +21,29 @@ private:
     std::size_t num_slots_;                                 // Actual number of slots in use
     
 public:
-    /// Templated constructor accepting an array of strategy pointers
+    /// Variadic template constructor accepting strategy references
     /// Strategies will be sorted by their size for efficient allocation
-    /// @param strategies Array of pointers to strategies (must outlive this allocator)
-    template <std::size_t N>
-    explicit BufferAllocator(const std::array<IBufferStrategy*, N>& strategies) noexcept
-        : num_slots_(N) {
-        static_assert(N <= kMaxSlots, "Number of strategies exceeds maximum");
+    /// @param strategies Strategy references (must outlive this allocator)
+    template <typename... Strategies>
+    explicit BufferAllocator(Strategies&... strategies) noexcept
+        : num_slots_(sizeof...(strategies)) {
+        static_assert(sizeof...(strategies) <= kMaxSlots, "Number of strategies exceeds maximum");
         
         // Initialize all slots to nullptr/0
         strategies_.fill(nullptr);
         sizes_.fill(0);
         
-        // Copy strategy pointers and extract their sizes
-        for (std::size_t i = 0; i < N; ++i) {
-            strategies_[i] = strategies[i];
-            sizes_[i] = strategies[i]->size();
-        }
+        // Helper to populate arrays
+        std::size_t i = 0;
+        ((strategies_[i] = &strategies, sizes_[i] = strategies.size(), ++i), ...);
         
         // Sort strategies by size using index sorting
         std::array<std::size_t, kMaxSlots> indices{};
-        for (std::size_t i = 0; i < N; ++i) {
-            indices[i] = i;
+        for (std::size_t j = 0; j < num_slots_; ++j) {
+            indices[j] = j;
         }
         
-        std::sort(indices.begin(), indices.begin() + N,
+        std::sort(indices.begin(), indices.begin() + num_slots_,
                   [this](std::size_t a, std::size_t b) {
                       return sizes_[a] < sizes_[b];
                   });
@@ -53,9 +51,9 @@ public:
         // Reorder strategies and sizes based on sorted indices
         std::array<IBufferStrategy*, kMaxSlots> sorted_strategies{};
         std::array<std::size_t, kMaxSlots> sorted_sizes{};
-        for (std::size_t i = 0; i < N; ++i) {
-            sorted_strategies[i] = strategies_[indices[i]];
-            sorted_sizes[i] = sizes_[indices[i]];
+        for (std::size_t j = 0; j < num_slots_; ++j) {
+            sorted_strategies[j] = strategies_[indices[j]];
+            sorted_sizes[j] = sizes_[indices[j]];
         }
         
         strategies_ = sorted_strategies;

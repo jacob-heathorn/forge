@@ -61,13 +61,9 @@ TEST_F(BumpPoolBufferStrategyTest, FreeListReuseWithAllocator) {
     auto strategy200 = std::make_unique<ftl::allocator::BumpPoolBufferStrategy>(*bump_allocator_, 200);
     auto strategy300 = std::make_unique<ftl::allocator::BumpPoolBufferStrategy>(*bump_allocator_, 300);
     
-    std::array<ftl::allocator::IBufferStrategy*, 3> strategies = {
-        strategy100.get(),
-        strategy200.get(),
-        strategy300.get()
-    };
-    
-    ftl::allocator::BufferAllocator allocator(strategies);
+    ftl::allocator::BufferAllocator allocator(
+        *strategy100, *strategy200, *strategy300
+    );
     
     std::vector<ftl::Buffer*> buffers;
     
@@ -123,14 +119,9 @@ TEST_F(BumpPoolBufferStrategyTest, SizeClassSelection) {
     auto strategy256 = std::make_unique<ftl::allocator::BumpPoolBufferStrategy>(*bump_allocator_, 256);
     auto strategy512 = std::make_unique<ftl::allocator::BumpPoolBufferStrategy>(*bump_allocator_, 512);
     
-    std::array<ftl::allocator::IBufferStrategy*, 4> strategies = {
-        strategy64.get(),
-        strategy128.get(),
-        strategy256.get(),
-        strategy512.get()
-    };
-    
-    ftl::allocator::BufferAllocator allocator(strategies);
+    ftl::allocator::BufferAllocator allocator(
+        *strategy64, *strategy128, *strategy256, *strategy512
+    );
     
     struct TestCase {
         std::size_t request;
@@ -180,13 +171,9 @@ TEST_F(BumpPoolBufferStrategyTest, CustomAlignment) {
     auto strategy256 = std::make_unique<ftl::allocator::BumpPoolBufferStrategy>(*bump_allocator_, 256, CACHE_LINE_SIZE);
     auto strategy512 = std::make_unique<ftl::allocator::BumpPoolBufferStrategy>(*bump_allocator_, 512, CACHE_LINE_SIZE);
     
-    std::array<ftl::allocator::IBufferStrategy*, 3> strategies = {
-        strategy128.get(),
-        strategy256.get(),
-        strategy512.get()
-    };
-    
-    ftl::allocator::BufferAllocator allocator(strategies);
+    ftl::allocator::BufferAllocator allocator(
+        *strategy128, *strategy256, *strategy512
+    );
     
     // Allocate multiple buffers and verify alignment
     for (int i = 0; i < 5; ++i) {
@@ -251,14 +238,9 @@ TEST_F(BumpPoolBufferStrategyTest, MixedStrategies) {
     auto malloc512 = std::make_unique<ftl::allocator::MallocBufferStrategy>(512);
     auto bump1024 = std::make_unique<ftl::allocator::BumpPoolBufferStrategy>(*bump_allocator_, 1024);
     
-    std::array<ftl::allocator::IBufferStrategy*, 4> strategies = {
-        bump128.get(),
-        bump256.get(),
-        malloc512.get(),
-        bump1024.get()
-    };
-    
-    ftl::allocator::BufferAllocator allocator(strategies);
+    ftl::allocator::BufferAllocator allocator(
+        *bump128, *bump256, *malloc512, *bump1024
+    );
     
     // Test various allocations
     std::vector<ftl::Buffer*> buffers;

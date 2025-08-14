@@ -45,14 +45,10 @@ TEST_F(MallocBufferStrategyTest, MultipleStrategiesWithAllocator) {
     auto strategy128 = std::make_unique<ftl::allocator::MallocBufferStrategy>(128);
     auto strategy256 = std::make_unique<ftl::allocator::MallocBufferStrategy>(256);
     
-    // Create allocator with array of strategy pointers
-    std::array<ftl::allocator::IBufferStrategy*, 3> strategies = {
-        strategy64.get(),
-        strategy128.get(),
-        strategy256.get()
-    };
-    
-    ftl::allocator::BufferAllocator allocator(strategies);
+    // Create allocator with strategy references
+    ftl::allocator::BufferAllocator allocator(
+        *strategy64, *strategy128, *strategy256
+    );
     
     // Test various allocation sizes
     struct TestCase {
@@ -132,13 +128,9 @@ TEST_F(MallocBufferStrategyTest, MixedStrategySizes) {
     auto medium = std::make_unique<ftl::allocator::MallocBufferStrategy>(512);
     auto large = std::make_unique<ftl::allocator::MallocBufferStrategy>(2048);
     
-    std::array<ftl::allocator::IBufferStrategy*, 3> strategies = {
-        small.get(),
-        medium.get(),
-        large.get()
-    };
-    
-    ftl::allocator::BufferAllocator allocator(strategies);
+    ftl::allocator::BufferAllocator allocator(
+        *small, *medium, *large
+    );
     
     // Allocate buffers of varying sizes
     std::vector<ftl::Buffer*> buffers;
@@ -180,13 +172,11 @@ TEST_F(MallocBufferStrategyTest, UnsortedStrategies) {
     auto small = std::make_unique<ftl::allocator::MallocBufferStrategy>(64);
     auto medium = std::make_unique<ftl::allocator::MallocBufferStrategy>(256);
     
-    std::array<ftl::allocator::IBufferStrategy*, 3> strategies = {
-        large.get(),  // 512
-        small.get(),  // 64
-        medium.get()  // 256
-    };
-    
-    ftl::allocator::BufferAllocator allocator(strategies);
+    ftl::allocator::BufferAllocator allocator(
+        *large,   // 512
+        *small,   // 64
+        *medium   // 256
+    );
     
     // Verify sizes are sorted internally
     EXPECT_EQ(allocator.size(0), 64);

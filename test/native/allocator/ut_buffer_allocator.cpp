@@ -18,13 +18,11 @@ TEST_F(BufferAllocatorTest, BasicAllocation) {
     auto strategy128 = std::make_unique<ftl::allocator::MallocBufferStrategy>(128);
     auto strategy256 = std::make_unique<ftl::allocator::MallocBufferStrategy>(256);
     
-    std::array<ftl::allocator::IBufferStrategy*, 3> strategies = {
-        strategy64.get(),
-        strategy128.get(),
-        strategy256.get()
-    };
-    
-    ftl::allocator::BufferAllocator allocator(strategies);
+    ftl::allocator::BufferAllocator allocator(
+        *strategy64,
+        *strategy128,
+        *strategy256
+    );
     
     // Allocate a small buffer
     ftl::Buffer* buf1 = allocator.allocate(32);
@@ -60,14 +58,9 @@ TEST_F(BufferAllocatorTest, Accessors) {
     auto strategy300 = std::make_unique<ftl::allocator::MallocBufferStrategy>(300, 64);
     auto strategy400 = std::make_unique<ftl::allocator::MallocBufferStrategy>(400, 64);
     
-    std::array<ftl::allocator::IBufferStrategy*, 4> strategies = {
-        strategy100.get(),
-        strategy200.get(),
-        strategy300.get(),
-        strategy400.get()
-    };
-    
-    ftl::allocator::BufferAllocator allocator(strategies);
+    ftl::allocator::BufferAllocator allocator(
+        *strategy100, *strategy200, *strategy300, *strategy400
+    );
     
     // Test num_slots
     EXPECT_EQ(allocator.num_slots(), 4u);
@@ -96,8 +89,7 @@ TEST_F(BufferAllocatorTest, Accessors) {
 // Test null pointer handling
 TEST_F(BufferAllocatorTest, NullPointerHandling) {
     auto strategy = std::make_unique<ftl::allocator::MallocBufferStrategy>(64);
-    std::array<ftl::allocator::IBufferStrategy*, 1> strategies = {strategy.get()};
-    ftl::allocator::BufferAllocator allocator(strategies);
+    ftl::allocator::BufferAllocator allocator(*strategy);
     
     // Deallocating nullptr should be safe
     allocator.deallocate(nullptr);
@@ -109,13 +101,9 @@ TEST_F(BufferAllocatorTest, MultipleAllocations) {
     auto strategy256 = std::make_unique<ftl::allocator::MallocBufferStrategy>(256);
     auto strategy512 = std::make_unique<ftl::allocator::MallocBufferStrategy>(512);
     
-    std::array<ftl::allocator::IBufferStrategy*, 3> strategies = {
-        strategy128.get(),
-        strategy256.get(),
-        strategy512.get()
-    };
-    
-    ftl::allocator::BufferAllocator allocator(strategies);
+    ftl::allocator::BufferAllocator allocator(
+        *strategy128, *strategy256, *strategy512
+    );
     
     std::vector<ftl::Buffer*> buffers;
     
@@ -151,12 +139,7 @@ TEST_F(BufferAllocatorTest, AllocationTooLarge) {
     auto strategy64 = std::make_unique<ftl::allocator::MallocBufferStrategy>(64);
     auto strategy128 = std::make_unique<ftl::allocator::MallocBufferStrategy>(128);
     
-    std::array<ftl::allocator::IBufferStrategy*, 2> strategies = {
-        strategy64.get(),
-        strategy128.get()
-    };
-    
-    ftl::allocator::BufferAllocator allocator(strategies);
+    ftl::allocator::BufferAllocator allocator(*strategy64, *strategy128);
     
     // Request larger than any size class
     ftl::Buffer* buf = allocator.allocate(256);
@@ -172,13 +155,9 @@ TEST_F(BufferAllocatorTest, CustomAlignment) {
     auto strategy256 = std::make_unique<ftl::allocator::MallocBufferStrategy>(256, CACHE_LINE_SIZE);
     auto strategy512 = std::make_unique<ftl::allocator::MallocBufferStrategy>(512, CACHE_LINE_SIZE);
     
-    std::array<ftl::allocator::IBufferStrategy*, 3> strategies = {
-        strategy128.get(),
-        strategy256.get(),
-        strategy512.get()
-    };
-    
-    ftl::allocator::BufferAllocator allocator(strategies);
+    ftl::allocator::BufferAllocator allocator(
+        *strategy128, *strategy256, *strategy512
+    );
     
     // Check alignment of each strategy
     EXPECT_EQ(allocator.alignment(0), CACHE_LINE_SIZE);
@@ -203,14 +182,9 @@ TEST_F(BufferAllocatorTest, NonAscendingOrder) {
     auto strategy512 = std::make_unique<ftl::allocator::MallocBufferStrategy>(512);
     auto strategy128 = std::make_unique<ftl::allocator::MallocBufferStrategy>(128);
     
-    std::array<ftl::allocator::IBufferStrategy*, 4> strategies = {
-        strategy256.get(),
-        strategy64.get(),
-        strategy512.get(),
-        strategy128.get()
-    };
-    
-    ftl::allocator::BufferAllocator allocator(strategies);
+    ftl::allocator::BufferAllocator allocator(
+        *strategy256, *strategy64, *strategy512, *strategy128
+    );
     
     // Verify sizes are sorted
     const auto& sorted_sizes = allocator.sizes();

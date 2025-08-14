@@ -40,15 +40,20 @@ class NativeUdpSocketTest : public ::testing::Test {
         allocator_ = new ftl::BumpAllocator(buffer_, POOL_MEMORY_SIZE);
         
         // Initialize Payload allocator with bump pool strategies
-        std::array<std::size_t, 8> sizes = {256, 512, 768, 1024, 1280, 1536, 1792, 2048};
-        std::array<ftl::allocator::IBufferStrategy*, 8> strategy_ptrs;
+        strategies_.reserve(8);
+        strategies_.push_back(std::make_unique<ftl::allocator::BumpPoolBufferStrategy>(*allocator_, 256));
+        strategies_.push_back(std::make_unique<ftl::allocator::BumpPoolBufferStrategy>(*allocator_, 512));
+        strategies_.push_back(std::make_unique<ftl::allocator::BumpPoolBufferStrategy>(*allocator_, 768));
+        strategies_.push_back(std::make_unique<ftl::allocator::BumpPoolBufferStrategy>(*allocator_, 1024));
+        strategies_.push_back(std::make_unique<ftl::allocator::BumpPoolBufferStrategy>(*allocator_, 1280));
+        strategies_.push_back(std::make_unique<ftl::allocator::BumpPoolBufferStrategy>(*allocator_, 1536));
+        strategies_.push_back(std::make_unique<ftl::allocator::BumpPoolBufferStrategy>(*allocator_, 1792));
+        strategies_.push_back(std::make_unique<ftl::allocator::BumpPoolBufferStrategy>(*allocator_, 2048));
         
-        for (size_t i = 0; i < sizes.size(); ++i) {
-            strategies_.push_back(std::make_unique<ftl::allocator::BumpPoolBufferStrategy>(*allocator_, sizes[i]));
-            strategy_ptrs[i] = strategies_.back().get();
-        }
-        
-        buffer_allocator_ = new ftl::allocator::BufferAllocator(strategy_ptrs);
+        buffer_allocator_ = new ftl::allocator::BufferAllocator(
+            *strategies_[0], *strategies_[1], *strategies_[2], *strategies_[3],
+            *strategies_[4], *strategies_[5], *strategies_[6], *strategies_[7]
+        );
         Payload::initialize(*buffer_allocator_);
 
         // construct the interface here
