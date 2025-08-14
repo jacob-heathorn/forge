@@ -328,3 +328,98 @@ TEST_F(ObjAllocatorTest, MakeUniqueMoveSemantics) {
     EXPECT_EQ(obj2->value(), 333);
     EXPECT_EQ(TrackedObject::alive_count, 1);  // First object destroyed
 }
+
+// Helper classes for interface pattern test
+namespace {
+    class IAnimal {
+    public:
+        virtual ~IAnimal() { destruction_count++; }
+        virtual const char* speak() const = 0;
+        static int destruction_count;
+    };
+    int IAnimal::destruction_count = 0;
+    
+    class Dog : public IAnimal {
+    public:
+        const char* speak() const override { return "Woof"; }
+    };
+    
+    class Cat : public IAnimal {
+    public:
+        const char* speak() const override { return "Meow"; }
+    };
+    
+    // Factory interface that returns the SAME unique_ptr type regardless of concrete type
+    class IAnimalFactory {
+    public:
+        virtual ~IAnimalFactory() = default;
+        virtual std::unique_ptr<IAnimal, DelegatingDeleter<IAnimal>> createAnimal() = 0;
+    };
+    
+    // Dog factory implementation
+    class DogFactory : public IAnimalFactory {
+        ftl::allocator::MallocObjStrategy<Dog> strategy_;
+        ftl::allocator::ObjAllocator<Dog> allocator_;
+    public:
+        DogFactory() : allocator_(strategy_) {}
+        
+        std::unique_ptr<IAnimal, DelegatingDeleter<IAnimal>> createAnimal() override {
+            // Returns same type as CatFactory despite using different allocator
+            return allocator_.make_unique<IAnimal>();
+        }
+    };
+    
+    // Cat factory implementation  
+    class CatFactory : public IAnimalFactory {
+        ftl::allocator::MallocObjStrategy<Cat> strategy_;
+        ftl::allocator::ObjAllocator<Cat> allocator_;
+    public:
+        CatFactory() : allocator_(strategy_) {}
+        
+        std::unique_ptr<IAnimal, DelegatingDeleter<IAnimal>> createAnimal() override {
+            // Returns same type as DogFactory despite using different allocator
+            return allocator_.make_unique<IAnimal>();
+        }
+    };
+}
+
+// Test interface pattern with DelegatingDeleter
+TEST_F(ObjAllocatorTest, InterfaceWithDelegatingDeleter) {
+    IAnimal::destruction_count = 0;
+    
+    // Use factories through the interface
+    DogFactory dogFactory;
+    CatFactory catFactory;
+    
+    // Both factories can be used through the same interface
+    IAnimalFactory* factory1 = &dogFactory;
+    IAnimalFactory* factory2 = &catFactory;
+    
+    // Collection of animals from different factories - all have same unique_ptr type
+    std::vector<std::unique_ptr<IAnimal, DelegatingDeleter<IAnimal>>> zoo;
+    
+    // Add animals from different factories
+    zoo.push_back(factory1->createAnimal());  // Dog
+    zoo.push_back(factory2->createAnimal());  // Cat  
+    zoo.push_back(factory1->createAnimal());  // Dog
+    
+    // Verify correct polymorphic behavior
+    EXPECT_STREQ(zoo[0]->speak(), "Woof");
+    EXPECT_STREQ(zoo[1]->speak(), "Meow");
+    EXPECT_STREQ(zoo[2]->speak(), "Woof");
+    
+    // Clear the zoo - each animal should be properly destructed using its allocator
+    zoo.clear();
+    EXPECT_EQ(IAnimal::destruction_count, 3);
+    
+    // Create a function that accepts animals from any factory
+    auto processAnimal = [](std::unique_ptr<IAnimal, DelegatingDeleter<IAnimal>> animal) {
+        return std::string(animal->speak());
+    };
+    
+    // Both factories produce compatible types for the function
+    EXPECT_EQ(processAnimal(factory1->createAnimal()), "Woof");
+    EXPECT_EQ(processAnimal(factory2->createAnimal()), "Meow");
+    
+    EXPECT_EQ(IAnimal::destruction_count, 5);  // 3 from zoo + 2 from processAnimal
+}
