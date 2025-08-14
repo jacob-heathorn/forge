@@ -2,6 +2,7 @@
 #include "ftl/allocator/malloc_obj_strategy.hpp"
 #include "ftl/allocator/bump_pool_obj_strategy.hpp"
 #include "ftl/allocator/bump_allocator.hpp"
+#include "ftl/memory.hpp"
 #include "gtest/gtest.h"
 #include <memory>
 #include <vector>
@@ -273,7 +274,7 @@ TEST_F(ObjAllocatorTest, MakeUniquePolymorphic) {
     ftl::allocator::ObjAllocator<TestDerived> allocator(strategy);
     
     {
-        std::unique_ptr<TestBase, DelegatingDeleter<TestBase>> base_ptr = allocator.make_unique<TestBase>(100);
+        ftl::unique_ptr<TestBase> base_ptr = allocator.make_unique<TestBase>(100);
         ASSERT_NE(base_ptr, nullptr);
         EXPECT_EQ(base_ptr->getValue(), 84);  // TestDerived::getValue()
     }
@@ -286,7 +287,7 @@ TEST_F(ObjAllocatorTest, MakeUniqueMultiple) {
     ftl::allocator::MallocObjStrategy<TrackedObject> strategy;
     ftl::allocator::ObjAllocator<TrackedObject> allocator(strategy);
     
-    std::vector<std::unique_ptr<TrackedObject, DelegatingDeleter<TrackedObject>>> objects;
+    std::vector<ftl::unique_ptr<TrackedObject>> objects;
     
     // Create multiple unique_ptrs
     for (int i = 0; i < 5; ++i) {
@@ -353,7 +354,7 @@ namespace {
     class IAnimalFactory {
     public:
         virtual ~IAnimalFactory() = default;
-        virtual std::unique_ptr<IAnimal, DelegatingDeleter<IAnimal>> createAnimal() = 0;
+        virtual ftl::unique_ptr<IAnimal> createAnimal() = 0;
     };
     
     // Dog factory implementation
@@ -363,7 +364,7 @@ namespace {
     public:
         DogFactory() : allocator_(strategy_) {}
         
-        std::unique_ptr<IAnimal, DelegatingDeleter<IAnimal>> createAnimal() override {
+        ftl::unique_ptr<IAnimal> createAnimal() override {
             // Returns same type as CatFactory despite using different allocator
             return allocator_.make_unique<IAnimal>();
         }
@@ -376,15 +377,15 @@ namespace {
     public:
         CatFactory() : allocator_(strategy_) {}
         
-        std::unique_ptr<IAnimal, DelegatingDeleter<IAnimal>> createAnimal() override {
+        ftl::unique_ptr<IAnimal> createAnimal() override {
             // Returns same type as DogFactory despite using different allocator
             return allocator_.make_unique<IAnimal>();
         }
     };
 }
 
-// Test interface pattern with DelegatingDeleter
-TEST_F(ObjAllocatorTest, InterfaceWithDelegatingDeleter) {
+// Test interface pattern with custom unique_ptr
+TEST_F(ObjAllocatorTest, InterfaceWithCustomUniquePtr) {
     IAnimal::destruction_count = 0;
     
     // Use factories through the interface
@@ -396,7 +397,7 @@ TEST_F(ObjAllocatorTest, InterfaceWithDelegatingDeleter) {
     IAnimalFactory* factory2 = &catFactory;
     
     // Collection of animals from different factories - all have same unique_ptr type
-    std::vector<std::unique_ptr<IAnimal, DelegatingDeleter<IAnimal>>> zoo;
+    std::vector<ftl::unique_ptr<IAnimal>> zoo;
     
     // Add animals from different factories
     zoo.push_back(factory1->createAnimal());  // Dog
@@ -413,7 +414,7 @@ TEST_F(ObjAllocatorTest, InterfaceWithDelegatingDeleter) {
     EXPECT_EQ(IAnimal::destruction_count, 3);
     
     // Create a function that accepts animals from any factory
-    auto processAnimal = [](std::unique_ptr<IAnimal, DelegatingDeleter<IAnimal>> animal) {
+    auto processAnimal = [](ftl::unique_ptr<IAnimal> animal) {
         return std::string(animal->speak());
     };
     

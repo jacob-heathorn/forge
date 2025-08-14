@@ -2,10 +2,9 @@
 
 #include <cstddef>
 #include <utility>
-#include <memory>
 #include <new>
 #include "strategy.hpp"
-#include "ftl/deleter.hpp"
+#include "ftl/memory.hpp"
 
 namespace ftl::allocator {
 
@@ -13,7 +12,7 @@ namespace ftl::allocator {
 /// and handles object construction/destruction
 /// @tparam T Type of objects to allocate
 template<typename T>
-class ObjAllocator : public PolymorphicDeleter {
+class ObjAllocator : public ftl::Deleter {
 public:
     /// Constructor that takes a reference to an IObjStrategy
     /// @param strategy Object allocation strategy to use (must outlive this allocator)
@@ -54,16 +53,13 @@ public:
     /// @tparam B Base type for the unique_ptr (T must be derived from B, defaults to T)
     /// @tparam Args Constructor argument types
     /// @param args Arguments forwarded to T's constructor
-    /// @return std::unique_ptr<B, DelegatingDeleter<B>> that deallocates on destruction
+    /// @return ftl::unique_ptr<B> that deallocates on destruction
     template<typename B = T, typename... Args>
-    std::unique_ptr<B, DelegatingDeleter<B>> make_unique(Args&&... args) {
+    ftl::unique_ptr<B> make_unique(Args&&... args) {
         static_assert(std::is_base_of_v<B, T> || std::is_same_v<B, T>, 
                       "T must be derived from B or the same as B");
         T* obj = allocate(std::forward<Args>(args)...);
-        return std::unique_ptr<B, DelegatingDeleter<B>>{
-            obj,
-            DelegatingDeleter<B>{this}
-        };
+        return ftl::unique_ptr<B>(obj, this);
     }
 
 private:
