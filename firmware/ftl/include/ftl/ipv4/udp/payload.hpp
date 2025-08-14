@@ -39,9 +39,8 @@ private:
   }
 
 public:
-  // Initialize with a buffer strategy
-  static void initialize(allocator::IBufferStrategy& strategy) {
-    static allocator::BufferAllocator alloc{strategy};
+  // Initialize with a buffer allocator
+  static void initialize(allocator::BufferAllocator& alloc) {
     allocator() = &alloc;
   }
 

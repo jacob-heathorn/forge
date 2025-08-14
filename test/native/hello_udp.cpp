@@ -9,6 +9,7 @@
 #include "ftl/ipv4/endpoint.hpp"
 #include "ftl/ipv4/udp/payload.hpp"
 #include "ftl/allocator/bump_pool_buffer_strategy.hpp"
+#include "ftl/allocator/buffer_allocator.hpp"
 
 static constexpr size_t POOL_MEMORY_SIZE = 16 * 1024;
 uint8_t kBumpBuffer[POOL_MEMORY_SIZE];
@@ -26,10 +27,24 @@ int main() {
     // "Loopback" interface just for IPv4 on 127.0.0.1/24
     ftl::ethernet::NativeEthernetInterface lo{ Address{"127.0.0.1"}, Mask{"255.255.255.0"} };
 
-    // Initialize Payload allocator with bump pool strategy
-    std::array<std::size_t, 8> sizes = {256, 512, 768, 1024, 1280, 1536, 1792, 2048};
-    static ftl::allocator::BumpPoolBufferStrategy strategy(kAllocator, sizes);
-    Payload::initialize(strategy);
+    // Initialize Payload allocator with bump pool strategies
+    // Create individual strategies for each buffer size
+    static ftl::allocator::BumpPoolBufferStrategy strategy256(kAllocator, 256);
+    static ftl::allocator::BumpPoolBufferStrategy strategy512(kAllocator, 512);
+    static ftl::allocator::BumpPoolBufferStrategy strategy768(kAllocator, 768);
+    static ftl::allocator::BumpPoolBufferStrategy strategy1024(kAllocator, 1024);
+    static ftl::allocator::BumpPoolBufferStrategy strategy1280(kAllocator, 1280);
+    static ftl::allocator::BumpPoolBufferStrategy strategy1536(kAllocator, 1536);
+    static ftl::allocator::BumpPoolBufferStrategy strategy1792(kAllocator, 1792);
+    static ftl::allocator::BumpPoolBufferStrategy strategy2048(kAllocator, 2048);
+    
+    std::array<ftl::allocator::IBufferStrategy*, 8> strategies = {
+        &strategy256, &strategy512, &strategy768, &strategy1024,
+        &strategy1280, &strategy1536, &strategy1792, &strategy2048
+    };
+    
+    static ftl::allocator::BufferAllocator allocator(strategies);
+    Payload::initialize(allocator);
 
     // Create and configure the sender socket:
     SocketPtr sender = lo.CreateUdpSocket();

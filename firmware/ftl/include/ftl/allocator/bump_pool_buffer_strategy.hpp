@@ -2,7 +2,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <array>
 #include <type_traits>
 #include <new>
 #include <cstddef>   // offsetof
@@ -13,6 +12,8 @@
 
 namespace ftl::allocator {
 
+// Single-size bump pool buffer strategy
+// Manages buffers of exactly one size with a free list for reuse
 class BumpPoolBufferStrategy : public IBufferStrategy {
 public:
     using Base = IBufferStrategy;
@@ -20,54 +21,42 @@ public:
     struct BufferNode {
         BufferNode* next;
         ftl::Buffer buffer; // must keep standard-layout for offsetof
-        std::size_t slot_index; // Which slot/free list this belongs to
-
-        BufferNode(uint8_t* data, std::size_t requested_size, std::size_t slot_idx) noexcept
-            : next(nullptr), buffer(data, requested_size), slot_index(slot_idx) {}
+        
+        BufferNode(uint8_t* data, std::size_t requested_size) noexcept
+            : next(nullptr), buffer(data, requested_size) {}
     };
     static_assert(std::is_standard_layout<BufferNode>::value, "BufferNode must be standard-layout");
 
 private:
-    // Per-size locks to minimize contention
-    std::array<Mutex, kMaxSlots> freelist_mutex_{};
-
+    // Single mutex for this size's free list
+    Mutex freelist_mutex_{};
+    
     // Separate lock since allocator_ is NOT thread-safe
     Mutex alloc_mutex_;
-
+    
     BumpAllocator& allocator_;
-
-    std::array<BufferNode*, kMaxSlots> free_lists_{};
+    
+    BufferNode* free_list_ = nullptr;
 
 public:
-    // Constructor:
-    template <std::size_t N>
+    // Constructor for single-size strategy
     BumpPoolBufferStrategy(BumpAllocator& allocator,
-                        const std::array<std::size_t, N>& sizes,
-                        std::size_t alignment = alignof(std::max_align_t)) noexcept
-        : Base(sizes, alignment)
-        , allocator_(allocator) {
-        // Initialize free lists to nullptr
-        for (auto& list : free_lists_) {
-            list = nullptr;
-        }
-    }
+                          std::size_t size,
+                          std::size_t alignment = alignof(std::max_align_t)) noexcept
+        : Base(size, alignment)
+        , allocator_(allocator) {}
 
-    // Allocate fast path with tiny critical section:
+    // Allocate with fast path free list reuse
     ftl::Buffer* allocate(std::size_t req_size) noexcept override {
-        // choose class (no lock)
-        std::size_t size_index = num_slots();
-        for (std::size_t i = 0; i < num_slots(); ++i) {
-            if (this->size(i) >= req_size) { size_index = i; break; }
-        }
-        if (size_index == num_slots()) return nullptr;
-        const std::size_t alloc_size = this->size(size_index);
-
+        // Check size is within our allocation size
+        if (req_size > size_) return nullptr;
+        
         // Try reuse under a very short lock
         {
-            LockGuard<Mutex> lk(freelist_mutex_[size_index]);
-            BufferNode* head = free_lists_[size_index];
-            if (head) {
-                free_lists_[size_index] = head->next;
+            LockGuard<Mutex> lk(freelist_mutex_);
+            if (free_list_) {
+                BufferNode* head = free_list_;
+                free_list_ = head->next;
                 head->buffer = ftl::Buffer(head->buffer.front(), req_size);  // Update size
                 return &head->buffer;
             }
@@ -84,19 +73,19 @@ public:
             if (!node) return nullptr;
             
             // Allocate data with requested alignment
-            data = allocator_.allocate(alloc_size, this->alignment_);
+            data = allocator_.allocate(size_, alignment_);
             if (!data) {
                 // Can't deallocate node back to bump allocator, just leave it
                 return nullptr;
             }
         }
 
-        // Construct BufferNode with requested size and slot index
-        new (node) BufferNode(static_cast<uint8_t*>(data), req_size, size_index);
+        // Construct BufferNode with requested size
+        new (node) BufferNode(static_cast<uint8_t*>(data), req_size);
         return &node->buffer;
     }
 
-    // Deallocate with tiny critical section:
+    // Deallocate with tiny critical section
     void deallocate(ftl::Buffer* buffer) noexcept override {
         if (!buffer) return;
 
@@ -104,15 +93,11 @@ public:
         auto* node = reinterpret_cast<BufferNode*>(
             reinterpret_cast<char*>(buffer) - offsetof(BufferNode, buffer));
 
-        // Use the stored slot_index to return to the correct free list
-        const std::size_t size_index = node->slot_index;
-        if (size_index >= num_slots()) return;
-
-        // push under a very short lock
+        // Push under a very short lock
         {
-            LockGuard<Mutex> lk(freelist_mutex_[size_index]);
-            node->next = free_lists_[size_index];
-            free_lists_[size_index] = node;
+            LockGuard<Mutex> lk(freelist_mutex_);
+            node->next = free_list_;
+            free_list_ = node;
         }
     }
 };

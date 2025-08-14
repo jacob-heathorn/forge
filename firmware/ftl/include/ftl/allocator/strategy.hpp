@@ -44,55 +44,33 @@ public:
     virtual void deallocate(void* ptr) noexcept = 0;
 };
 
-// Base interface for buffer allocations with multiple size classes
-// Allocates ftl::Buffer* pointers from the smallest suitable size class
+// Base interface for buffer allocations with a single fixed size
+// Each strategy handles buffers of exactly one size
 class IBufferStrategy {
-public:
-    static constexpr std::size_t kMaxSlots = 8;  // Maximum number of size classes
-    
 protected:
-    std::array<std::size_t, kMaxSlots> sizes_;   // Size classes (sorted)
-    std::size_t num_slots_;                      // Actual number of slots in use
-    std::size_t alignment_;                      // Alignment requirement for buffers
+    std::size_t size_;        // Size of buffers this strategy allocates
+    std::size_t alignment_;   // Alignment requirement for buffers
     
 public:
-    // Templated constructor accepting std::array
-    // @param sizes std::array of buffer sizes (will be sorted automatically)
+    // Constructor for single-size buffer strategy
+    // @param size Size of buffers to allocate
     // @param alignment Alignment requirement for allocated buffers
-    template <std::size_t N>
-    IBufferStrategy(const std::array<std::size_t, N>& sizes,
+    IBufferStrategy(std::size_t size,
                     std::size_t alignment = alignof(std::max_align_t)) noexcept 
-        : num_slots_(N), alignment_(alignment) {
-        static_assert(N <= kMaxSlots, "Number of size classes exceeds maximum");
-        // Initialize all slots to 0
-        sizes_.fill(0);
-        // Copy provided sizes
-        for (std::size_t i = 0; i < N; ++i) {
-            sizes_[i] = sizes[i];
-        }
-        // Sort only the used slots
-        std::sort(sizes_.begin(), sizes_.begin() + N);
-    }
+        : size_(size), alignment_(alignment) {}
     
     virtual ~IBufferStrategy() = default;
     
-    // Allocate a buffer of the smallest size class >= requested size
+    // Allocate a buffer of the configured size
+    // @param req_size The requested size (must be <= size_)
     // Returns a pointer to ftl::Buffer or nullptr on failure
     virtual ftl::Buffer* allocate(std::size_t req_size) noexcept = 0;
     
     // Deallocate a buffer
     virtual void deallocate(ftl::Buffer* buffer) noexcept = 0;
     
-    // Get the number of size classes in use
-    std::size_t num_slots() const noexcept { return num_slots_; }
-    
-    // Get the sizes array (all kMaxSlots elements, use num_slots() for actual count)
-    const std::array<std::size_t, kMaxSlots>& sizes() const noexcept { return sizes_; }
-    
-    // Get a specific size
-    std::size_t size(std::size_t idx) const noexcept {
-        return (idx < num_slots_) ? sizes_[idx] : 0;
-    }
+    // Get the buffer size this strategy handles
+    std::size_t size() const noexcept { return size_; }
     
     // Get the alignment requirement
     std::size_t alignment() const noexcept { return alignment_; }
