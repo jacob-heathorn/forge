@@ -65,10 +65,10 @@ TEST_F(UniqueObjAllocatorTest, BasicAllocationWithMalloc) {
 // Test polymorphic usage with base and derived types
 TEST_F(UniqueObjAllocatorTest, PolymorphicUsage) {
     ftl::allocator::MallocObjStrategy<Derived> strategy;
-    ftl::allocator::UniqueObjAllocator<Derived, Base> allocator(strategy);
+    ftl::allocator::UniqueObjAllocator<Derived> allocator(strategy);
     
     {
-        std::unique_ptr<Base, DelegatingDeleter<Base>> base_ptr = allocator.acquire(100);
+        std::unique_ptr<Base, DelegatingDeleter<Base>> base_ptr = allocator.acquire<Base>(100);
         ASSERT_NE(base_ptr, nullptr);
         EXPECT_EQ(base_ptr->getValue(), 200);  // Derived::getValue() returns value * 2
     }
@@ -177,14 +177,14 @@ public:
 TEST_F(UniqueObjAllocatorTest, PolymorphicCollection) {
     ftl::allocator::MallocObjStrategy<Dog> dog_strategy;
     ftl::allocator::MallocObjStrategy<Cat> cat_strategy;
-    ftl::allocator::UniqueObjAllocator<Dog, Animal> dog_allocator(dog_strategy);
-    ftl::allocator::UniqueObjAllocator<Cat, Animal> cat_allocator(cat_strategy);
+    ftl::allocator::UniqueObjAllocator<Dog> dog_allocator(dog_strategy);
+    ftl::allocator::UniqueObjAllocator<Cat> cat_allocator(cat_strategy);
     
     std::vector<std::unique_ptr<Animal, DelegatingDeleter<Animal>>> animals;
     
-    animals.push_back(dog_allocator.acquire());
-    animals.push_back(cat_allocator.acquire());
-    animals.push_back(dog_allocator.acquire());
+    animals.push_back(dog_allocator.acquire<Animal>());
+    animals.push_back(cat_allocator.acquire<Animal>());
+    animals.push_back(dog_allocator.acquire<Animal>());
     
     EXPECT_EQ(animals[0]->speak(), "Woof!");
     EXPECT_EQ(animals[1]->speak(), "Meow!");

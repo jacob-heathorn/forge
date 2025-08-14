@@ -1,9 +1,8 @@
 #pragma once
 
-// Abstract base class for polymorphic deletion of objects of type T.
-// Used as a type-erased deleter with std::unique_ptr.
+// Abstract base class for polymorphic deletion of objects.
+// Uses void* for complete type erasure, allowing any type to use the same deleter.
 // Copying and moving are disabled to enforce unique ownership semantics.
-template <typename T>
 class PolymorphicDeleter
 {
 public:
@@ -19,26 +18,27 @@ public:
   PolymorphicDeleter(PolymorphicDeleter&&) = delete;                 // Delete move constructor
   PolymorphicDeleter& operator=(PolymorphicDeleter&&) = delete;      // Delete move assignment operator
 
-  // Pure virtual call operator to delete object of type T.
-  // @param ptr Pointer to object to delete.
-  virtual void operator()(T* ptr) = 0;
+  // Pure virtual call operator to delete object.
+  // @param ptr Pointer to object to delete (as void* for type erasure).
+  virtual void operator()(void* ptr) = 0;
 };
 
 
 // A default polymorphic deleter that just calls delete on the object.
 template <typename T>
-class DefaultDeleter final : public PolymorphicDeleter<T>
+class DefaultDeleter final : public PolymorphicDeleter
 {
 public:
-  void operator()(T* ptr) override
+  void operator()(void* ptr) override
   {
-    delete ptr;
+    delete static_cast<T*>(ptr);
   }
 };
 
 
-// Delegating deleter that owns and forwards deletion to a PolymorphicDeleter<T> instance.
-// We store a pointer because PolymorphicDeleter<T> is abstract and cannot be used directly
+// Delegating deleter that owns and forwards deletion to a PolymorphicDeleter instance.
+// Templated on T for type safety at the unique_ptr level, but uses void* internally.
+// We store a pointer because PolymorphicDeleter is abstract and cannot be used directly
 // as a std::unique_ptr deleter; owning the base-pointer enables runtime polymorphism and
 // type erasure of the deletion logic, while satisfying std::unique_ptr's requirement that
 // the deleter type be completely known at compile time.
@@ -46,9 +46,9 @@ template <typename T>
 class DelegatingDeleter
 {
 public:
-  // Construct with a pointer to a PolymorphicDeleter<T>.
+  // Construct with a pointer to a PolymorphicDeleter.
   // @param deleter Pointer to the polymorphic deleter instance.
-  explicit DelegatingDeleter(PolymorphicDeleter<T>* const deleter)
+  explicit DelegatingDeleter(PolymorphicDeleter* const deleter)
     : polymorphic_deleter_{deleter}
   {}
 
@@ -69,11 +69,11 @@ public:
   void operator()(T* ptr) const
   {
     if (polymorphic_deleter_ != nullptr) {
-      polymorphic_deleter_->operator()(ptr);
+      polymorphic_deleter_->operator()(static_cast<void*>(ptr));
     }
   }
 
 private:
   // Pointer to the polymorphic deleter instance.
-  PolymorphicDeleter<T>* polymorphic_deleter_ = nullptr;
+  PolymorphicDeleter* polymorphic_deleter_ = nullptr;
 };
