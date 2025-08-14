@@ -7,7 +7,7 @@
 #include <iomanip>
 
 #include "ftl/allocator/bump_allocator.hpp"
-#include "ftl/allocator/bump_pool_strategy.hpp"
+#include "ftl/allocator/bump_pool_obj_strategy.hpp"
 #include "ftl/map.hpp"
 
 static constexpr size_t POOL_MEMORY_SIZE = 10 * 1024 * 1024; // 10MB for performance tests

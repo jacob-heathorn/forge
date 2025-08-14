@@ -1,5 +1,5 @@
 #include "ftl/allocator/strategy.hpp"
-#include "ftl/allocator/malloc_strategy.hpp"
+#include "ftl/allocator/malloc_obj_strategy.hpp"
 #include "gtest/gtest.h"
 #include <cstdint>
 #include <cstring>

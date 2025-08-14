@@ -5,7 +5,7 @@
 #include <random>
 #include <map>
 
-#include "ftl/allocator/malloc_strategy.hpp"
+#include "ftl/allocator/malloc_obj_strategy.hpp"
 #include "ftl/map.hpp"
 
 class MapTest : public ::testing::Test {

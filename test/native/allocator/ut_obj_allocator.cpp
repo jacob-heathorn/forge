@@ -1,6 +1,6 @@
 #include "ftl/allocator/obj_allocator.hpp"
-#include "ftl/allocator/malloc_strategy.hpp"
-#include "ftl/allocator/bump_pool_strategy.hpp"
+#include "ftl/allocator/malloc_obj_strategy.hpp"
+#include "ftl/allocator/bump_pool_obj_strategy.hpp"
 #include "ftl/allocator/bump_allocator.hpp"
 #include "gtest/gtest.h"
 #include <memory>
