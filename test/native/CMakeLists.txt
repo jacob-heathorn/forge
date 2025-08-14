@@ -14,8 +14,9 @@ target_link_libraries(ut-ftl ftl ftl-native)
 
 # Allocator unit tests
 add_platform_test(ut-allocator
-  allocator/ut_malloc_strategy.cpp
-  allocator/ut_bump_pool_strategy.cpp
+  allocator/ut_bump_allocator.cpp
+  allocator/ut_malloc_obj_strategy.cpp
+  allocator/ut_bump_pool_obj_strategy.cpp
   allocator/ut_obj_allocator.cpp
   allocator/ut_unique_obj_allocator.cpp
   allocator/ut_malloc_buffer_strategy.cpp
