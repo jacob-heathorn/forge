@@ -38,12 +38,10 @@ int main() {
     static ftl::allocator::BumpPoolBufferStrategy strategy1792(kAllocator, 1792);
     static ftl::allocator::BumpPoolBufferStrategy strategy2048(kAllocator, 2048);
     
-    std::array<ftl::allocator::IBufferStrategy*, 8> strategies = {
+    static ftl::allocator::BufferAllocator allocator(std::array<ftl::allocator::IBufferStrategy*, 8>{
         &strategy256, &strategy512, &strategy768, &strategy1024,
         &strategy1280, &strategy1536, &strategy1792, &strategy2048
-    };
-    
-    static ftl::allocator::BufferAllocator allocator(strategies);
+    });
     Payload::initialize(allocator);
 
     // Create and configure the sender socket:
