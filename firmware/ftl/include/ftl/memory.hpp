@@ -75,8 +75,8 @@ public:
     // Constructor with nullptr
     constexpr unique_ptr(std::nullptr_t) noexcept : ptr_(nullptr), deleter_(nullptr) {}
     
-    // Constructor with pointer and deleter
-    explicit unique_ptr(T* ptr, IDeleter* deleter = nullptr) noexcept
+    // Constructor with pointer and deleter (deleter is required)
+    explicit unique_ptr(T* ptr, IDeleter* deleter) noexcept
         : ptr_(ptr), deleter_(deleter) {}
     
     // Destructor - calls deleter if set
@@ -121,21 +121,16 @@ public:
         return tmp;
     }
     
-    // Reset pointer, optionally to a new value
-    void reset(T* ptr = nullptr) noexcept {
+    // Reset pointer to nullptr
+    void reset() noexcept {
         if (ptr_ && deleter_) {
             deleter_->operator()(static_cast<void*>(ptr_));
-        } else if (ptr_) {
-            // No deleter set, use default delete
-            delete ptr_;
         }
-        ptr_ = ptr;
-        if (!ptr) {
-            deleter_ = nullptr;
-        }
+        ptr_ = nullptr;
+        deleter_ = nullptr;
     }
     
-    // Reset with new pointer and deleter
+    // Reset with new pointer and deleter (both required together)
     void reset(T* ptr, IDeleter* deleter) noexcept {
         reset();
         ptr_ = ptr;
