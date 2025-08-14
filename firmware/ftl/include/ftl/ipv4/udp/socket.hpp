@@ -2,7 +2,7 @@
 
 #include "stdint.h"
 
-#include "ftl/deleter.hpp"
+#include "ftl/memory.hpp"
 #include "ftl/ipv4/endpoint.hpp"
 #include "ftl/ipv4/udp/payload.hpp"
 
@@ -32,6 +32,6 @@ public:
   virtual bool leave_multicast_group(const ftl::ipv4::Address &group) = 0;
 };
 
-using SocketPtr = std::unique_ptr<Socket, DelegatingDeleter<Socket>>;
+using SocketPtr = ftl::unique_ptr<Socket>;
 
 }
