@@ -6,29 +6,53 @@
 
 namespace ftl {
 
-/// @brief Abstract interface for object deletion
-/// Used by ftl::unique_ptr to enable polymorphic deletion strategies
-class Deleter {
+/// @brief Abstract interface for object deletion with type erasure
+///
+/// Why we need type erasure (void* instead of templated):
+/// 
+/// In embedded systems with polymorphic factories, we need to return smart pointers
+/// to base interfaces from different concrete allocators. For example:
+///   - DogFactory returns unique_ptr<Animal> but allocates Dog objects
+///   - CatFactory returns unique_ptr<Animal> but allocates Cat objects
+///
+/// Without type erasure:
+///   - Each allocator would produce incompatible deleter types (IDeleter<Dog> vs IDeleter<Cat>)
+///   - Factories couldn't implement the same interface
+///   - Collections couldn't store objects from different factories
+///
+/// With type erasure (void*):
+///   - All deleters share the same base interface (IDeleter)
+///   - Different factories can return the same unique_ptr<Animal> type
+///   - Collections can store mixed concrete types with proper cleanup
+///
+/// The void* cast is safe because:
+///   - The deleter knows the actual type from construction
+///   - The cast happens in controlled allocator code
+///   - Type safety is maintained at the unique_ptr interface level
+///
+/// This design enables clean interfaces and dependency injection patterns
+/// critical for testable, maintainable embedded systems.
+class IDeleter {
 public:
-    virtual ~Deleter() = default;
+    virtual ~IDeleter() = default;
     
     /// Delete the object pointed to by ptr
     /// @param ptr Pointer to object to delete (as void* for type erasure)
     virtual void operator()(void* ptr) = 0;
     
     // Prevent copying and moving to ensure deleter lifetime is managed properly
-    Deleter(const Deleter&) = delete;
-    Deleter& operator=(const Deleter&) = delete;
-    Deleter(Deleter&&) = delete;
-    Deleter& operator=(Deleter&&) = delete;
+    IDeleter(const IDeleter&) = delete;
+    IDeleter& operator=(const IDeleter&) = delete;
+    IDeleter(IDeleter&&) = delete;
+    IDeleter& operator=(IDeleter&&) = delete;
     
 protected:
-    Deleter() = default;
+    IDeleter() = default;
 };
 
 /// @brief Default deleter that uses delete operator
 template<typename T>
-class DefaultDeleter : public Deleter {
+class DefaultDeleter : public IDeleter {
 public:
     void operator()(void* ptr) override {
         delete static_cast<T*>(ptr);
@@ -42,7 +66,7 @@ template<typename T>
 class unique_ptr {
 private:
     T* ptr_ = nullptr;
-    Deleter* deleter_ = nullptr;
+    IDeleter* deleter_ = nullptr;
     
 public:
     // Default constructor
@@ -52,7 +76,7 @@ public:
     constexpr unique_ptr(std::nullptr_t) noexcept : ptr_(nullptr), deleter_(nullptr) {}
     
     // Constructor with pointer and deleter
-    explicit unique_ptr(T* ptr, Deleter* deleter = nullptr) noexcept
+    explicit unique_ptr(T* ptr, IDeleter* deleter = nullptr) noexcept
         : ptr_(ptr), deleter_(deleter) {}
     
     // Destructor - calls deleter if set
@@ -112,7 +136,7 @@ public:
     }
     
     // Reset with new pointer and deleter
-    void reset(T* ptr, Deleter* deleter) noexcept {
+    void reset(T* ptr, IDeleter* deleter) noexcept {
         reset();
         ptr_ = ptr;
         deleter_ = deleter;
@@ -122,7 +146,7 @@ public:
     T* get() const noexcept { return ptr_; }
     
     // Get deleter
-    Deleter* get_deleter() const noexcept { return deleter_; }
+    IDeleter* get_deleter() const noexcept { return deleter_; }
     
     // Dereference operators
     T& operator*() const noexcept { return *ptr_; }

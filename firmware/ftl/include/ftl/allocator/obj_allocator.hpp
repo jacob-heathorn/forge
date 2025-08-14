@@ -12,7 +12,7 @@ namespace ftl::allocator {
 /// and handles object construction/destruction
 /// @tparam T Type of objects to allocate
 template<typename T>
-class ObjAllocator : public ftl::Deleter {
+class ObjAllocator : public ftl::IDeleter {
 public:
     /// Constructor that takes a reference to an IObjStrategy
     /// @param strategy Object allocation strategy to use (must outlive this allocator)
