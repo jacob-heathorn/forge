@@ -36,12 +36,23 @@ public:
 };
 
 
-// Delegating deleter that owns and forwards deletion to a PolymorphicDeleter instance.
-// Templated on T for type safety at the unique_ptr level, but uses void* internally.
-// We store a pointer because PolymorphicDeleter is abstract and cannot be used directly
-// as a std::unique_ptr deleter; owning the base-pointer enables runtime polymorphism and
-// type erasure of the deletion logic, while satisfying std::unique_ptr's requirement that
-// the deleter type be completely known at compile time.
+// Delegating deleter that forwards deletion to a PolymorphicDeleter instance.
+// 
+// Why we need this two-level design:
+// 1. std::unique_ptr requires its deleter to be a concrete type (not abstract) that can be 
+//    instantiated and stored by value inside the unique_ptr.
+// 2. Different allocators (e.g., ObjAllocator<Dog> vs ObjAllocator<Cat>) need different
+//    deletion logic, but we want them to produce unique_ptrs with the SAME deleter type
+//    so they can be stored in the same container or returned from the same interface.
+// 3. PolymorphicDeleter provides runtime polymorphism for different deletion strategies,
+//    but it's abstract and can't be used directly as a unique_ptr deleter.
+// 4. DelegatingDeleter is a concrete class that can be stored in unique_ptr, and it
+//    delegates to a PolymorphicDeleter pointer for the actual deletion logic.
+//
+// This enables polymorphic factories and collections:
+// - All unique_ptr<Animal, DelegatingDeleter<Animal>> have the same type
+// - But they can point to Dogs, Cats, etc. with appropriate deletion logic
+// - Different concrete types can be stored in the same vector or returned from same interface
 template <typename T>
 class DelegatingDeleter
 {
