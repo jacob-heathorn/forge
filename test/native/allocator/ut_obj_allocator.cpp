@@ -236,3 +236,95 @@ TEST_F(ObjAllocatorTest, BumpPoolExhaustion) {
         allocator.deallocate(obj);
     }
 }
+
+// Test make_unique basic functionality
+TEST_F(ObjAllocatorTest, MakeUniqueBasic) {
+    ftl::allocator::MallocObjStrategy<TrackedObject> strategy;
+    ftl::allocator::ObjAllocator<TrackedObject> allocator(strategy);
+    
+    {
+        auto obj = allocator.make_unique(999);
+        ASSERT_NE(obj, nullptr);
+        EXPECT_EQ(obj->value(), 999);
+        EXPECT_EQ(TrackedObject::alive_count, 1);
+    }
+    // obj goes out of scope, should be automatically deallocated
+    EXPECT_EQ(TrackedObject::alive_count, 0);
+}
+
+// Helper classes for polymorphic testing
+struct TestBase {
+    virtual ~TestBase() { destruction_count++; }
+    virtual int getValue() const { return 42; }
+    static int destruction_count;
+};
+int TestBase::destruction_count = 0;
+
+struct TestDerived : TestBase {
+    int getValue() const override { return 84; }
+    explicit TestDerived(int) {}  // Constructor with argument
+};
+
+// Test make_unique with polymorphic types
+TEST_F(ObjAllocatorTest, MakeUniquePolymorphic) {
+    TestBase::destruction_count = 0;
+    
+    ftl::allocator::MallocObjStrategy<TestDerived> strategy;
+    ftl::allocator::ObjAllocator<TestDerived> allocator(strategy);
+    
+    {
+        std::unique_ptr<TestBase, DelegatingDeleter<TestBase>> base_ptr = allocator.make_unique<TestBase>(100);
+        ASSERT_NE(base_ptr, nullptr);
+        EXPECT_EQ(base_ptr->getValue(), 84);  // TestDerived::getValue()
+    }
+    // Should properly destruct through virtual destructor
+    EXPECT_EQ(TestBase::destruction_count, 1);
+}
+
+// Test make_unique with multiple unique_ptrs
+TEST_F(ObjAllocatorTest, MakeUniqueMultiple) {
+    ftl::allocator::MallocObjStrategy<TrackedObject> strategy;
+    ftl::allocator::ObjAllocator<TrackedObject> allocator(strategy);
+    
+    std::vector<std::unique_ptr<TrackedObject, DelegatingDeleter<TrackedObject>>> objects;
+    
+    // Create multiple unique_ptrs
+    for (int i = 0; i < 5; ++i) {
+        objects.push_back(allocator.make_unique(i * 100));
+        ASSERT_NE(objects.back(), nullptr);
+        EXPECT_EQ(objects.back()->value(), i * 100);
+    }
+    
+    EXPECT_EQ(TrackedObject::alive_count, 5);
+    
+    // Clear vector, should trigger all destructors
+    objects.clear();
+    EXPECT_EQ(TrackedObject::alive_count, 0);
+}
+
+// Test make_unique move semantics
+TEST_F(ObjAllocatorTest, MakeUniqueMoveSemantics) {
+    ftl::allocator::MallocObjStrategy<TrackedObject> strategy;
+    ftl::allocator::ObjAllocator<TrackedObject> allocator(strategy);
+    
+    auto obj1 = allocator.make_unique(111);
+    ASSERT_NE(obj1, nullptr);
+    EXPECT_EQ(TrackedObject::alive_count, 1);
+    
+    // Move to another unique_ptr
+    auto obj2 = std::move(obj1);
+    EXPECT_EQ(obj1, nullptr);
+    ASSERT_NE(obj2, nullptr);
+    EXPECT_EQ(obj2->value(), 111);
+    EXPECT_EQ(TrackedObject::alive_count, 1);
+    
+    // Move assignment
+    auto obj3 = allocator.make_unique(333);
+    EXPECT_EQ(TrackedObject::alive_count, 2);
+    
+    obj2 = std::move(obj3);
+    EXPECT_EQ(obj3, nullptr);
+    ASSERT_NE(obj2, nullptr);
+    EXPECT_EQ(obj2->value(), 333);
+    EXPECT_EQ(TrackedObject::alive_count, 1);  // First object destroyed
+}
