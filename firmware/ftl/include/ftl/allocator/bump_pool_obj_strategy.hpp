@@ -20,7 +20,8 @@ private:
     };
     
     BumpAllocator& allocator_;
-    mutable Mutex mutex_;         // Protects free list
+    mutable Mutex free_list_mutex_;  // Protects free list operations
+    mutable Mutex bump_mutex_;        // Protects bump allocator
     NodeBase* free_list_{nullptr};
     std::size_t node_size_;      // Total size of node including header and storage
     std::size_t storage_offset_; // Offset from node start to storage
@@ -39,17 +40,19 @@ public:
     }
     
     void* allocate() noexcept {
-        LockGuard<Mutex> lock(mutex_);
-        
         // Try to get from free list first
-        if (free_list_) {
-            NodeBase* node = free_list_;
-            free_list_ = node->next;
-            // Return pointer to storage area
-            return reinterpret_cast<unsigned char*>(node) + storage_offset_;
+        {
+            LockGuard<Mutex> lock(free_list_mutex_);
+            if (free_list_) {
+                NodeBase* node = free_list_;
+                free_list_ = node->next;
+                // Return pointer to storage area
+                return reinterpret_cast<unsigned char*>(node) + storage_offset_;
+            }
         }
         
-        // Allocate new from bump allocator (must be inside lock since bump allocator is not thread-safe)
+        // Allocate new from bump allocator with separate lock
+        LockGuard<Mutex> lock(bump_mutex_);
         // Request alignment for the whole node to ensure storage is aligned
         void* mem = allocator_.allocate(node_size_, alignment_);
         if (!mem) return nullptr;
@@ -66,7 +69,7 @@ public:
             static_cast<unsigned char*>(ptr) - storage_offset_
         );
         
-        LockGuard<Mutex> lock(mutex_);
+        LockGuard<Mutex> lock(free_list_mutex_);
         // Add to free list
         node->next = free_list_;
         free_list_ = node;
