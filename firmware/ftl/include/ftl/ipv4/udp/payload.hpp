@@ -33,10 +33,8 @@ private:
   // NOTE: We have not implemented lower frame layers (e.g. EthernetFrame)
   static constexpr std::size_t kPayloadOffset = 0;
 
-  ftl::unique_ptr<Buffer> buffer_;
-  std::size_t actual_size_ = 0;  // Actual payload size (may be less than buffer size)
-  
   inline static Deleter deleter_;
+  ftl::unique_ptr<Buffer> buffer_;  
 
 public:
   // Initialize with a buffer allocator
@@ -50,7 +48,6 @@ public:
     Buffer* buf = Deleter::allocator->allocate(size);
     if (buf) {
       buffer_ = ftl::unique_ptr<Buffer>(buf, &deleter_);
-      actual_size_ = size;
     }
   }
   
