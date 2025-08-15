@@ -41,13 +41,13 @@ TEST_F(MallocBufferStrategyTest, SingleStrategyAllocation) {
 // Test multiple strategies with BufferAllocator
 TEST_F(MallocBufferStrategyTest, MultipleStrategiesWithAllocator) {
     // Create individual strategies for each size
-    auto strategy64 = std::make_unique<ftl::allocator::MallocBufferStrategy>(64);
-    auto strategy128 = std::make_unique<ftl::allocator::MallocBufferStrategy>(128);
-    auto strategy256 = std::make_unique<ftl::allocator::MallocBufferStrategy>(256);
+    ftl::allocator::MallocBufferStrategy strategy64(64);
+    ftl::allocator::MallocBufferStrategy strategy128(128);
+    ftl::allocator::MallocBufferStrategy strategy256(256);
     
     // Create allocator with strategy references
     ftl::allocator::BufferAllocator allocator(
-        *strategy64, *strategy128, *strategy256
+        strategy64, strategy128, strategy256
     );
     
     // Test various allocation sizes
@@ -124,12 +124,12 @@ TEST_F(MallocBufferStrategyTest, CustomAlignment) {
 // Test mixing different strategy types
 TEST_F(MallocBufferStrategyTest, MixedStrategySizes) {
     // Create strategies with different sizes
-    auto small = std::make_unique<ftl::allocator::MallocBufferStrategy>(128);
-    auto medium = std::make_unique<ftl::allocator::MallocBufferStrategy>(512);
-    auto large = std::make_unique<ftl::allocator::MallocBufferStrategy>(2048);
+    ftl::allocator::MallocBufferStrategy small(128);
+    ftl::allocator::MallocBufferStrategy medium(512);
+    ftl::allocator::MallocBufferStrategy large(2048);
     
     ftl::allocator::BufferAllocator allocator(
-        *small, *medium, *large
+        small, medium, large
     );
     
     // Allocate buffers of varying sizes
@@ -168,14 +168,14 @@ TEST_F(MallocBufferStrategyTest, MixedStrategySizes) {
 // Test allocator with unsorted strategies (should auto-sort)
 TEST_F(MallocBufferStrategyTest, UnsortedStrategies) {
     // Create strategies in non-ascending order
-    auto large = std::make_unique<ftl::allocator::MallocBufferStrategy>(512);
-    auto small = std::make_unique<ftl::allocator::MallocBufferStrategy>(64);
-    auto medium = std::make_unique<ftl::allocator::MallocBufferStrategy>(256);
+    ftl::allocator::MallocBufferStrategy large(512);
+    ftl::allocator::MallocBufferStrategy small(64);
+    ftl::allocator::MallocBufferStrategy medium(256);
     
     ftl::allocator::BufferAllocator allocator(
-        *large,   // 512
-        *small,   // 64
-        *medium   // 256
+        large,   // 512
+        small,   // 64
+        medium   // 256
     );
     
     // Verify sizes are sorted internally

@@ -16,14 +16,14 @@ protected:
 // Test basic allocation with MallocBufferStrategy
 TEST_F(BufferAllocatorTest, BasicAllocation) {
     // Create individual strategies
-    auto strategy64 = std::make_unique<ftl::allocator::MallocBufferStrategy>(64);
-    auto strategy128 = std::make_unique<ftl::allocator::MallocBufferStrategy>(128);
-    auto strategy256 = std::make_unique<ftl::allocator::MallocBufferStrategy>(256);
+    ftl::allocator::MallocBufferStrategy strategy64(64);
+    ftl::allocator::MallocBufferStrategy strategy128(128);
+    ftl::allocator::MallocBufferStrategy strategy256(256);
     
     ftl::allocator::BufferAllocator allocator(
-        *strategy64,
-        *strategy128,
-        *strategy256
+        strategy64,
+        strategy128,
+        strategy256
     );
     
     // Allocate a small buffer
@@ -52,14 +52,14 @@ TEST_F(BufferAllocatorTest, BasicAllocation) {
 
 // Test accessor methods
 TEST_F(BufferAllocatorTest, Accessors) {
-    auto strategy32 = std::make_unique<ftl::allocator::MallocBufferStrategy>(32);
-    auto strategy64 = std::make_unique<ftl::allocator::MallocBufferStrategy>(64);
-    auto strategy128 = std::make_unique<ftl::allocator::MallocBufferStrategy>(128);
+    ftl::allocator::MallocBufferStrategy strategy32(32);
+    ftl::allocator::MallocBufferStrategy strategy64(64);
+    ftl::allocator::MallocBufferStrategy strategy128(128);
     
     ftl::allocator::BufferAllocator allocator(
-        *strategy32,
-        *strategy64,
-        *strategy128
+        strategy32,
+        strategy64,
+        strategy128
     );
     
     const auto& sizes = allocator.sizes();
@@ -72,9 +72,9 @@ TEST_F(BufferAllocatorTest, Accessors) {
 
 // Test null pointer handling
 TEST_F(BufferAllocatorTest, NullPointerHandling) {
-    auto strategy64 = std::make_unique<ftl::allocator::MallocBufferStrategy>(64);
+    ftl::allocator::MallocBufferStrategy strategy64(64);
     
-    ftl::allocator::BufferAllocator allocator(*strategy64);
+    ftl::allocator::BufferAllocator allocator(strategy64);
     
     // Deallocating nullptr should be safe
     allocator.deallocate(nullptr);
@@ -87,10 +87,10 @@ TEST_F(BufferAllocatorTest, NullPointerHandling) {
 
 // Test multiple allocations and deallocations
 TEST_F(BufferAllocatorTest, MultipleAllocations) {
-    auto strategy64 = std::make_unique<ftl::allocator::MallocBufferStrategy>(64);
-    auto strategy128 = std::make_unique<ftl::allocator::MallocBufferStrategy>(128);
+    ftl::allocator::MallocBufferStrategy strategy64(64);
+    ftl::allocator::MallocBufferStrategy strategy128(128);
     
-    ftl::allocator::BufferAllocator allocator(*strategy64, *strategy128);
+    ftl::allocator::BufferAllocator allocator(strategy64, strategy128);
     
     std::vector<ftl::Buffer*> buffers;
     
@@ -111,10 +111,10 @@ TEST_F(BufferAllocatorTest, MultipleAllocations) {
 
 // Test allocation too large
 TEST_F(BufferAllocatorTest, AllocationTooLarge) {
-    auto strategy64 = std::make_unique<ftl::allocator::MallocBufferStrategy>(64);
-    auto strategy128 = std::make_unique<ftl::allocator::MallocBufferStrategy>(128);
+    ftl::allocator::MallocBufferStrategy strategy64(64);
+    ftl::allocator::MallocBufferStrategy strategy128(128);
     
-    ftl::allocator::BufferAllocator allocator(*strategy64, *strategy128);
+    ftl::allocator::BufferAllocator allocator(strategy64, strategy128);
     
     // Try to allocate larger than max size
     ftl::Buffer* buf = allocator.allocate(256);
@@ -125,10 +125,10 @@ TEST_F(BufferAllocatorTest, AllocationTooLarge) {
 TEST_F(BufferAllocatorTest, CustomAlignment) {
     constexpr size_t CACHE_LINE_SIZE = 64;
     
-    auto strategy128 = std::make_unique<ftl::allocator::MallocBufferStrategy>(128, CACHE_LINE_SIZE);
-    auto strategy256 = std::make_unique<ftl::allocator::MallocBufferStrategy>(256, CACHE_LINE_SIZE);
+    ftl::allocator::MallocBufferStrategy strategy128(128, CACHE_LINE_SIZE);
+    ftl::allocator::MallocBufferStrategy strategy256(256, CACHE_LINE_SIZE);
     
-    ftl::allocator::BufferAllocator allocator(*strategy128, *strategy256);
+    ftl::allocator::BufferAllocator allocator(strategy128, strategy256);
     
     ftl::Buffer* buf1 = allocator.allocate(100);
     ASSERT_NE(buf1, nullptr);
@@ -150,13 +150,13 @@ TEST_F(BufferAllocatorTest, CustomAlignment) {
 // Test with sizes in non-ascending order (should be sorted by allocator)
 TEST_F(BufferAllocatorTest, NonAscendingOrder) {
     // Create strategies in random order
-    auto strategy256 = std::make_unique<ftl::allocator::MallocBufferStrategy>(256);
-    auto strategy64 = std::make_unique<ftl::allocator::MallocBufferStrategy>(64);
-    auto strategy512 = std::make_unique<ftl::allocator::MallocBufferStrategy>(512);
-    auto strategy128 = std::make_unique<ftl::allocator::MallocBufferStrategy>(128);
+    ftl::allocator::MallocBufferStrategy strategy256(256);
+    ftl::allocator::MallocBufferStrategy strategy64(64);
+    ftl::allocator::MallocBufferStrategy strategy512(512);
+    ftl::allocator::MallocBufferStrategy strategy128(128);
     
     ftl::allocator::BufferAllocator allocator(
-        *strategy256, *strategy64, *strategy512, *strategy128
+        strategy256, strategy64, strategy512, strategy128
     );
     
     // Verify sizes are sorted
@@ -185,14 +185,14 @@ TEST_F(BufferAllocatorTest, WithBumpPoolStrategy) {
     ftl::BumpAllocator bump(arena, sizeof(arena));
     
     // Create bump pool strategies with different sizes
-    auto strategy64 = std::make_unique<ftl::allocator::BumpPoolBufferStrategy>(bump, 64);
-    auto strategy128 = std::make_unique<ftl::allocator::BumpPoolBufferStrategy>(bump, 128);
-    auto strategy256 = std::make_unique<ftl::allocator::BumpPoolBufferStrategy>(bump, 256);
+    ftl::allocator::BumpPoolBufferStrategy strategy64(bump, 64);
+    ftl::allocator::BumpPoolBufferStrategy strategy128(bump, 128);
+    ftl::allocator::BumpPoolBufferStrategy strategy256(bump, 256);
     
     ftl::allocator::BufferAllocator allocator(
-        *strategy64,
-        *strategy128,
-        *strategy256
+        strategy64,
+        strategy128,
+        strategy256
     );
     
     // Test allocation
@@ -228,14 +228,14 @@ TEST_F(BufferAllocatorTest, WithFixedPoolStrategy) {
     
     // Create fixed pool strategies with different sizes
     // Each pool pre-allocates a fixed number of buffers
-    auto strategy64 = std::make_unique<ftl::allocator::FixedPoolBufferStrategy>(bump, 64, 10);
-    auto strategy128 = std::make_unique<ftl::allocator::FixedPoolBufferStrategy>(bump, 128, 8);
-    auto strategy256 = std::make_unique<ftl::allocator::FixedPoolBufferStrategy>(bump, 256, 5);
+    ftl::allocator::FixedPoolBufferStrategy strategy64(bump, 64, 10);
+    ftl::allocator::FixedPoolBufferStrategy strategy128(bump, 128, 8);
+    ftl::allocator::FixedPoolBufferStrategy strategy256(bump, 256, 5);
     
     ftl::allocator::BufferAllocator allocator(
-        *strategy64,
-        *strategy128,
-        *strategy256
+        strategy64,
+        strategy128,
+        strategy256
     );
     
     // Test allocation
@@ -285,14 +285,14 @@ TEST_F(BufferAllocatorTest, MixedStrategies) {
     ftl::BumpAllocator bump(arena, sizeof(arena));
     
     // Mix of different strategy types
-    auto malloc64 = std::make_unique<ftl::allocator::MallocBufferStrategy>(64);
-    auto bumpPool128 = std::make_unique<ftl::allocator::BumpPoolBufferStrategy>(bump, 128);
-    auto fixedPool256 = std::make_unique<ftl::allocator::FixedPoolBufferStrategy>(bump, 256, 5);
+    ftl::allocator::MallocBufferStrategy malloc64(64);
+    ftl::allocator::BumpPoolBufferStrategy bumpPool128(bump, 128);
+    ftl::allocator::FixedPoolBufferStrategy fixedPool256(bump, 256, 5);
     
     ftl::allocator::BufferAllocator allocator(
-        *malloc64,
-        *bumpPool128,
-        *fixedPool256
+        malloc64,
+        bumpPool128,
+        fixedPool256
     );
     
     // Test allocation from each strategy

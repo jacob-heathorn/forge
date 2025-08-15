@@ -123,13 +123,13 @@ TEST_F(FixedPoolBufferStrategyTest, WithBufferAllocator) {
     ftl::BumpAllocator bump(arena, sizeof(arena));
     
     // Create multiple strategies with different sizes
-    auto strategy64 = std::make_unique<ftl::allocator::FixedPoolBufferStrategy>(bump, 64, 10);
-    auto strategy128 = std::make_unique<ftl::allocator::FixedPoolBufferStrategy>(bump, 128, 8);
-    auto strategy256 = std::make_unique<ftl::allocator::FixedPoolBufferStrategy>(bump, 256, 5);
+    ftl::allocator::FixedPoolBufferStrategy strategy64(bump, 64, 10);
+    ftl::allocator::FixedPoolBufferStrategy strategy128(bump, 128, 8);
+    ftl::allocator::FixedPoolBufferStrategy strategy256(bump, 256, 5);
     
     // Create allocator with strategies
     ftl::allocator::BufferAllocator allocator(
-        *strategy64, *strategy128, *strategy256
+        strategy64, strategy128, strategy256
     );
     
     // Small allocation should use 64-byte strategy
