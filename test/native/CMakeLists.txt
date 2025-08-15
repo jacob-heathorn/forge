@@ -18,6 +18,7 @@ add_platform_test(ut-allocator
   allocator/ut_bump_allocator.cpp
   allocator/ut_malloc_obj_strategy.cpp
   allocator/ut_bump_pool_obj_strategy.cpp
+  allocator/ut_fixed_pool_obj_strategy.cpp
   allocator/ut_obj_allocator.cpp
   allocator/ut_malloc_buffer_strategy.cpp
   allocator/ut_buffer_allocator.cpp
