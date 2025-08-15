@@ -22,8 +22,6 @@ private:
     
     mutable Mutex mutex_;         // Protects free list
     Node* free_list_{nullptr};    // Head of free list
-    Node* pool_start_{nullptr};   // Start of allocated pool
-    Node* pool_end_{nullptr};     // End of allocated pool
     std::size_t capacity_{0};     // Number of nodes allocated
     
 public:
@@ -46,12 +44,8 @@ public:
             return;
         }
         
-        // Set up pool boundaries
-        pool_start_ = static_cast<Node*>(mem);
-        pool_end_ = pool_start_ + count;
-        
         // Initialize free list with all nodes
-        Node* nodes = pool_start_;
+        Node* nodes = static_cast<Node*>(mem);
         for (std::size_t i = 0; i < count - 1; ++i) {
             nodes[i].next = &nodes[i + 1];
         }
@@ -84,11 +78,8 @@ public:
             static_cast<std::byte*>(ptr) - offsetof(Node, storage)
         );
         
-        // Validate that ptr is from our pool
-        if (node < pool_start_ || node >= pool_end_) {
-            // Invalid pointer - not from our pool
-            return;
-        }
+        // No validation - trust that ptr came from our pool
+        // In debug builds, could add checks like verifying the pointer alignment
         
         LockGuard<Mutex> lock(mutex_);
         
