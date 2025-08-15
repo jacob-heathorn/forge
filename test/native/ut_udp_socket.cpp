@@ -5,7 +5,6 @@
 #include <chrono>
 #include <cstring>
 #include <vector>
-#include <memory>
 
 #include "ftl/native_ethernet_interface.hpp"
 #include "ftl/ipv4/endpoint.hpp"

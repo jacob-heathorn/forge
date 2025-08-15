@@ -4,7 +4,6 @@
 #include "ftl/allocator/bump_allocator.hpp"
 #include "ftl/memory.hpp"
 #include "gtest/gtest.h"
-#include <memory>
 #include <vector>
 
 namespace {

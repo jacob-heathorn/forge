@@ -4,7 +4,6 @@
 #include "ftl/allocator/malloc_buffer_strategy.hpp"
 #include "gtest/gtest.h"
 #include <cstring>
-#include <memory>
 #include <vector>
 
 class BumpPoolBufferStrategyTest : public ::testing::Test {

@@ -1,7 +1,6 @@
 #include "ftl/memory.hpp"
 #include "gtest/gtest.h"
 #include <vector>
-#include <memory>
 
 namespace {
 
