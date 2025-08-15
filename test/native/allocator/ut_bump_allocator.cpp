@@ -165,25 +165,28 @@ TEST_F(BumpAllocatorTest, CacheAlignmentWithLargerAlignment) {
   EXPECT_LE(addr + 64, cache_line_end + ftl::BumpAllocator::kCacheLineSize);
 }
 
-// Tests that allocations larger than cache line size are not affected by cache alignment
-TEST_F(BumpAllocatorTest, CacheAlignmentIgnoredForLargeAllocations) {
+// Tests that all allocations are cache-aligned when cache alignment is enabled
+TEST_F(BumpAllocatorTest, CacheAlignmentAppliesToAllAllocations) {
   alignas(64) uint8_t cache_arena[512];
   ftl::BumpAllocator cache_allocator(cache_arena, sizeof(cache_arena), true);
   
-  // Allocate something small first to offset from cache line boundary
+  // Allocate something small first
   void* ptr1 = cache_allocator.allocate(10);
   ASSERT_NE(ptr1, nullptr);
   
-  // Allocate something larger than cache line (will cross boundaries regardless)
+  // Allocate something larger than cache line
   constexpr size_t large_size = ftl::BumpAllocator::kCacheLineSize + 20;
   void* ptr2 = cache_allocator.allocate(large_size);
   ASSERT_NE(ptr2, nullptr);
   
-  // Should immediately follow ptr1 (no cache line bumping for large allocations)
+  // With cache alignment enabled, all allocations should start at cache line boundaries
   auto addr1 = reinterpret_cast<uintptr_t>(ptr1);
   auto addr2 = reinterpret_cast<uintptr_t>(ptr2);
   
-  // ptr2 should start right after ptr1 (with default alignment)
-  auto expected_addr2 = (addr1 + 10 + alignof(std::max_align_t) - 1) & ~(alignof(std::max_align_t) - 1);
-  EXPECT_EQ(addr2, expected_addr2) << "Large allocation should not be bumped to cache line";
+  // Both allocations should be cache-aligned
+  EXPECT_EQ(addr1 % ftl::BumpAllocator::kCacheLineSize, 0u) << "First allocation should be cache-aligned";
+  EXPECT_EQ(addr2 % ftl::BumpAllocator::kCacheLineSize, 0u) << "Large allocation should also be cache-aligned";
+  
+  // ptr2 should be at least one cache line after ptr1
+  EXPECT_GE(addr2 - addr1, ftl::BumpAllocator::kCacheLineSize) << "Large allocation should start at next cache line";
 }

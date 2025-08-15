@@ -18,7 +18,7 @@ class BumpAllocator {
   // Constructor.
   // @param base  Pointer to the beginning of the memory block.
   // @param size  Size of the memory block in bytes.
-  // @param cache_align  If true, ensures allocations smaller than a cache line don't cross cache line boundaries.
+  // @param cache_align  If true, ensures all allocations start at cache line boundaries.
   BumpAllocator(uint8_t* base, size_t size, bool cache_align = false)
     : ptr_{base}, base_{base}, end_{base + size}, cache_align_{cache_align} {}
 
@@ -28,24 +28,15 @@ class BumpAllocator {
   // @return Pointer to the allocated memory if successful, or nullptr if out of memory.
   void* allocate(size_t size, size_t alignment = alignof(max_align_t)) {
     uintptr_t current = reinterpret_cast<uintptr_t>(ptr_);
+    
+    // If cache alignment is enabled, ensure allocations start at cache line boundaries
+    if (cache_align_) {
+      // Use the larger of the requested alignment or cache line size
+      alignment = (alignment > kCacheLineSize) ? alignment : kCacheLineSize;
+    }
+    
     // Align the current pointer to the requested alignment.
     uintptr_t aligned = (current + alignment - 1) & ~(alignment - 1);
-    
-    // If cache alignment is enabled and allocation fits within a cache line,
-    // ensure it doesn't cross cache line boundaries
-    if (cache_align_ && size <= kCacheLineSize) {
-      uintptr_t cache_line_start = aligned & ~(kCacheLineSize - 1);
-      uintptr_t cache_line_end = cache_line_start + kCacheLineSize;
-      
-      // If the allocation would cross a cache line boundary, bump to next cache line
-      if (aligned + size > cache_line_end) {
-        aligned = cache_line_end;
-        // Re-apply the alignment requirement in case it's larger than cache line
-        if (alignment > kCacheLineSize) {
-          aligned = (aligned + alignment - 1) & ~(alignment - 1);
-        }
-      }
-    }
     
     // Check if there is enough memory remaining.
     if (aligned + size <= reinterpret_cast<uintptr_t>(end_)) {
