@@ -8,36 +8,42 @@
 
 namespace ftl::allocator {
 
-/// Fixed-size pool object allocation strategy
-/// Pre-allocates a fixed number of nodes from a bump allocator
-/// @tparam T Type of objects to allocate
-template <typename T>
-class FixedPoolObjStrategy : public IObjStrategy<T> {
+namespace detail {
+
+// Non-virtual fixed pool implementation to avoid code duplication
+// Pre-allocates all nodes from bump allocator
+class FixedPoolImpl {
 private:
-    // Node structure for the free list
-    struct Node {
-        Node* next{nullptr};
-        alignas(T) std::byte storage[sizeof(T)];
+    // Base node structure for the free list
+    struct NodeBase {
+        NodeBase* next{nullptr};
     };
     
     mutable Mutex mutex_;         // Protects free list
-    Node* free_list_{nullptr};    // Head of free list
+    NodeBase* free_list_{nullptr};  // Head of free list
+    std::size_t node_size_;       // Total size of node including header and storage
+    std::size_t storage_offset_;  // Offset from node start to storage
     std::size_t capacity_{0};     // Number of nodes allocated
     
 public:
-    /// Constructor that pre-allocates nodes from bump allocator
-    /// @param allocator Bump allocator to allocate nodes from
-    /// @param count Number of nodes to pre-allocate
-    FixedPoolObjStrategy(BumpAllocator& allocator, std::size_t count) noexcept
+    FixedPoolImpl(BumpAllocator& allocator, std::size_t size, std::size_t alignment, std::size_t count) noexcept
         : capacity_(count) {
         
         if (count == 0) {
             return;
         }
         
+        // Calculate storage offset to ensure proper alignment
+        // Storage comes after NodeBase, aligned to requested alignment
+        storage_offset_ = sizeof(NodeBase);
+        if (alignment > alignof(NodeBase)) {
+            storage_offset_ = (storage_offset_ + alignment - 1) & ~(alignment - 1);
+        }
+        node_size_ = storage_offset_ + size;
+        
         // Allocate all nodes at once as a contiguous block
-        std::size_t total_size = sizeof(Node) * count;
-        void* mem = allocator.allocate(total_size, alignof(Node));
+        std::size_t total_size = node_size_ * count;
+        void* mem = allocator.allocate(total_size, alignment);
         
         if (!mem) {
             capacity_ = 0;
@@ -45,41 +51,37 @@ public:
         }
         
         // Initialize free list with all nodes
-        Node* nodes = static_cast<Node*>(mem);
+        unsigned char* nodes = static_cast<unsigned char*>(mem);
         for (std::size_t i = 0; i < count - 1; ++i) {
-            nodes[i].next = &nodes[i + 1];
+            NodeBase* node = reinterpret_cast<NodeBase*>(nodes + i * node_size_);
+            NodeBase* next = reinterpret_cast<NodeBase*>(nodes + (i + 1) * node_size_);
+            node->next = next;
         }
-        nodes[count - 1].next = nullptr;
-        free_list_ = &nodes[0];
+        NodeBase* last = reinterpret_cast<NodeBase*>(nodes + (count - 1) * node_size_);
+        last->next = nullptr;
+        free_list_ = reinterpret_cast<NodeBase*>(nodes);
     }
     
-    /// Allocate memory for an object
-    /// @return Pointer to allocated memory, or nullptr if pool is exhausted
-    void* allocate() noexcept override {
+    void* allocate() noexcept {
         LockGuard<Mutex> lock(mutex_);
         
         if (!free_list_) {
             return nullptr;  // Pool exhausted
         }
         
-        Node* node = free_list_;
+        NodeBase* node = free_list_;
         free_list_ = node->next;
-        return node->storage;
+        // Return pointer to storage area
+        return reinterpret_cast<unsigned char*>(node) + storage_offset_;
     }
     
-    /// Deallocate memory for an object
-    /// @param ptr Pointer to memory to deallocate
-    void deallocate(void* ptr) noexcept override {
+    void deallocate(void* ptr) noexcept {
         if (!ptr) return;
         
-        // Calculate node address from storage pointer
-        // storage is at offset of sizeof(Node*) from Node start
-        Node* node = reinterpret_cast<Node*>(
-            static_cast<std::byte*>(ptr) - offsetof(Node, storage)
+        // Calculate Node address from storage pointer
+        NodeBase* node = reinterpret_cast<NodeBase*>(
+            static_cast<unsigned char*>(ptr) - storage_offset_
         );
-        
-        // No validation - trust that ptr came from our pool
-        // In debug builds, could add checks like verifying the pointer alignment
         
         LockGuard<Mutex> lock(mutex_);
         
@@ -88,22 +90,60 @@ public:
         free_list_ = node;
     }
     
-    /// Get the maximum number of objects that can be allocated
     std::size_t capacity() const noexcept {
         return capacity_;
     }
     
-    /// Get the number of currently available objects
     std::size_t available() const noexcept {
         LockGuard<Mutex> lock(mutex_);
         
         std::size_t count = 0;
-        Node* current = free_list_;
+        NodeBase* current = free_list_;
         while (current) {
             ++count;
             current = current->next;
         }
         return count;
+    }
+};
+
+} // namespace detail
+
+/// Fixed-size pool object allocation strategy
+/// Pre-allocates a fixed number of nodes from a bump allocator
+/// @tparam T Type of objects to allocate
+template <typename T>
+class FixedPoolObjStrategy : public IObjStrategy<T> {
+private:
+    detail::FixedPoolImpl impl_;
+    
+public:
+    /// Constructor that pre-allocates nodes from bump allocator
+    /// @param allocator Bump allocator to allocate nodes from
+    /// @param count Number of nodes to pre-allocate
+    FixedPoolObjStrategy(BumpAllocator& allocator, std::size_t count) noexcept
+        : impl_(allocator, sizeof(T), alignof(T), count) {}
+    
+    /// Allocate memory for an object
+    /// @return Pointer to allocated memory, or nullptr if pool is exhausted
+    void* allocate() noexcept override {
+        return impl_.allocate();
+    }
+    
+    /// Deallocate memory for an object
+    /// @param ptr Pointer to memory to deallocate
+    void deallocate(void* ptr) noexcept override {
+        impl_.deallocate(ptr);
+    }
+    
+    /// Get the maximum number of objects that can be allocated
+    std::size_t capacity() const noexcept {
+        return impl_.capacity();
+    }
+    
+    /// Get the number of currently available objects
+    std::size_t available() const noexcept {
+        return impl_.available();
     }
     
     /// Get the number of currently allocated objects
