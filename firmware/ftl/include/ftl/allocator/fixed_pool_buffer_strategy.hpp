@@ -20,9 +20,7 @@ private:
     
     mutable Mutex mutex_;         // Protects free list
     Node* free_list_{nullptr};    // Head of free list
-    std::size_t buffer_size_;     // Size of each buffer
     std::size_t capacity_{0};     // Number of buffers allocated
-    std::size_t alignment_;       // Buffer alignment
     
 public:
     /// Constructor that pre-allocates buffers from bump allocator
@@ -32,7 +30,7 @@ public:
     /// @param alignment Required alignment for buffers (default: alignof(std::max_align_t))
     FixedPoolBufferStrategy(BumpAllocator& allocator, std::size_t buffer_size, 
                            std::size_t count, std::size_t alignment = alignof(std::max_align_t)) noexcept
-        : buffer_size_(buffer_size), alignment_(alignment), capacity_(count) {
+        : IBufferStrategy(buffer_size, alignment), capacity_(count) {
         
         if (count == 0 || buffer_size == 0) {
             capacity_ = 0;
@@ -78,21 +76,11 @@ public:
         free_list_ = &nodes[0];
     }
     
-    /// Get the size of buffers this strategy allocates
-    std::size_t size() const noexcept override {
-        return buffer_size_;
-    }
-    
-    /// Get the alignment of buffers this strategy allocates
-    std::size_t alignment() const noexcept override {
-        return alignment_;
-    }
-    
     /// Allocate a buffer
-    /// @param requested_size Size requested (must be <= buffer_size_)
+    /// @param requested_size Size requested (must be <= size_)
     /// @return Pointer to allocated buffer, or nullptr if pool is exhausted
     Buffer* allocate(std::size_t requested_size) noexcept override {
-        if (requested_size > buffer_size_) {
+        if (requested_size > size_) {
             return nullptr;  // Can't satisfy request
         }
         
@@ -104,6 +92,9 @@ public:
         
         Node* node = free_list_;
         free_list_ = node->next;
+        
+        // Adjust buffer size to requested size
+        node->buffer = Buffer(node->buffer.front(), requested_size);
         return &node->buffer;
     }
     
@@ -118,11 +109,8 @@ public:
             reinterpret_cast<uint8_t*>(buffer) - offsetof(Node, buffer)
         );
         
-        // Basic sanity check - node should have a valid buffer with our size
-        // This isn't perfect validation but catches obvious bad pointers
-        if (node->buffer.size() != buffer_size_) {
-            return;  // Not from our pool
-        }
+        // No validation - trust that buffer came from our pool
+        // This matches BumpPoolBufferStrategy behavior
         
         LockGuard<Mutex> lock(mutex_);
         
