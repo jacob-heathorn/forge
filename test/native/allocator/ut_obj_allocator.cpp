@@ -1,6 +1,7 @@
 #include "ftl/allocator/obj_allocator.hpp"
 #include "ftl/allocator/malloc_obj_strategy.hpp"
 #include "ftl/allocator/bump_pool_obj_strategy.hpp"
+#include "ftl/allocator/fixed_pool_obj_strategy.hpp"
 #include "ftl/allocator/bump_allocator.hpp"
 #include "ftl/memory.hpp"
 #include "gtest/gtest.h"
@@ -106,6 +107,54 @@ TEST_F(ObjAllocatorTest, BumpPoolStrategyBasic) {
     EXPECT_EQ(obj2->value(), 789);
     
     allocator.deallocate(obj2);
+}
+
+// Test ObjAllocator with FixedPoolObjStrategy
+TEST_F(ObjAllocatorTest, FixedPoolStrategyBasic) {
+    alignas(64) uint8_t arena[8192];
+    ftl::BumpAllocator bump(arena, sizeof(arena));
+    
+    // Pre-allocate 10 objects
+    ftl::allocator::FixedPoolObjStrategy<TrackedObject> strategy(bump, 10);
+    ftl::allocator::ObjAllocator<TrackedObject> allocator(strategy);
+    
+    EXPECT_EQ(strategy.capacity(), 10u);
+    EXPECT_EQ(strategy.available(), 10u);
+    
+    // Allocate and construct object
+    TrackedObject* obj = allocator.allocate(321);
+    ASSERT_NE(obj, nullptr);
+    EXPECT_EQ(obj->value(), 321);
+    EXPECT_EQ(TrackedObject::alive_count, 1);
+    EXPECT_EQ(strategy.available(), 9u);
+    
+    // Deallocate - should destruct object and return to pool
+    allocator.deallocate(obj);
+    EXPECT_EQ(TrackedObject::alive_count, 0);
+    EXPECT_EQ(strategy.available(), 10u);
+    
+    // Allocate multiple objects
+    std::vector<TrackedObject*> objects;
+    for (int i = 0; i < 10; ++i) {
+        TrackedObject* o = allocator.allocate(i * 10);
+        ASSERT_NE(o, nullptr) << "Failed to allocate object " << i;
+        objects.push_back(o);
+    }
+    
+    EXPECT_EQ(TrackedObject::alive_count, 10);
+    EXPECT_EQ(strategy.available(), 0u);
+    
+    // Try to allocate one more - should fail (pool exhausted)
+    TrackedObject* extra = allocator.allocate(999);
+    EXPECT_EQ(extra, nullptr);
+    
+    // Deallocate all
+    for (TrackedObject* o : objects) {
+        allocator.deallocate(o);
+    }
+    
+    EXPECT_EQ(TrackedObject::alive_count, 0);
+    EXPECT_EQ(strategy.available(), 10u);
 }
 
 // Test multiple allocations and deallocations
@@ -250,6 +299,51 @@ TEST_F(ObjAllocatorTest, MakeUniqueBasic) {
     }
     // obj goes out of scope, should be automatically deallocated
     EXPECT_EQ(TrackedObject::alive_count, 0);
+}
+
+// Test make_unique with FixedPoolObjStrategy
+TEST_F(ObjAllocatorTest, MakeUniqueWithFixedPool) {
+    alignas(64) uint8_t arena[4096];
+    ftl::BumpAllocator bump(arena, sizeof(arena));
+    
+    // Pre-allocate 5 objects
+    ftl::allocator::FixedPoolObjStrategy<TrackedObject> strategy(bump, 5);
+    ftl::allocator::ObjAllocator<TrackedObject> allocator(strategy);
+    
+    std::vector<ftl::unique_ptr<TrackedObject>> objects;
+    
+    // Create unique_ptrs using the fixed pool
+    for (int i = 0; i < 5; ++i) {
+        auto obj = allocator.make_unique(i * 11);
+        ASSERT_NE(obj, nullptr) << "Failed to create unique_ptr " << i;
+        EXPECT_EQ(obj->value(), i * 11);
+        objects.push_back(std::move(obj));
+    }
+    
+    EXPECT_EQ(TrackedObject::alive_count, 5);
+    EXPECT_EQ(strategy.available(), 0u);
+    
+    // Try to allocate one more - should fail (pool exhausted)
+    auto extra = allocator.make_unique(666);
+    EXPECT_EQ(extra, nullptr);
+    
+    // Free one object by resetting a unique_ptr
+    objects[2].reset();
+    EXPECT_EQ(TrackedObject::alive_count, 4);
+    EXPECT_EQ(strategy.available(), 1u);
+    
+    // Now we can allocate again
+    extra = allocator.make_unique(777);
+    ASSERT_NE(extra, nullptr);
+    EXPECT_EQ(extra->value(), 777);
+    EXPECT_EQ(TrackedObject::alive_count, 5);
+    
+    // Clear all objects
+    objects.clear();
+    extra.reset();
+    
+    EXPECT_EQ(TrackedObject::alive_count, 0);
+    EXPECT_EQ(strategy.available(), 5u);
 }
 
 // Helper classes for polymorphic testing
