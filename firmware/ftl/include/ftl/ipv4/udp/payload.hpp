@@ -2,7 +2,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <memory>
 #include <cassert>
 #include <type_traits>
 
@@ -10,47 +9,49 @@
 #include "ftl/buffer.hpp"
 #include "ftl/allocator/buffer_allocator.hpp"
 #include "ftl/allocator/strategy.hpp"
+#include "ftl/memory.hpp"
 
 namespace ftl::ipv4::udp {
-
-// Custom deleter for Buffer that returns it to the allocator
-struct PayloadBufferDeleter {
-    allocator::BufferAllocator* allocator;
-
-    void operator()(Buffer* buf) const noexcept {
-        if (allocator && buf) allocator->deallocate(buf);
-    }
-};
 
 // Provides an interface to an ethernet data frame to access UDP payload data. 
 class Payload {
 private:
+  // Static deleter for Payload buffers
+  class Deleter : public ftl::IDeleter {
+  public:
+    inline static allocator::BufferAllocator* allocator = nullptr;
+    
+    void operator()(void* ptr) override {
+      if (ptr && allocator) {
+        allocator->deallocate(static_cast<Buffer*>(ptr));
+      }
+    }
+  };
+  
   // Offsets into the raw frame
   //
   // NOTE: We have not implemented lower frame layers (e.g. EthernetFrame)
   static constexpr std::size_t kPayloadOffset = 0;
 
-  std::unique_ptr<Buffer, PayloadBufferDeleter> buffer_;
+  ftl::unique_ptr<Buffer> buffer_;
   std::size_t actual_size_ = 0;  // Actual payload size (may be less than buffer size)
-
-  static allocator::BufferAllocator*& allocator() {
-    static allocator::BufferAllocator* ptr = nullptr;
-    return ptr;
-  }
+  
+  inline static Deleter deleter_;
 
 public:
   // Initialize with a buffer allocator
   static void initialize(allocator::BufferAllocator& alloc) {
-    allocator() = &alloc;
+    Deleter::allocator = &alloc;
   }
 
   // Construct with payload size
   explicit Payload(std::size_t size) {
-    assert(allocator() && "Payload::initialize() has not been called.");
-    buffer_ = std::unique_ptr<Buffer, PayloadBufferDeleter>(
-        allocator()->allocate(size),
-        PayloadBufferDeleter{allocator()}
-    );
+    assert(Deleter::allocator && "Payload::initialize() has not been called.");
+    Buffer* buf = Deleter::allocator->allocate(size);
+    if (buf) {
+      buffer_ = ftl::unique_ptr<Buffer>(buf, &deleter_);
+      actual_size_ = size;
+    }
   }
   
   Payload() = default;
@@ -79,6 +80,6 @@ public:
   }
 };
 
-// Payload contains a unique_ptr with custom deleter, which is 2 pointers
+// Payload contains a unique_ptr with deleter pointer, which is 2 pointers
 
 }
