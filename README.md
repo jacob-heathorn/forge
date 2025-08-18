@@ -49,3 +49,10 @@ ctest
 cmake --workflow --preset native-debug && \
 rip -r native-debug:hello-udp
 ```
+
+# Copyright & Licensing
+
+Copyright (c) 2025 Jacob Heathorn
+
+This project is released under the **Academic Use License** (see [LICENSE](./LICENSE)).
+For **commercial licensing**, please contact: <jacob.heathorn@gmail.com>.
