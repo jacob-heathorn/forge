@@ -34,30 +34,26 @@ public:
         sizes_.fill(0);
         
         // Helper to populate arrays
-        std::size_t i = 0;
-        ((strategies_[i] = &strategies, sizes_[i] = strategies.size(), ++i), ...);
+        std::size_t idx = 0;
+        ((strategies_[idx] = &strategies, sizes_[idx] = strategies.size(), ++idx), ...);
         
-        // Sort strategies by size using index sorting
-        std::array<std::size_t, kMaxSlots> indices{};
-        for (std::size_t j = 0; j < num_slots_; ++j) {
-            indices[j] = j;
+        // Sort strategies by size - simple bubble sort to avoid std::sort issues
+        // with aggressive optimization
+        for (std::size_t i = 0; i < num_slots_; ++i) {
+            for (std::size_t j = i + 1; j < num_slots_; ++j) {
+                if (sizes_[j] < sizes_[i]) {
+                    // Swap strategies
+                    IBufferStrategy* temp_strategy = strategies_[i];
+                    strategies_[i] = strategies_[j];
+                    strategies_[j] = temp_strategy;
+                    
+                    // Swap sizes
+                    std::size_t temp_size = sizes_[i];
+                    sizes_[i] = sizes_[j];
+                    sizes_[j] = temp_size;
+                }
+            }
         }
-        
-        std::sort(indices.begin(), indices.begin() + num_slots_,
-                  [this](std::size_t a, std::size_t b) {
-                      return sizes_[a] < sizes_[b];
-                  });
-        
-        // Reorder strategies and sizes based on sorted indices
-        std::array<IBufferStrategy*, kMaxSlots> sorted_strategies{};
-        std::array<std::size_t, kMaxSlots> sorted_sizes{};
-        for (std::size_t j = 0; j < num_slots_; ++j) {
-            sorted_strategies[j] = strategies_[indices[j]];
-            sorted_sizes[j] = sizes_[indices[j]];
-        }
-        
-        strategies_ = sorted_strategies;
-        sizes_ = sorted_sizes;
     }
     
     /// Allocate a buffer of the smallest size >= requested size

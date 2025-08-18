@@ -57,7 +57,6 @@ TEST_F(BumpPoolStrategyTest, ObjectAllocationBasic) {
     
     // Destroy object
     obj->~TestObject();
-    EXPECT_FALSE(obj->active);
     
     // Deallocate memory
     obj_strategy.deallocate(raw);

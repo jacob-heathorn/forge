@@ -66,9 +66,15 @@ public:
   }
 
   // Access the UDP payload pointer
-  uint8_t* front() noexcept { return buffer_->front() + kPayloadOffset; }
-  const uint8_t* front() const noexcept { return buffer_->front() + kPayloadOffset; }
-  std::size_t size() const noexcept { return buffer_->size() - kPayloadOffset; }
+  uint8_t* front() noexcept { 
+    return buffer_ ? (buffer_->front() + kPayloadOffset) : nullptr; 
+  }
+  const uint8_t* front() const noexcept { 
+    return buffer_ ? (buffer_->front() + kPayloadOffset) : nullptr; 
+  }
+  std::size_t size() const noexcept { 
+    return buffer_ ? (buffer_->size() - kPayloadOffset) : 0; 
+  }
 
   // Returns the payload interpreted as characters in an etl::string_view
   etl::string_view string_view() const noexcept {

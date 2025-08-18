@@ -1,10 +1,9 @@
 #pragma once
 
-#include <functional>
-#include <iterator>
 #include <utility>
 #include <cassert>
 #include <cstddef>
+#include <cstdlib>
 #include "ftl/allocator/obj_allocator.hpp"
 #include "ftl/allocator/strategy.hpp"
 
@@ -78,6 +77,10 @@ private:
     /// All leaf pointers point to this single nil node to save memory
     void initialize_nil() {
         nil_ = alloc_.allocate();
+        if (!nil_) {
+            // Cannot recover from nil allocation failure
+            std::abort();
+        }
         nil_->parent = nil_->left = nil_->right = nil_;
         nil_->color = Color::BLACK;  // nil is always black by RB-tree definition
     }
@@ -581,6 +584,10 @@ public:
 
         // Allocate and construct new node
         Node* z = alloc_.allocate(value);
+        if (!z) {
+            // Allocation failed
+            return {iterator(nil_, nil_), false};
+        }
         z->parent = y;
         z->left = nil_;
         z->right = nil_;
@@ -607,6 +614,10 @@ public:
     std::pair<iterator, bool> emplace(Args&&... args) {
         // Allocate temp node to get the key for comparison
         Node* temp = alloc_.allocate(std::forward<Args>(args)...);
+        if (!temp) {
+            // Allocation failed
+            return {iterator(nil_, nil_), false};
+        }
         
         Node* y = nil_;
         Node* x = root_;
