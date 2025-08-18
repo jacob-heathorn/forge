@@ -6,13 +6,17 @@
 #include <map>
 
 #include "ftl/allocator/malloc_obj_strategy.hpp"
+#include "ftl/allocator/obj_allocator.hpp"
 #include "ftl/map.hpp"
 
 class MapTest : public ::testing::Test {
 protected:
     // Common allocator for int->string maps
     using IntStringNode = ftl::Map<int, std::string>::Node;
-    ftl::allocator::MallocObjStrategy<IntStringNode> int_string_alloc_;
+    ftl::allocator::MallocObjStrategy<IntStringNode> int_string_strategy_;
+    ftl::allocator::ObjAllocator<IntStringNode> int_string_alloc_;
+    
+    MapTest() : int_string_alloc_(int_string_strategy_) {}
     
     void SetUp() override {
         // MallocObjStrategy doesn't track allocation count
@@ -256,7 +260,8 @@ TEST_F(MapTest, MoveConstruction) {
 
 TEST_F(MapTest, LargeDataset) {
     using IntIntNode = ftl::Map<int, int>::Node;
-    ftl::allocator::MallocObjStrategy<IntIntNode> int_int_alloc;
+    ftl::allocator::MallocObjStrategy<IntIntNode> int_int_strategy;
+    ftl::allocator::ObjAllocator<IntIntNode> int_int_alloc(int_int_strategy);
     ftl::Map<int, int> map(int_int_alloc);
     
     constexpr int N = 1000;
@@ -289,7 +294,8 @@ TEST_F(MapTest, LargeDataset) {
 
 TEST_F(MapTest, RandomInsertDelete) {
     using IntIntNode = ftl::Map<int, int>::Node;
-    ftl::allocator::MallocObjStrategy<IntIntNode> int_int_alloc;
+    ftl::allocator::MallocObjStrategy<IntIntNode> int_int_strategy;
+    ftl::allocator::ObjAllocator<IntIntNode> int_int_alloc(int_int_strategy);
     ftl::Map<int, int> map(int_int_alloc);
     std::mt19937 gen(42);
     std::uniform_int_distribution<> dis(1, 100);
@@ -317,7 +323,8 @@ TEST_F(MapTest, CustomComparator) {
     };
     
     using ReverseNode = ftl::Map<int, std::string, ReverseCompare>::Node;
-    ftl::allocator::MallocObjStrategy<ReverseNode> reverse_alloc;
+    ftl::allocator::MallocObjStrategy<ReverseNode> reverse_strategy;
+    ftl::allocator::ObjAllocator<ReverseNode> reverse_alloc(reverse_strategy);
     ftl::Map<int, std::string, ReverseCompare> map(reverse_alloc, ReverseCompare{});
     
     map[1] = "one";
@@ -336,7 +343,8 @@ TEST_F(MapTest, CustomComparator) {
 
 TEST_F(MapTest, StringKeys) {
     using StringIntNode = ftl::Map<std::string, int>::Node;
-    ftl::allocator::MallocObjStrategy<StringIntNode> string_int_alloc;
+    ftl::allocator::MallocObjStrategy<StringIntNode> string_int_strategy;
+    ftl::allocator::ObjAllocator<StringIntNode> string_int_alloc(string_int_strategy);
     ftl::Map<std::string, int> map(string_int_alloc);
     
     map["apple"] = 1;

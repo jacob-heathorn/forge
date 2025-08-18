@@ -8,6 +8,7 @@
 
 #include "ftl/allocator/bump_allocator.hpp"
 #include "ftl/allocator/bump_pool_obj_strategy.hpp"
+#include "ftl/allocator/obj_allocator.hpp"
 #include "ftl/map.hpp"
 
 static constexpr size_t POOL_MEMORY_SIZE = 10 * 1024 * 1024; // 10MB for performance tests
@@ -21,7 +22,8 @@ int main() {
     
     // Create allocators for different node types
     using IntMapNode = ftl::Map<int, int>::Node;
-    ftl::allocator::BumpPoolObjStrategy<IntMapNode> int_pool_alloc(allocator);  // Use bump pool strategy
+    ftl::allocator::BumpPoolObjStrategy<IntMapNode> int_pool_strategy(allocator);  // Use bump pool strategy
+    ftl::allocator::ObjAllocator<IntMapNode> int_pool_alloc(int_pool_strategy);
     
     // Test parameters
     const std::vector<size_t> test_sizes = {100, 1000, 10000, 50000};

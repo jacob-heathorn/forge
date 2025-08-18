@@ -71,8 +71,7 @@ private:
     Node* nil_;                     ///< Sentinel node representing all leaves (never deallocated until destructor)
     size_type size_;                ///< Number of elements in the map
     Compare comp_;                  ///< Comparison function object
-    allocator::IObjStrategy<Node>& strategy_;  ///< Memory allocation strategy reference for Node objects
-    allocator::ObjAllocator<Node> alloc_;      ///< Object allocator that wraps the strategy
+    allocator::ObjAllocator<Node>& alloc_;      ///< Object allocator reference for Node objects
 
     /// @brief Initialize the sentinel nil node
     /// The nil node is allocated once and persists for the lifetime of the map
@@ -464,10 +463,10 @@ public:
     };
 
     /// @brief Construct an empty map
-    /// @param strategy Reference to allocation strategy for Node objects (must outlive the map)
+    /// @param allocator Reference to object allocator for Node objects (must outlive the map)
     /// @param comp Comparison function object
-    explicit Map(allocator::IObjStrategy<Node>& strategy, const Compare& comp = Compare())
-        : root_(nullptr), size_(0), comp_(comp), strategy_(strategy), alloc_(strategy_) {
+    explicit Map(allocator::ObjAllocator<Node>& allocator, const Compare& comp = Compare())
+        : root_(nullptr), size_(0), comp_(comp), alloc_(allocator) {
         initialize_nil();  // Allocate sentinel node
         root_ = nil_;      // Empty tree points to nil
     }
@@ -485,7 +484,7 @@ public:
     /// @param other Map to copy from
     /// MEMORY: Allocates new nodes for all elements
     Map(const Map& other) 
-        : root_(nullptr), size_(0), comp_(other.comp_), strategy_(other.strategy_), alloc_(strategy_) {
+        : root_(nullptr), size_(0), comp_(other.comp_), alloc_(other.alloc_) {
         initialize_nil();  // Create our own nil node
         root_ = nil_;
         // Deep copy all elements
@@ -515,7 +514,7 @@ public:
     /// WARNING: Leaves other in moved-from state (nil_ = nullptr)
     Map(Map&& other) noexcept
         : root_(other.root_), nil_(other.nil_), size_(other.size_),
-          comp_(std::move(other.comp_)), strategy_(other.strategy_), alloc_(strategy_) {
+          comp_(std::move(other.comp_)), alloc_(other.alloc_) {
         // Leave other in valid but empty state
         other.root_ = nullptr;
         other.nil_ = nullptr;  // IMPORTANT: other's destructor must check for null
