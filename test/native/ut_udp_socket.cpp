@@ -4,13 +4,16 @@
 #include <thread>
 #include <chrono>
 #include <cstring>
+#include <vector>
 
 #include "ftl/native_ethernet_interface.hpp"
 #include "ftl/ipv4/endpoint.hpp"
 #include "ftl/ipv4/mask.hpp"
 #include "ftl/ipv4/udp/socket.hpp"
 #include "ftl/ipv4/udp/payload.hpp"
-#include "ftl/bump_allocator.hpp"
+#include "ftl/allocator/bump_allocator.hpp"
+#include "ftl/allocator/bump_pool_buffer_strategy.hpp"
+#include "ftl/allocator/buffer_allocator.hpp"
 
 using ftl::ethernet::NativeEthernetInterface;
 using ftl::ipv4::Address;
@@ -24,15 +27,33 @@ class NativeUdpSocketTest : public ::testing::Test {
     static constexpr size_t POOL_MEMORY_SIZE = 16 * 1024;
     uint8_t*              buffer_   = nullptr;
     ftl::BumpAllocator*   allocator_= nullptr;
+    std::vector<std::unique_ptr<ftl::allocator::BumpPoolBufferStrategy>> strategies_;
+    ftl::allocator::BufferAllocator* buffer_allocator_ = nullptr;
     NativeEthernetInterface* lo_     = nullptr;
     SocketPtr             sender_;
     SocketPtr             receiver_;
 
     void SetUp() override {
-        // bump allocator + DataFrame
+        // bump allocator + Payload
         buffer_    = new uint8_t[POOL_MEMORY_SIZE];
         allocator_ = new ftl::BumpAllocator(buffer_, POOL_MEMORY_SIZE);
-        ftl::DataFrame::initialize(*allocator_);
+        
+        // Initialize Payload allocator with bump pool strategies
+        strategies_.reserve(8);
+        strategies_.push_back(std::make_unique<ftl::allocator::BumpPoolBufferStrategy>(*allocator_, 256));
+        strategies_.push_back(std::make_unique<ftl::allocator::BumpPoolBufferStrategy>(*allocator_, 512));
+        strategies_.push_back(std::make_unique<ftl::allocator::BumpPoolBufferStrategy>(*allocator_, 768));
+        strategies_.push_back(std::make_unique<ftl::allocator::BumpPoolBufferStrategy>(*allocator_, 1024));
+        strategies_.push_back(std::make_unique<ftl::allocator::BumpPoolBufferStrategy>(*allocator_, 1280));
+        strategies_.push_back(std::make_unique<ftl::allocator::BumpPoolBufferStrategy>(*allocator_, 1536));
+        strategies_.push_back(std::make_unique<ftl::allocator::BumpPoolBufferStrategy>(*allocator_, 1792));
+        strategies_.push_back(std::make_unique<ftl::allocator::BumpPoolBufferStrategy>(*allocator_, 2048));
+        
+        buffer_allocator_ = new ftl::allocator::BufferAllocator(
+            *strategies_[0], *strategies_[1], *strategies_[2], *strategies_[3],
+            *strategies_[4], *strategies_[5], *strategies_[6], *strategies_[7]
+        );
+        Payload::initialize(*buffer_allocator_);
 
         // construct the interface here
         lo_ = new NativeEthernetInterface(
@@ -52,6 +73,8 @@ class NativeUdpSocketTest : public ::testing::Test {
         sender_->close();
         receiver_->close();
         delete lo_;
+        delete buffer_allocator_;
+        strategies_.clear();
         delete allocator_;
         delete[] buffer_;
     }

@@ -1,7 +1,5 @@
 #pragma once
 
-#include <memory>
-
 #include "ftl/ipv4/endpoint.hpp"
 #include "ftl/ipv4/mask.hpp"
 #include "ftl/ipv4/udp/socket.hpp"

@@ -2,7 +2,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#include <new>      // For placement new
+#include <new>      // For placement new, std::hardware_destructive_interference_size
 #include <utility>  // For std::forward
 
 namespace ftl {
@@ -12,11 +12,15 @@ namespace ftl {
 // with each allocation. The entire block can be reset for reuse.
 class BumpAllocator {
  public:
+  // Cache line size from hardware
+  static constexpr size_t kCacheLineSize = std::hardware_destructive_interference_size;
+  
   // Constructor.
   // @param base  Pointer to the beginning of the memory block.
   // @param size  Size of the memory block in bytes.
-  BumpAllocator(uint8_t* base, size_t size)
-    : ptr_{base}, base_{base}, end_{base + size} {}
+  // @param cache_align  If true, ensures all allocations start at cache line boundaries.
+  BumpAllocator(uint8_t* base, size_t size, bool cache_align = false)
+    : ptr_{base}, base_{base}, end_{base + size}, cache_align_{cache_align} {}
 
   // Allocate a block of memory.
   // @param size      The number of bytes to allocate.
@@ -24,8 +28,16 @@ class BumpAllocator {
   // @return Pointer to the allocated memory if successful, or nullptr if out of memory.
   void* allocate(size_t size, size_t alignment = alignof(max_align_t)) {
     uintptr_t current = reinterpret_cast<uintptr_t>(ptr_);
+    
+    // If cache alignment is enabled, ensure allocations start at cache line boundaries
+    if (cache_align_) {
+      // Use the larger of the requested alignment or cache line size
+      alignment = (alignment > kCacheLineSize) ? alignment : kCacheLineSize;
+    }
+    
     // Align the current pointer to the requested alignment.
     uintptr_t aligned = (current + alignment - 1) & ~(alignment - 1);
+    
     // Check if there is enough memory remaining.
     if (aligned + size <= reinterpret_cast<uintptr_t>(end_)) {
       ptr_ = reinterpret_cast<uint8_t*>(aligned + size);
@@ -61,6 +73,8 @@ class BumpAllocator {
   uint8_t* base_ = nullptr;
   // One past the end of the memory block.
   uint8_t* end_ = nullptr;
+  // Whether to prevent allocations from crossing cache line boundaries.
+  bool cache_align_ = false;
 };
 
 }

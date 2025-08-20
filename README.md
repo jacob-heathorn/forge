@@ -1,8 +1,13 @@
 # Forge
 
-Tooling for forging embedded projects
+Common tooling for embedded projects, including:
+* Forge template library (ftl)
+* Deployment and debugging tools
+* SVD register generators
+* Common nix environment
 
 # Setup Instructions
+The has only been tested in Ubuntu 24.04
 
 1) Clone this repository: `git clone https://github.com/jacob-heathorn/forge.git`
 2) Install gordion: `pipx install gordion`
@@ -32,6 +37,7 @@ Tooling for forging embedded projects
 
 # Debug
 `rip -d native-debug:hello-world`
+Debug in VSCode (F5)
 
 # ctest
 ```
@@ -44,3 +50,10 @@ ctest
 cmake --workflow --preset native-debug && \
 rip -r native-debug:hello-udp
 ```
+
+# Copyright & Licensing
+
+Copyright (c) 2025 Jacob Heathorn
+
+This project is released under the **Academic Use License** (see [LICENSE](./LICENSE)).
+For **commercial licensing**, please contact: <jacob.heathorn@gmail.com>.

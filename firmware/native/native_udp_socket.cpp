@@ -252,6 +252,10 @@ Payload NativeUdpSocket::receive(ipv4::Endpoint *const peer) {
     // Copy the received data into a Payload of exactly the right size.
     size_t len = static_cast<size_t>(n);
     Payload p(len);
+    if (!p) {
+        // Allocation failed
+        return {};
+    }
     std::memcpy(p.front(), tmpBuf, len);
 
     // Populate the peer endpoint (host-order address and port).
