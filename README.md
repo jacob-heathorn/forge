@@ -1,6 +1,10 @@
 # Forge
 
-Tooling for forging embedded projects
+Common tooling for embedded projects, including:
+* Forge template library (ftl)
+* Deployment and debugging tools
+* SVD register generators
+* Common nix environment
 
 # Setup Instructions
 
