@@ -41,6 +41,7 @@ Common tooling for embedded projects, including:
 
 # Debug
 `rip -d native-debug:hello-world`
+Debug in VSCode (F5)
 
 # ctest
 ```
