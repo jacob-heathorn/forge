@@ -206,8 +206,8 @@ class NativeApplication(Application):
       subprocess.check_call(args)
       forge.print_green("Complete!")
     except KeyboardInterrupt:
-      print("\nInterrupted")
-      exit(130)  # Standard exit code for SIGINT
+      print("\nApplication interrupted by user")
+      return
 
   def debug(self):
     debugger = forge.NativeDebugger(name=f"{self.preset_name}:{self.application_name}")
