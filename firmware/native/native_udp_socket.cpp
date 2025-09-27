@@ -10,6 +10,7 @@
 #include <unistd.h>       // close
 #include <cerrno>
 #include <cstring>
+#include <utility>        // std::move
 
 namespace ftl::ipv4::udp {
 
@@ -165,7 +166,7 @@ bool NativeUdpSocket::bind(uint16_t port) {
 
 // send(): send a UDP packet (unicast or multicast) on the TX socket. Returns true
 // if the full payload was sent successfully.
-bool NativeUdpSocket::send(Payload payload, const ipv4::Endpoint dest) {
+bool NativeUdpSocket::send(Payload&& payload, const ipv4::Endpoint dest) {
     if (tx_fd_ < 0) {
         return false;
     }

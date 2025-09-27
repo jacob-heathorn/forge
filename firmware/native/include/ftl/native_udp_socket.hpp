@@ -92,7 +92,7 @@ public:
   bool open(std::size_t receive_queue_len = 1) override;
   bool is_open() const noexcept override;
   bool bind(uint16_t port = 0) override;
-  bool send(Payload payload, const ipv4::Endpoint dest) override;
+  bool send(Payload&& payload, const ipv4::Endpoint dest) override;
   Payload receive(ipv4::Endpoint *const peer) override;
   void close() override;
 

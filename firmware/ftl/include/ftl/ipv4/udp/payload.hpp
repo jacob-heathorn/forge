@@ -8,49 +8,20 @@
 #include "etl/string.h"
 #include "ftl/buffer.hpp"
 #include "ftl/allocator/buffer_allocator.hpp"
+#include "ftl/allocator/data_frame.hpp"
 #include "ftl/allocator/strategy.hpp"
 #include "ftl/memory.hpp"
 
 namespace ftl::ipv4::udp {
 
-// Provides an interface to an ethernet data frame to access UDP payload data. 
-class Payload {
-private:
-  // Static deleter for Payload buffers
-  class Deleter : public ftl::IDeleter {
-  public:
-    inline static allocator::BufferAllocator* allocator = nullptr;
-    
-    void operator()(void* ptr) override {
-      if (ptr && allocator) {
-        allocator->deallocate(static_cast<Buffer*>(ptr));
-      }
-    }
-  };
-  
-  // Offsets into the raw frame
-  //
-  // NOTE: We have not implemented lower frame layers (e.g. EthernetFrame)
-  static constexpr std::size_t kPayloadOffset = 0;
-
-  inline static Deleter deleter_;
-  ftl::unique_ptr<Buffer> buffer_;  
-
+// Provides an interface to an ethernet data frame to access UDP payload data.
+class Payload : public ftl::allocator::DataFrame<Payload> {
 public:
-  // Initialize with a buffer allocator
-  static void initialize(allocator::BufferAllocator& alloc) {
-    Deleter::allocator = &alloc;
+  // Construct with payload size
+  explicit Payload(std::size_t size)
+    : DataFrame(size) {
   }
 
-  // Construct with payload size
-  explicit Payload(std::size_t size) {
-    assert(Deleter::allocator && "Payload::initialize() has not been called.");
-    Buffer* buf = Deleter::allocator->allocate(size);
-    if (buf) {
-      buffer_ = ftl::unique_ptr<Buffer>(buf, &deleter_);
-    }
-  }
-  
   Payload() = default;
 
   // Movable but not copyable
@@ -60,22 +31,6 @@ public:
   Payload& operator=(const Payload&) = delete;
   ~Payload() = default;
 
-  // Check if buffer is valid
-  explicit operator bool() const noexcept {
-    return static_cast<bool>(buffer_);
-  }
-
-  // Access the UDP payload pointer
-  uint8_t* front() noexcept { 
-    return buffer_ ? (buffer_->front() + kPayloadOffset) : nullptr; 
-  }
-  const uint8_t* front() const noexcept { 
-    return buffer_ ? (buffer_->front() + kPayloadOffset) : nullptr; 
-  }
-  std::size_t size() const noexcept { 
-    return buffer_ ? (buffer_->size() - kPayloadOffset) : 0; 
-  }
-
   // Returns the payload interpreted as characters in an etl::string_view
   etl::string_view string_view() const noexcept {
     const char* data = reinterpret_cast<const char*>(this->front());
@@ -83,6 +38,7 @@ public:
   }
 };
 
-// Payload contains a unique_ptr with deleter pointer, which is 2 pointers
+// Payload inherits from DataFrame: unique_ptr (2 pointers) + vtable pointer from Deleter
+static_assert(sizeof(Payload) == 3 * sizeof(void*));
 
 }
