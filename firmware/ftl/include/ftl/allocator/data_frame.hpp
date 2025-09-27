@@ -5,6 +5,7 @@
 #include <cassert>
 #include <type_traits>
 
+#include "etl/string.h"
 #include "ftl/buffer.hpp"
 #include "ftl/allocator/buffer_allocator.hpp"
 #include "ftl/allocator/strategy.hpp"
@@ -69,6 +70,12 @@ public:
 
   std::size_t size() const noexcept {
     return buffer_ ? buffer_->size() : 0;
+  }
+
+  // Returns the buffer data interpreted as characters in an etl::string_view
+  etl::string_view string_view() const noexcept {
+    const char* data = reinterpret_cast<const char*>(this->front());
+    return etl::string_view{ data, this->size() };
   }
 };
 

@@ -30,12 +30,6 @@ public:
   Payload(const Payload&) = delete;
   Payload& operator=(const Payload&) = delete;
   ~Payload() = default;
-
-  // Returns the payload interpreted as characters in an etl::string_view
-  etl::string_view string_view() const noexcept {
-    const char* data = reinterpret_cast<const char*>(this->front());
-    return etl::string_view{ data, this->size() };
-  }
 };
 
 // Payload inherits from DataFrame: unique_ptr (2 pointers) + vtable pointer from Deleter
