@@ -93,7 +93,6 @@ union {{ reg_name }} {
   // Full {{ reg_size }}-bit register value.
   {{ reg_type }} value;
 
-  {{ reg_name }}() = delete;
   inline void Reset() volatile { this->value = 0x{{ "%08X" % register.reset_value }}; }
   static inline volatile {{ reg_name }} &ref() { return *reinterpret_cast<volatile {{ reg_name }}*>(0x{{ "%08X" % (peripheral.base_address + register.address_offset) }}); }
 };
