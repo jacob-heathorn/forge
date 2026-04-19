@@ -21,7 +21,6 @@ private:
     
     BumpAllocator& allocator_;
     mutable Mutex free_list_mutex_;  // Protects free list operations
-    mutable Mutex bump_mutex_;        // Protects bump allocator
     NodeBase* free_list_{nullptr};
     std::size_t node_size_;      // Total size of node including header and storage
     std::size_t storage_offset_; // Offset from node start to storage
@@ -50,13 +49,11 @@ public:
                 return reinterpret_cast<unsigned char*>(node) + storage_offset_;
             }
         }
-        
-        // Allocate new from bump allocator with separate lock
-        LockGuard<Mutex> lock(bump_mutex_);
-        // Request alignment for the whole node to ensure storage is aligned
+
+        // BumpAllocator::allocate is lock-free, no external lock needed.
         void* mem = allocator_.allocate(node_size_, alignment_);
         if (!mem) return nullptr;
-        
+
         // Return pointer to storage area
         return reinterpret_cast<unsigned char*>(mem) + storage_offset_;
     }

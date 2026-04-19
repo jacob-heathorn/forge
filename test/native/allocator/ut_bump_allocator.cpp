@@ -7,15 +7,18 @@
 //   - Allocation fails (returns nullptr) when out of memory.
 //   - Allocation succeeds when exactly filling the block.
 //   - The templated allocate() method constructs an object correctly.
-//   - The reset() method allows reusing the memory block.
 //
 // According to the Google C++ Style Guide, file names, function names, and comments
 // follow consistent formatting for clarity and maintainability.
 
 #include "ftl/allocator/bump_allocator.hpp"
 #include "gtest/gtest.h"
+#include <algorithm>
+#include <atomic>
 #include <cstdint>
 #include <cstring>
+#include <thread>
+#include <vector>
 
 // A simple test class for use with the templated allocate() method.
 class TestObject {
@@ -89,16 +92,6 @@ TEST_F(BumpAllocatorTest, TemplateAllocateConstructsObject) {
   TestObject* obj = allocator_->allocate<TestObject>(123);
   ASSERT_NE(obj, nullptr);
   EXPECT_EQ(obj->value_, 123);
-}
-
-// Tests that reset() correctly resets the allocator so that memory can be reallocated.
-// After resetting, a new allocation should start at the same address as the first allocation.
-TEST_F(BumpAllocatorTest, ResetAllowsReallocation) {
-  void* ptr1 = allocator_->allocate(200);
-  EXPECT_NE(ptr1, nullptr);
-  allocator_->reset();
-  void* ptr2 = allocator_->allocate(200);
-  EXPECT_EQ(ptr1, ptr2);
 }
 
 // Tests that cache alignment prevents allocations from crossing cache line boundaries
@@ -189,4 +182,38 @@ TEST_F(BumpAllocatorTest, CacheAlignmentAppliesToAllAllocations) {
   
   // ptr2 should be at least one cache line after ptr1
   EXPECT_GE(addr2 - addr1, ftl::BumpAllocator::kCacheLineSize) << "Large allocation should start at next cache line";
+}
+
+// Stress allocate() from many threads and verify that no two returned slots overlap.
+TEST(BumpAllocatorConcurrent, NoOverlap) {
+  alignas(16) uint8_t arena[16 * 1024];
+  ftl::BumpAllocator alloc(arena, sizeof(arena));
+
+  constexpr size_t kThreads = 8;
+  constexpr size_t kPerThread = 64;
+  constexpr size_t kSize = 16;
+
+  std::vector<std::vector<uint8_t*>> results(kThreads);
+  std::atomic<bool> go{false};
+
+  auto worker = [&](size_t id) {
+    while (!go.load(std::memory_order_acquire)) {}
+    for (size_t i = 0; i < kPerThread; ++i) {
+      results[id].push_back(static_cast<uint8_t*>(alloc.allocate(kSize)));
+    }
+  };
+
+  std::vector<std::thread> threads;
+  for (size_t i = 0; i < kThreads; ++i) threads.emplace_back(worker, i);
+  go.store(true, std::memory_order_release);
+  for (auto& t : threads) t.join();
+
+  std::vector<uint8_t*> flat;
+  for (const auto& v : results) flat.insert(flat.end(), v.begin(), v.end());
+  std::sort(flat.begin(), flat.end());
+
+  for (uint8_t* p : flat) ASSERT_NE(p, nullptr);
+  for (size_t i = 1; i < flat.size(); ++i) {
+    EXPECT_GE(flat[i], flat[i - 1] + kSize) << "overlap between allocations";
+  }
 }
