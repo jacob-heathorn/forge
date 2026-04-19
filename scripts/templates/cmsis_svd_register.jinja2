@@ -1,4 +1,5 @@
-{#- Emit one register: Fields sub-namespace + Register type alias.
+{#- Emit one register: internal Field namespace + struct Register that re-exports fields.
+    Call sites then read as: MCR::modify(MCR::MEN{MCR::eMEN::eENABLED}).
     Context: r = the SVDRegister instance. -#}
 {%- set reg_name = normalize_register_name(r.name) -%}
 {%- set reg_bits = register_size(r) -%}
@@ -6,8 +7,8 @@
 {%- set reg_access = mmio_access(r.access) -%}
 {%- set rows = build_field_rows(r) -%}
 {{ format_comment(r.description, width=100, indent_width=0) }}
-namespace {{ reg_name }}_Fields {
-  {#- Emit enum classes for enumerated fields. -#}
+namespace {{ reg_name }}_fields_ {
+  {#- Enum classes for enumerated fields. -#}
   {%- for row in rows if row.kind == 'field' and row.field.is_enumerated_type and row.field.enumerated_values %}
   {%- for enum_set in row.field.enumerated_values %}
   {%- set enum_name = enum_set.name if enum_set.name else row.field.name %}
@@ -23,24 +24,41 @@ namespace {{ reg_name }}_Fields {
   {%- endfor %}
   {%- endfor %}
 
-  {#- Emit one Field alias per field row. -#}
   {%- for row in rows if row.kind == 'field' %}
   {%- if row.field.description %}
   // {{ row.field.description }}
   {%- endif %}
   using {{ row.name }} = ftl::mmio::Field<{{ row.width }}, {{ row.offset }}, {{ row.value_type }}, {{ row.access }}, {{ row.modify }}>;
   {%- endfor %}
-}  // namespace {{ reg_name }}_Fields
+}  // namespace {{ reg_name }}_fields_
 
-using {{ reg_name }} = ftl::mmio::Register<
+struct {{ reg_name }} : ftl::mmio::Register<
     0x{{ "%08X" % reg_addr }}u,
     0x{{ "%08X" % r.reset_value }}u,
     {{ reg_access }}
   {%- for row in rows -%}
   ,
     {%- if row.kind == 'field' %}
-    {{ reg_name }}_Fields::{{ row.name }}
+    {{ reg_name }}_fields_::{{ row.name }}
     {%- else %}
     ftl::mmio::Reserved<{{ row.width }}, {{ row.offset }}>
     {%- endif -%}
-  {%- endfor %}>;
+  {%- endfor %}> {
+  {#- Re-export enums into the struct. -#}
+  {%- for row in rows if row.kind == 'field' and row.field.is_enumerated_type and row.field.enumerated_values %}
+  {%- for enum_set in row.field.enumerated_values %}
+  {%- set enum_name = enum_set.name if enum_set.name else row.field.name %}
+  using e{{ enum_name }} = {{ reg_name }}_fields_::e{{ enum_name }};
+  {%- endfor %}
+  {%- endfor %}
+  {#- Re-export field types into the struct.
+      When a field shares the register's name (common for single-field registers like GPIO::DR),
+      expose it as `value_` to avoid the "nested type with same name as enclosing class" error. -#}
+  {%- for row in rows if row.kind == 'field' %}
+  {%- if row.name == reg_name %}
+  using value_ = {{ reg_name }}_fields_::{{ row.name }};
+  {%- else %}
+  using {{ row.name }} = {{ reg_name }}_fields_::{{ row.name }};
+  {%- endif %}
+  {%- endfor %}
+};
