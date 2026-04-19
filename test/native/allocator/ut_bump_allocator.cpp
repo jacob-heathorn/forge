@@ -7,7 +7,6 @@
 //   - Allocation fails (returns nullptr) when out of memory.
 //   - Allocation succeeds when exactly filling the block.
 //   - The templated allocate() method constructs an object correctly.
-//   - The reset() method allows reusing the memory block.
 //
 // According to the Google C++ Style Guide, file names, function names, and comments
 // follow consistent formatting for clarity and maintainability.
@@ -89,16 +88,6 @@ TEST_F(BumpAllocatorTest, TemplateAllocateConstructsObject) {
   TestObject* obj = allocator_->allocate<TestObject>(123);
   ASSERT_NE(obj, nullptr);
   EXPECT_EQ(obj->value_, 123);
-}
-
-// Tests that reset() correctly resets the allocator so that memory can be reallocated.
-// After resetting, a new allocation should start at the same address as the first allocation.
-TEST_F(BumpAllocatorTest, ResetAllowsReallocation) {
-  void* ptr1 = allocator_->allocate(200);
-  EXPECT_NE(ptr1, nullptr);
-  allocator_->reset();
-  void* ptr2 = allocator_->allocate(200);
-  EXPECT_EQ(ptr1, ptr2);
 }
 
 // Tests that cache alignment prevents allocations from crossing cache line boundaries

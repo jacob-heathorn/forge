@@ -10,13 +10,11 @@ namespace ftl {
 
 // BumpAllocator provides a simple, linear ("bump") memory allocator.
 // It allocates memory from a contiguous block, moving a pointer forward
-// with each allocation. The entire block can be reset for reuse.
+// with each allocation.
 //
 // allocate() is lock-free (CAS on the bump pointer) and safe to call
 // concurrently from threads and ISRs on a single core. It does not depend
 // on any OS primitives, so it is usable before kernel start.
-// reset() is NOT concurrency-safe and must only run when no other context
-// is allocating.
 class BumpAllocator {
   static_assert(std::atomic<uint8_t*>::is_always_lock_free,
                 "BumpAllocator requires lock-free atomic pointers");
@@ -30,7 +28,7 @@ class BumpAllocator {
   // @param size  Size of the memory block in bytes.
   // @param cache_align  If true, ensures all allocations start at cache line boundaries.
   BumpAllocator(uint8_t* base, size_t size, bool cache_align = false)
-    : ptr_{base}, base_{base}, end_{base + size}, cache_align_{cache_align} {}
+    : ptr_{base}, end_{base + size}, cache_align_{cache_align} {}
 
   // Allocate a block of memory.
   // @param size      The number of bytes to allocate.
@@ -71,20 +69,11 @@ class BumpAllocator {
     return new (raw_memory) T(std::forward<Args>(args)...);
   }
 
-  // Reset the allocator to reuse the entire memory block.
-  // Resets the current pointer back to the base.
-  // Caller must ensure no concurrent allocate() is in flight.
-  void reset() {
-    ptr_.store(base_, std::memory_order_relaxed);
-  }
-
   const uint8_t * head() const { return ptr_.load(std::memory_order_relaxed); }
 
  private:
   // Current allocation position.
   std::atomic<uint8_t*> ptr_;
-  // Base of the memory block.
-  uint8_t* base_ = nullptr;
   // One past the end of the memory block.
   uint8_t* end_ = nullptr;
   // Whether to prevent allocations from crossing cache line boundaries.
