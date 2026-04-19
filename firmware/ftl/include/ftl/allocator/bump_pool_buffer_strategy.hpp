@@ -30,12 +30,9 @@ public:
 private:
     // Single mutex for this size's free list
     Mutex freelist_mutex_{};
-    
-    // Separate lock since allocator_ is NOT thread-safe
-    Mutex alloc_mutex_;
-    
+
     BumpAllocator& allocator_;
-    
+
     BufferNode* free_list_ = nullptr;
 
 public:
@@ -62,22 +59,16 @@ public:
             }
         }
 
-        // Slow path: allocate BufferNode and data separately
-        BufferNode* node;
-        void* data;
-        {
-            // Only lock allocator if it isn't internally thread-safe.
-            LockGuard<Mutex> lk(alloc_mutex_);
-            // Allocate node
-            node = static_cast<BufferNode*>(allocator_.allocate(sizeof(BufferNode), alignof(BufferNode)));
-            if (!node) return nullptr;
-            
-            // Allocate data with requested alignment
-            data = allocator_.allocate(size_, alignment_);
-            if (!data) {
-                // Can't deallocate node back to bump allocator, just leave it
-                return nullptr;
-            }
+        // Slow path: allocate BufferNode and data separately.
+        // BumpAllocator::allocate is lock-free, no external lock needed.
+        BufferNode* node = static_cast<BufferNode*>(
+            allocator_.allocate(sizeof(BufferNode), alignof(BufferNode)));
+        if (!node) return nullptr;
+
+        void* data = allocator_.allocate(size_, alignment_);
+        if (!data) {
+            // Can't deallocate node back to bump allocator, just leave it
+            return nullptr;
         }
 
         // Construct BufferNode with requested size
