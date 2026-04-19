@@ -90,3 +90,22 @@ def lint(session):
       "--cache-dir=../../.pycache",
       "--package=forge"
   )
+
+
+@nox.session(venv_backend="none")
+def tsan(session):
+  """Build with ThreadSanitizer and run the full C++ test suite under it."""
+  session.run("cmake", "--workflow", "--preset", "native-tsan", external=True)
+  # TSan reserves fixed virtual-address regions at startup for its shadow
+  # memory. On Linux kernels with high vm.mmap_rnd_bits (default 32 on
+  # 6.x), ASLR can place libraries or the stack inside those regions and
+  # TSan aborts with "unexpected memory mapping". setarch -R disables
+  # ASLR for ctest and its children, leaving TSan's layout free.
+  session.run(
+      "setarch", "-R",
+      "ctest",
+      "--test-dir", ".bin/native-tsan",
+      "--output-on-failure",
+      external=True,
+      env={"TSAN_OPTIONS": "halt_on_error=1 exitcode=1"},
+  )

@@ -184,8 +184,7 @@ TEST_F(BumpAllocatorTest, CacheAlignmentAppliesToAllAllocations) {
   EXPECT_GE(addr2 - addr1, ftl::BumpAllocator::kCacheLineSize) << "Large allocation should start at next cache line";
 }
 
-// Stress allocate() from many threads and verify that no two returned slots
-// overlap. Designed to be meaningful under ThreadSanitizer.
+// Stress allocate() from many threads and verify that no two returned slots overlap.
 TEST(BumpAllocatorConcurrent, NoOverlap) {
   alignas(16) uint8_t arena[16 * 1024];
   ftl::BumpAllocator alloc(arena, sizeof(arena));
