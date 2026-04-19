@@ -243,34 +243,42 @@ class Register {
     raw() = (current & ~(mask | kOneNeutralMask)) | bits;
   }
 
-  // -------------------------- single-flag ops -------------------------------
-  template <typename F>
+  // -------------------------- flag ops (single or batched) ------------------
+  // For W1C/W1S/W1T, ORing masks and writing once is equivalent to N sequential
+  // writes — bits not in the combined mask write 0, which is "no effect."
+  template <typename... Fs>
   static void clear() {
-    static_assert(F::is_w1c, "Register::clear<F>() requires a OneToClear field");
+    static_assert(sizeof...(Fs) > 0,         "clear<>() needs at least one field");
+    static_assert((Fs::is_w1c && ...),        "Register::clear<F...>() requires OneToClear fields");
+    constexpr std::uint32_t mask = (Fs::kMask | ... | 0u);
     if constexpr (kIsPureStatusFlag) {
-      raw() = F::kMask;
+      raw() = mask;
     } else {
-      raw() = (raw() & ~kOneNeutralMask) | F::kMask;
+      raw() = (raw() & ~kOneNeutralMask) | mask;
     }
   }
 
-  template <typename F>
+  template <typename... Fs>
   static void set_flag() {
-    static_assert(F::is_w1s, "Register::set_flag<F>() requires a OneToSet field");
+    static_assert(sizeof...(Fs) > 0,         "set_flag<>() needs at least one field");
+    static_assert((Fs::is_w1s && ...),        "Register::set_flag<F...>() requires OneToSet fields");
+    constexpr std::uint32_t mask = (Fs::kMask | ... | 0u);
     if constexpr (kIsPureStatusFlag) {
-      raw() = F::kMask;
+      raw() = mask;
     } else {
-      raw() = (raw() & ~kOneNeutralMask) | F::kMask;
+      raw() = (raw() & ~kOneNeutralMask) | mask;
     }
   }
 
-  template <typename F>
+  template <typename... Fs>
   static void toggle() {
-    static_assert(F::is_w1t, "Register::toggle<F>() requires a OneToToggle field");
+    static_assert(sizeof...(Fs) > 0,         "toggle<>() needs at least one field");
+    static_assert((Fs::is_w1t && ...),        "Register::toggle<F...>() requires OneToToggle fields");
+    constexpr std::uint32_t mask = (Fs::kMask | ... | 0u);
     if constexpr (kIsPureStatusFlag) {
-      raw() = F::kMask;
+      raw() = mask;
     } else {
-      raw() = (raw() & ~kOneNeutralMask) | F::kMask;
+      raw() = (raw() & ~kOneNeutralMask) | mask;
     }
   }
 };
