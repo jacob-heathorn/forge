@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Fixture SVD for forge's end-to-end MMIO test. The SVD is intentionally small
+  and hand-crafted to exercise each generator concern:
+    STATUS   - 32-bit RW register with normal fields, enums, and reserved bits
+    FLAGS    - 32-bit RW with W1C (OneToClear) fields
+    CONTROL  - 16-bit RW register (exercises std::uint16_t storage)
+    TRIGGER  - 8-bit RW at an unaligned byte offset (exercises std::uint8_t
+               storage and guards against the SERQ-style regression where the
+               generator emitted 32-bit stores at byte-aligned addresses)
+    VERSION  - 32-bit RO (read-only access policy)
+    COMMAND  - 32-bit WO (write-only access policy)
+
+  Base address 0x10000000 is a scratch page we mmap with MAP_FIXED at test
+  setup; nothing on Linux native maps there by default.
+-->
+<device schemaVersion="1.3" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocation="CMSIS-SVD.xsd">
+  <vendor>forge-test</vendor>
+  <name>forge_test</name>
+  <version>1.0</version>
+  <description>Forge MMIO test fixture</description>
+  <addressUnitBits>8</addressUnitBits>
+  <width>32</width>
+  <peripherals>
+    <peripheral>
+      <name>TESTPERIPH</name>
+      <description>Test peripheral for forge native MMIO tests.</description>
+      <groupName>TEST</groupName>
+      <baseAddress>0x10000000</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x20</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <registers>
+
+        <register>
+          <name>STATUS</name>
+          <description>Status register: normal fields, enum, reserved gap.</description>
+          <addressOffset>0x00</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000001</resetValue>
+          <resetMask>0xFFFFFFFF</resetMask>
+          <fields>
+            <field>
+              <name>READY</name>
+              <description>Device ready</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>MODE</name>
+              <description>Operating mode</description>
+              <bitOffset>4</bitOffset>
+              <bitWidth>2</bitWidth>
+              <access>read-write</access>
+              <enumeratedValues>
+                <enumeratedValue>
+                  <name>IDLE</name>
+                  <description>Idle</description>
+                  <value>0</value>
+                </enumeratedValue>
+                <enumeratedValue>
+                  <name>ACTIVE</name>
+                  <description>Active</description>
+                  <value>1</value>
+                </enumeratedValue>
+                <enumeratedValue>
+                  <name>SLEEP</name>
+                  <description>Sleep</description>
+                  <value>2</value>
+                </enumeratedValue>
+              </enumeratedValues>
+            </field>
+            <field>
+              <name>COUNT</name>
+              <description>Counter</description>
+              <bitOffset>16</bitOffset>
+              <bitWidth>8</bitWidth>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+
+        <register>
+          <name>FLAGS</name>
+          <description>W1C flags register.</description>
+          <addressOffset>0x04</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+          <resetMask>0xFFFFFFFF</resetMask>
+          <fields>
+            <field>
+              <name>OVERFLOW</name>
+              <description>Overflow occurred; write 1 to clear.</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <access>read-write</access>
+              <modifiedWriteValues>oneToClear</modifiedWriteValues>
+            </field>
+            <field>
+              <name>UNDERFLOW</name>
+              <description>Underflow occurred; write 1 to clear.</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>1</bitWidth>
+              <access>read-write</access>
+              <modifiedWriteValues>oneToClear</modifiedWriteValues>
+            </field>
+          </fields>
+        </register>
+
+        <register>
+          <name>CONTROL</name>
+          <description>16-bit control register.</description>
+          <addressOffset>0x08</addressOffset>
+          <size>16</size>
+          <access>read-write</access>
+          <resetValue>0x0000</resetValue>
+          <resetMask>0xFFFF</resetMask>
+          <fields>
+            <field>
+              <name>ENABLE</name>
+              <description>Enable bit</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>SCALE</name>
+              <description>Scale value</description>
+              <bitOffset>8</bitOffset>
+              <bitWidth>4</bitWidth>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+
+        <register>
+          <name>TRIGGER</name>
+          <description>8-bit trigger register at an unaligned byte offset.</description>
+          <addressOffset>0x0B</addressOffset>
+          <size>8</size>
+          <access>read-write</access>
+          <resetValue>0x00</resetValue>
+          <resetMask>0xFF</resetMask>
+          <fields>
+            <field>
+              <name>CHANNEL</name>
+              <description>Channel to trigger</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>5</bitWidth>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>FORCE</name>
+              <description>Force-all flag</description>
+              <bitOffset>7</bitOffset>
+              <bitWidth>1</bitWidth>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+
+        <register>
+          <name>VERSION</name>
+          <description>Version ID (read-only).</description>
+          <addressOffset>0x0C</addressOffset>
+          <size>32</size>
+          <access>read-only</access>
+          <resetValue>0x00010002</resetValue>
+          <resetMask>0xFFFFFFFF</resetMask>
+          <fields>
+            <field>
+              <name>MINOR</name>
+              <description>Minor version</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>16</bitWidth>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>MAJOR</name>
+              <description>Major version</description>
+              <bitOffset>16</bitOffset>
+              <bitWidth>16</bitWidth>
+              <access>read-only</access>
+            </field>
+          </fields>
+        </register>
+
+        <register>
+          <name>COUNTER</name>
+          <description>Mixed register: a normal RW field alongside a W1C flag.</description>
+          <addressOffset>0x14</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+          <resetMask>0xFFFFFFFF</resetMask>
+          <fields>
+            <field>
+              <name>VALUE</name>
+              <description>Counter value (RW).</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>16</bitWidth>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>SATURATED</name>
+              <description>Counter saturated; write 1 to clear.</description>
+              <bitOffset>31</bitOffset>
+              <bitWidth>1</bitWidth>
+              <access>read-write</access>
+              <modifiedWriteValues>oneToClear</modifiedWriteValues>
+            </field>
+          </fields>
+        </register>
+
+        <register>
+          <name>COMMAND</name>
+          <description>Command register (write-only).</description>
+          <addressOffset>0x10</addressOffset>
+          <size>32</size>
+          <access>write-only</access>
+          <resetValue>0x00000000</resetValue>
+          <resetMask>0xFFFFFFFF</resetMask>
+          <fields>
+            <field>
+              <name>OPCODE</name>
+              <description>Operation code</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>8</bitWidth>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>PAYLOAD</name>
+              <description>Payload word</description>
+              <bitOffset>8</bitOffset>
+              <bitWidth>24</bitWidth>
+              <access>write-only</access>
+            </field>
+          </fields>
+        </register>
+
+      </registers>
+    </peripheral>
+  </peripherals>
+</device>
