@@ -93,6 +93,22 @@ def register_size(register):
   return register.size if register.size is not None else 32
 
 
+def register_storage_type(register):
+  """Return the C++ unsigned storage type matching the register's bit width."""
+  bits = register_size(register)
+  if bits <= 8:  return 'std::uint8_t'
+  if bits <= 16: return 'std::uint16_t'
+  return 'std::uint32_t'
+
+
+def register_reset_literal(register):
+  """Format a reset-value literal sized to match the register's storage type."""
+  bits = register_size(register)
+  reset = register.reset_value or 0
+  width_hex = {8: 2, 16: 4, 32: 8}.get(bits if bits in (8, 16, 32) else 32, 8)
+  return f'0x{reset:0{width_hex}X}u'
+
+
 def field_value_type(field):
   """
   Pick the C++ type name used for a field's value.
@@ -187,6 +203,8 @@ class SVDParserWrapper:
       format_comment=format_comment,
       normalize_register_name=normalize_register_name,
       register_size=register_size,
+      register_storage_type=register_storage_type,
+      register_reset_literal=register_reset_literal,
       build_field_rows=build_field_rows,
       mmio_access=mmio_access,
       mmio_modify_write=mmio_modify_write,

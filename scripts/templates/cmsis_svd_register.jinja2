@@ -34,7 +34,8 @@ namespace {{ reg_name }}_fields_ {
 
 struct {{ reg_name }} : ftl::mmio::Register<
     0x{{ "%08X" % reg_addr }}u,
-    0x{{ "%08X" % r.reset_value }}u,
+    {{ register_storage_type(r) }},
+    {{ register_reset_literal(r) }},
     {{ reg_access }}
   {%- for row in rows -%}
   ,

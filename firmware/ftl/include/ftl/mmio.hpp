@@ -155,9 +155,16 @@ class Snapshot {
 
 // ============================================================================
 // Register
+//
+// StorageT is the underlying MMIO access width (uint8_t / uint16_t / uint32_t),
+// driven by the SVD <size> of the register. Field masks and combined values are
+// always computed as uint32_t — StorageT only dictates the load/store width at
+// the final volatile access, so an 8-bit register becomes a single strb and a
+// 32-bit store at an unaligned address never happens.
 // ============================================================================
 template <std::uintptr_t Addr,
-          std::uint32_t  ResetValue,
+          typename       StorageT,
+          StorageT       ResetValue,
           typename       AccessT,
           typename...    Fields>
 class Register {
@@ -191,19 +198,20 @@ class Register {
   }
 
  public:
+  using storage_type = StorageT;
   static constexpr std::uintptr_t kAddr       = Addr;
-  static constexpr std::uint32_t  kResetValue = ResetValue;
+  static constexpr StorageT       kResetValue = ResetValue;
 
   // Escape hatch — always available regardless of policy.
-  static volatile std::uint32_t& raw() {
-    return *reinterpret_cast<volatile std::uint32_t*>(Addr);
+  static volatile StorageT& raw() {
+    return *reinterpret_cast<volatile StorageT*>(Addr);
   }
 
   // -------------------------- read -----------------------------------------
   template <typename A = AccessT,
             std::enable_if_t<!std::is_same_v<A, WriteOnly>, int> = 0>
   static Snapshot read() {
-    return Snapshot{raw()};
+    return Snapshot{static_cast<std::uint32_t>(raw())};
   }
 
   // -------------------------- write (atomic overwrite) ----------------------
@@ -216,7 +224,7 @@ class Register {
     static_assert((Args::is_normal_write && ...),
         "W1C/W1S/W1T fields cannot be passed to write(); "
         "use Register::clear<F>() / set_flag<F>() / toggle<F>()");
-    raw() = combined_bits(args...);
+    raw() = static_cast<StorageT>(combined_bits(args...));
   }
 
   template <typename A = AccessT,
@@ -237,10 +245,10 @@ class Register {
         "use Register::clear<F>() / set_flag<F>() / toggle<F>()");
     constexpr std::uint32_t mask  = combined_mask<Args...>();
     const     std::uint32_t bits  = combined_bits(args...);
-    const     std::uint32_t current = raw();
+    const     std::uint32_t current = static_cast<std::uint32_t>(raw());
     // Zero out W1C/W1S/W1T bits so RMW doesn't re-trigger them.
     // Reserved bits are preserved because they're outside `mask`.
-    raw() = (current & ~(mask | kOneNeutralMask)) | bits;
+    raw() = static_cast<StorageT>((current & ~(mask | kOneNeutralMask)) | bits);
   }
 
   // -------------------------- flag ops (single or batched) ------------------
@@ -252,9 +260,9 @@ class Register {
     static_assert((Fs::is_w1c && ...),        "Register::clear<F...>() requires OneToClear fields");
     constexpr std::uint32_t mask = (Fs::kMask | ... | 0u);
     if constexpr (kIsPureStatusFlag) {
-      raw() = mask;
+      raw() = static_cast<StorageT>(mask);
     } else {
-      raw() = (raw() & ~kOneNeutralMask) | mask;
+      raw() = static_cast<StorageT>((static_cast<std::uint32_t>(raw()) & ~kOneNeutralMask) | mask);
     }
   }
 
@@ -264,9 +272,9 @@ class Register {
     static_assert((Fs::is_w1s && ...),        "Register::set_flag<F...>() requires OneToSet fields");
     constexpr std::uint32_t mask = (Fs::kMask | ... | 0u);
     if constexpr (kIsPureStatusFlag) {
-      raw() = mask;
+      raw() = static_cast<StorageT>(mask);
     } else {
-      raw() = (raw() & ~kOneNeutralMask) | mask;
+      raw() = static_cast<StorageT>((static_cast<std::uint32_t>(raw()) & ~kOneNeutralMask) | mask);
     }
   }
 
@@ -276,9 +284,9 @@ class Register {
     static_assert((Fs::is_w1t && ...),        "Register::toggle<F...>() requires OneToToggle fields");
     constexpr std::uint32_t mask = (Fs::kMask | ... | 0u);
     if constexpr (kIsPureStatusFlag) {
-      raw() = mask;
+      raw() = static_cast<StorageT>(mask);
     } else {
-      raw() = (raw() & ~kOneNeutralMask) | mask;
+      raw() = static_cast<StorageT>((static_cast<std::uint32_t>(raw()) & ~kOneNeutralMask) | mask);
     }
   }
 };
