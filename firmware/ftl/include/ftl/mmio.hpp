@@ -6,22 +6,13 @@
 
 // Type-safe MMIO primitives.
 //
-// A Register pairs a constexpr address with a list of Field types describing
-// its layout. Operations valid on a register are gated at compile time by its
-// access policy and each field's modified-write semantics (SVD
-// <modifiedWriteValues>).
-//
-//   regs::lpi2c5::MSR::clear<MSR::SDF>();           // W1C
-//   regs::lpi2c5::MTDR::write(MTDR::CMD{Cmd::Start},
-//                             MTDR::DATA{0x6C});
-//   regs::lpi2c5::MCR::modify(MCR::MEN{true});
-//   if (regs::lpi2c5::MSR::read().get<MSR::NDF>()) return Nack;
-//
-// Misuse is a compile error: reading a write-only register, modifying a
-// read-only register, passing a W1C/W1S/W1T field to write()/modify() (use
-// clear/set/toggle), reading a write-only field from a Snapshot.
-//
-// Escape hatch: ::raw() (volatile StorageT&), ::kAddr, ::kResetValue.
+// A Register pairs a constexpr address with the Field types describing its
+// layout. Each operation is gated at compile time by the register's access
+// policy and each field's modified-write semantics (SVD <modifiedWriteValues>):
+// reading a write-only register, modifying a read-only one, or passing a
+// W1C/W1S/W1T field to write()/modify() are compile errors. Sticky flags use
+// clear()/set()/toggle(). raw() is the escape hatch when bare volatile access
+// is needed.
 
 namespace ftl::mmio {
 
