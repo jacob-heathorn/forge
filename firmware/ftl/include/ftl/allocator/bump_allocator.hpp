@@ -36,8 +36,10 @@ class BumpAllocator {
       alignment = (alignment > kCacheLineSize) ? alignment : kCacheLineSize;
     }
 
-    // Relaxed load: a stale cur just loses the CAS below and we retry.
-    // The CAS itself provides the synchronizing memory order.
+    // Relaxed everywhere: only the pointer bump needs synchronization,
+    // which the CAS provides atomically. ptr_ is monotonic, so each
+    // slot is owned by exactly one task and no shared memory behind the
+    // pointer needs ordering.
     uint8_t* cur = ptr_.load(std::memory_order_relaxed);
     for (;;) {
       uintptr_t aligned = (reinterpret_cast<uintptr_t>(cur) + alignment - 1) & ~(alignment - 1);
@@ -45,17 +47,14 @@ class BumpAllocator {
         return nullptr;
       }
       uint8_t* next = reinterpret_cast<uint8_t*>(aligned + size);
-      // CAS serializes bumpers: at most one thread advances ptr_ from cur
-      // to next, so the slot [aligned, next) is exclusively owned by the
-      // winner. acq_rel ensures we observe every prior winner's bump and
-      // publish ours to subsequent winners.
+      // Compare-and-swap: atomically advance ptr_ from cur to next iff
+      // no one else moved it first. Winner owns [aligned, next); on
+      // failure cur is refreshed with the current value and we retry.
       if (ptr_.compare_exchange_weak(cur, next,
-              std::memory_order_acq_rel,
+              std::memory_order_relaxed,
               std::memory_order_relaxed)) {
         return reinterpret_cast<void*>(aligned);
       }
-      // CAS failed (another thread bumped, or spurious weak failure);
-      // cur was reloaded with the current value, retry.
     }
   }
 

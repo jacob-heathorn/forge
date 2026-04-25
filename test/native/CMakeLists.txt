@@ -33,6 +33,9 @@ add_platform_test(ut-network
 )
 target_link_libraries(ut-network ftl ftl-native)
 
+# End-to-end MMIO test (generator + ftl::mmio primitives).
+add_subdirectory(mmio)
+
 # Manual tests
 add_executable(hello-world hello_world.cpp)
 platformify(hello-world)
