@@ -57,23 +57,34 @@ def mmio_access(access):
   return "ftl::mmio::RW"
 
 
-def mmio_modify_write(mwv):
-  """Map SVDModifiedWriteValuesType to ftl::mmio modified-write tag."""
+_SUPPORTED_MODIFY_WRITE = {
+  'ONE_TO_CLEAR':   "ftl::mmio::OneToClear",
+  'ONE_TO_SET':     "ftl::mmio::OneToSet",
+  'ONE_TO_TOGGLE':  "ftl::mmio::OneToToggle",
+  'MODIFY':         "ftl::mmio::Normal",
+}
+
+
+def mmio_modify_write(mwv, *, field_name=None, register_name=None):
+  """Map SVDModifiedWriteValuesType to ftl::mmio modified-write tag.
+
+  Fails loud on values ftl::mmio::Register::modify() can't safely handle yet
+  (ZERO_TO_*, CLEAR, SET) so we don't silently emit headers that misbehave on
+  RMW. To support a new value: extend ftl::mmio + add a fixture in
+  forge/test/native/mmio/test_peripheral.svd before regenerating.
+  """
   if mwv is None:
     return "ftl::mmio::Normal"
   name = getattr(mwv, 'name', str(mwv))
-  table = {
-    'ONE_TO_CLEAR':   "ftl::mmio::OneToClear",
-    'ONE_TO_SET':     "ftl::mmio::OneToSet",
-    'ONE_TO_TOGGLE':  "ftl::mmio::OneToToggle",
-    'ZERO_TO_CLEAR':  "ftl::mmio::ZeroToClear",
-    'ZERO_TO_SET':    "ftl::mmio::ZeroToSet",
-    'ZERO_TO_TOGGLE': "ftl::mmio::ZeroToToggle",
-    'CLEAR':          "ftl::mmio::ClearOnWrite",
-    'SET':            "ftl::mmio::SetOnWrite",
-    'MODIFY':         "ftl::mmio::Normal",
-  }
-  return table.get(name, "ftl::mmio::Normal")
+  if name not in _SUPPORTED_MODIFY_WRITE:
+    where = ''
+    if register_name and field_name:
+      where = f' (register {register_name}, field {field_name})'
+    raise NotImplementedError(
+        f"<modifiedWriteValues>{name.lower()}</modifiedWriteValues>"
+        f"{where} is not supported by ftl::mmio. "
+        f"Supported values: {sorted(_SUPPORTED_MODIFY_WRITE)}.")
+  return _SUPPORTED_MODIFY_WRITE[name]
 
 
 # ------------------------------------------------------------------------------------
@@ -158,7 +169,10 @@ def build_field_rows(register):
       'field':  field,
       'value_type': field_value_type(field),
       'access': mmio_access(field.access),
-      'modify': mmio_modify_write(field.modified_write_values),
+      'modify': mmio_modify_write(
+          field.modified_write_values,
+          field_name=field.name,
+          register_name=register.name),
     })
     cursor = field.bit_offset + field.bit_width
   if cursor < reg_bits:
@@ -179,11 +193,17 @@ class SVDParserWrapper:
     print(f"Using svd file: {svd_file}")
     self.output_dir = output_dir
 
-    # Cache the parsed device on first run; reload from pickle afterwards.
+    # Cache the parsed device. Invalidate the pickle when the SVD source is
+    # newer than the cache — otherwise edits to test fixtures (or vendor SVDs)
+    # silently use a stale parse.
     svd_filename = os.path.splitext(os.path.basename(svd_file))[0]
     cache_path = os.path.join(BIN_DIR, f"{svd_filename}.pkl")
 
-    if os.path.exists(cache_path):
+    cache_fresh = (
+        os.path.exists(cache_path)
+        and os.path.getmtime(cache_path) >= os.path.getmtime(svd_file))
+
+    if cache_fresh:
       print(f"Loading device from: {cache_path}")
       with open(cache_path, 'rb') as f:
         self.device = pickle.load(f)
@@ -212,7 +232,26 @@ class SVDParserWrapper:
     )
     self.template = self.env.get_template('cmsis_svd_registers.jinja2')
 
+  # Register classes the generator emits today. Anything else (register arrays,
+  # clusters, cluster arrays) is silently dropped by the current template, which
+  # is how DMA's TCDs went missing from dma0.hpp. Fail loud so the next gap is
+  # caught at generation time, not at use time.
+  _SUPPORTED_REGISTER_CLASSES = {'SVDRegister'}
+
+  def _validate_peripheral(self, peripheral):
+    for register in peripheral.registers:
+      cls = register.__class__.__name__
+      if cls not in self._SUPPORTED_REGISTER_CLASSES:
+        name = getattr(register, 'name', '<unnamed>')
+        raise NotImplementedError(
+            f"Peripheral {peripheral.name!r} contains a register {name!r} "
+            f"of type {cls} which the generator does not yet emit "
+            f"(register arrays / clusters). Add support to "
+            f"cmsis_svd_registers.jinja2 plus a fixture in "
+            f"forge/test/native/mmio/test_peripheral.svd before regenerating.")
+
   def _render(self, peripheral):
+    self._validate_peripheral(peripheral)
     return self.template.render(peripheral=peripheral)
 
   def _write_peripheral(self, peripheral):

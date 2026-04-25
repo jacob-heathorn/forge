@@ -9,22 +9,11 @@
 // NOTE: This file was generated from the forge CMSIS-svd wrapper tool.
 namespace regs::{{ peripheral.name | lower }} {
 
-{%- for register in peripheral.registers %}
-{%- if register.__class__.__name__ == "SVDRegisterArray" %}
-{%-   for r in register.registers %}
+{#- Register arrays / clusters are rejected by SVDParserWrapper._validate_peripheral
+    before this template runs, so we only ever see plain SVDRegister here. -#}
+{%- for r in peripheral.registers %}
 
 {% include "cmsis_svd_register.jinja2" with context %}
-{%-   endfor %}
-{%- elif register.__class__.__name__ == "SVDRegisterClusterArray" %}
-{%-   for r in register.registers %}
-
-{% include "cmsis_svd_register.jinja2" with context %}
-{%-   endfor %}
-{%- else %}
-{%-   set r = register %}
-
-{% include "cmsis_svd_register.jinja2" with context %}
-{%- endif %}
 {%- endfor %}
 
 }  // namespace regs::{{ peripheral.name | lower }}
