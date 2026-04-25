@@ -67,21 +67,45 @@ TEST_F(MmioTest, ModifyPreservesUnspecifiedFields) {
   EXPECT_EQ  (snap.get<Status::MODE>(),  Status::eMODE::eSLEEP);
 }
 
-// --- W1C semantics -----------------------------------------------------------
+// --- Modify-write semantics: W1C / W1S / W1T --------------------------------
 //
-// mmap'd RAM doesn't honor W1C (write-0 just stores 0), so these tests assert
-// the *write pattern* the abstraction emits — what the software puts on the
-// bus. Hardware would then apply its W1C semantics.
+// mmap'd RAM doesn't honor W1C/W1S/W1T (any write just stores). These tests
+// assert the *write pattern* the abstraction emits — what the software puts
+// on the bus. Hardware then applies its modify-write semantics.
 
-TEST_F(MmioTest, ClearEmitsOnlyTargetBitOnPureFlagsRegister) {
-  // FLAGS has only W1C fields, so clear<>() bypasses RMW and stores the mask.
-  periph::FLAGS::clear<periph::FLAGS::OVERFLOW>();
-  EXPECT_EQ(periph::FLAGS::raw(), 1u << 0);
+TEST_F(MmioTest, ClearEmitsOnlyTargetBit) {
+  using Flags = periph::FLAGS;
+  Flags::clear<Flags::OVERFLOW>();
+  EXPECT_EQ(Flags::raw(), 1u << 0);
 }
 
 TEST_F(MmioTest, ClearMultipleFieldsCombinesMasks) {
-  periph::FLAGS::clear<periph::FLAGS::OVERFLOW, periph::FLAGS::UNDERFLOW>();
-  EXPECT_EQ(periph::FLAGS::raw(), (1u << 0) | (1u << 1));
+  using Flags = periph::FLAGS;
+  Flags::clear<Flags::OVERFLOW, Flags::UNDERFLOW>();
+  EXPECT_EQ(Flags::raw(), (1u << 0) | (1u << 1));
+}
+
+TEST_F(MmioTest, SetEmitsOnlyTargetBit) {
+  using Flags = periph::FLAGS;
+  Flags::set<Flags::LATCH>();
+  EXPECT_EQ(Flags::raw(), 1u << 8);
+}
+
+TEST_F(MmioTest, ToggleEmitsOnlyTargetBit) {
+  using Flags = periph::FLAGS;
+  Flags::toggle<Flags::PULSE>();
+  EXPECT_EQ(Flags::raw(), 1u << 16);
+}
+
+TEST_F(MmioTest, ClearLeavesOtherSensitiveFlagsUntouched) {
+  // Even when W1C/W1S/W1T fields share a register, clear<W1C> must write 0
+  // to the W1S/W1T positions so they don't fire on hardware.
+  using Flags = periph::FLAGS;
+  Flags::raw() = 0xFFFFFFFFu;  // all bits set in backing memory
+  Flags::clear<Flags::OVERFLOW>();
+  EXPECT_EQ(Flags::raw() & (1u << 8),  0u);  // LATCH (W1S) written as 0
+  EXPECT_EQ(Flags::raw() & (1u << 16), 0u);  // PULSE (W1T) written as 0
+  EXPECT_EQ(Flags::raw() & (1u << 0),  1u << 0);  // OVERFLOW: the clear bit
 }
 
 TEST_F(MmioTest, ModifyZerosW1cBitsOnMixedRegister) {

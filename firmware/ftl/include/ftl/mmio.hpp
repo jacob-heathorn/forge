@@ -24,7 +24,7 @@
 // Misuse is a compile error:
 //   - Reading a write-only register
 //   - Modifying a read-only register
-//   - Passing a W1C/W1S/W1T field value to write()/modify() (use clear/set_flag/toggle)
+//   - Passing a W1C/W1S/W1T field value to write()/modify() (use clear/set/toggle)
 //   - Reading a write-only field from a Snapshot
 //
 // Escape hatch: every register exposes ::raw() (volatile uint32_t&), ::kAddr,
@@ -223,7 +223,7 @@ class Register {
     static_assert((Args::is_writable && ...),         "Field is not writable");
     static_assert((Args::is_normal_write && ...),
         "W1C/W1S/W1T fields cannot be passed to write(); "
-        "use Register::clear<F>() / set_flag<F>() / toggle<F>()");
+        "use Register::clear<F>() / set<F>() / toggle<F>()");
     raw() = static_cast<StorageT>(combined_bits(args...));
   }
 
@@ -242,7 +242,7 @@ class Register {
     static_assert((Args::is_writable && ...),         "Field is not writable");
     static_assert((Args::is_normal_write && ...),
         "W1C/W1S/W1T fields cannot be passed to modify(); "
-        "use Register::clear<F>() / set_flag<F>() / toggle<F>()");
+        "use Register::clear<F>() / set<F>() / toggle<F>()");
     constexpr std::uint32_t mask  = combined_mask<Args...>();
     const     std::uint32_t bits  = combined_bits(args...);
     const     std::uint32_t current = static_cast<std::uint32_t>(raw());
@@ -267,9 +267,9 @@ class Register {
   }
 
   template <typename... Fs>
-  static void set_flag() {
-    static_assert(sizeof...(Fs) > 0,         "set_flag<>() needs at least one field");
-    static_assert((Fs::is_w1s && ...),        "Register::set_flag<F...>() requires OneToSet fields");
+  static void set() {
+    static_assert(sizeof...(Fs) > 0,         "set<>() needs at least one field");
+    static_assert((Fs::is_w1s && ...),        "Register::set<F...>() requires OneToSet fields");
     constexpr std::uint32_t mask = (Fs::kMask | ... | 0u);
     if constexpr (kIsPureStatusFlag) {
       raw() = static_cast<StorageT>(mask);

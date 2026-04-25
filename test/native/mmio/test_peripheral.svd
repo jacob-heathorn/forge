@@ -86,7 +86,7 @@
 
         <register>
           <name>FLAGS</name>
-          <description>W1C flags register.</description>
+          <description>Mixed flag register exercising W1C / W1S / W1T modify-write semantics.</description>
           <addressOffset>0x04</addressOffset>
           <size>32</size>
           <access>read-write</access>
@@ -95,7 +95,7 @@
           <fields>
             <field>
               <name>OVERFLOW</name>
-              <description>Overflow occurred; write 1 to clear.</description>
+              <description>W1C: write 1 to clear.</description>
               <bitOffset>0</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
@@ -103,11 +103,27 @@
             </field>
             <field>
               <name>UNDERFLOW</name>
-              <description>Underflow occurred; write 1 to clear.</description>
+              <description>W1C: write 1 to clear.</description>
               <bitOffset>1</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-write</access>
               <modifiedWriteValues>oneToClear</modifiedWriteValues>
+            </field>
+            <field>
+              <name>LATCH</name>
+              <description>W1S: write 1 to set.</description>
+              <bitOffset>8</bitOffset>
+              <bitWidth>1</bitWidth>
+              <access>read-write</access>
+              <modifiedWriteValues>oneToSet</modifiedWriteValues>
+            </field>
+            <field>
+              <name>PULSE</name>
+              <description>W1T: write 1 to toggle.</description>
+              <bitOffset>16</bitOffset>
+              <bitWidth>1</bitWidth>
+              <access>read-write</access>
+              <modifiedWriteValues>oneToToggle</modifiedWriteValues>
             </field>
           </fields>
         </register>
