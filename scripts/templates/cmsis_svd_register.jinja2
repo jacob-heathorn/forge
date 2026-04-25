@@ -1,9 +1,13 @@
 {#- Emit one register: internal Field namespace + struct Register that re-exports fields.
     Call sites then read as: MCR::modify(MCR::MEN{MCR::eMEN::eENABLED}).
-    Context: r = the SVDRegister instance. -#}
-{%- set reg_name = normalize_register_name(r.name) -%}
+    Context provided by the wrapper template:
+      item       = render-item dict from peripheral_render_items()
+      r          = item.register (the underlying SVDRegister)
+    Use item.name / item.addr_expr / item.is_templated rather than reading from
+    r directly so cluster-array inner registers and plain registers go through
+    the same path. -#}
+{%- set reg_name = item.name -%}
 {%- set reg_bits = register_size(r) -%}
-{%- set reg_addr = peripheral.base_address + r.address_offset -%}
 {%- set reg_access = mmio_access(r.access) -%}
 {%- set rows = build_field_rows(r) -%}
 {{ format_comment(r.description, width=100, indent_width=0) }}
@@ -32,8 +36,11 @@ namespace {{ reg_name }}_fields_ {
   {%- endfor %}
 }  // namespace {{ reg_name }}_fields_
 
+{% if item.is_templated -%}
+template<std::uint32_t Index>
+{% endif -%}
 struct {{ reg_name }} : ftl::mmio::Register<
-    0x{{ "%08X" % reg_addr }}u,
+    {{ item.addr_expr }},
     {{ register_storage_type(r) }},
     {{ register_reset_literal(r) }},
     {{ reg_access }}
@@ -45,6 +52,9 @@ struct {{ reg_name }} : ftl::mmio::Register<
     ftl::mmio::Reserved<{{ row.width }}, {{ row.offset }}>
     {%- endif -%}
   {%- endfor %}> {
+  {%- if item.is_templated %}
+  static_assert(Index < {{ item.dim }}u, "{{ reg_name }}: Index out of range");
+  {%- endif %}
   {#- Re-export enums into the struct. -#}
   {%- for row in rows if row.kind == 'field' and row.field.is_enumerated_type and row.field.enumerated_values %}
   {%- for enum_set in row.field.enumerated_values %}

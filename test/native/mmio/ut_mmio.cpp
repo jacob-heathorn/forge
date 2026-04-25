@@ -164,3 +164,47 @@ TEST_F(MmioTest, StorageTypesMatchSvdSize) {
   static_assert(std::is_same_v<periph::CONTROL::storage_type, std::uint16_t>);
   static_assert(std::is_same_v<periph::TRIGGER::storage_type, std::uint8_t>);
 }
+
+// --- Cluster array (templated index) -----------------------------------------
+//
+// Fixture: peripheral has a cluster of 4 channels, dim_increment=0x10, starting
+// at peripheral offset 0x40. CHAN_CONFIG (32-bit) at intra-cluster offset 0,
+// CHAN_STATE (8-bit) at intra-cluster offset 0x8.
+
+TEST_F(MmioTest, ClusterAddressesAreCorrectPerIndex) {
+  // Channel 0: 0x10000040 (CONFIG), 0x10000048 (STATE)
+  // Channel 1: 0x10000050,           0x10000058
+  // Channel 2: 0x10000060,           0x10000068
+  // Channel 3: 0x10000070,           0x10000078
+  EXPECT_EQ(periph::CHAN_CONFIG<0>::kAddr, 0x10000040u);
+  EXPECT_EQ(periph::CHAN_CONFIG<1>::kAddr, 0x10000050u);
+  EXPECT_EQ(periph::CHAN_CONFIG<2>::kAddr, 0x10000060u);
+  EXPECT_EQ(periph::CHAN_CONFIG<3>::kAddr, 0x10000070u);
+  EXPECT_EQ(periph::CHAN_STATE<0>::kAddr,  0x10000048u);
+  EXPECT_EQ(periph::CHAN_STATE<3>::kAddr,  0x10000078u);
+}
+
+TEST_F(MmioTest, ClusterWriteIsolatedPerChannel) {
+  periph::CHAN_CONFIG<0>::write(periph::CHAN_CONFIG<0>::SOURCE{std::uint8_t{0xAA}});
+  periph::CHAN_CONFIG<2>::write(periph::CHAN_CONFIG<2>::SOURCE{std::uint8_t{0xCC}});
+  EXPECT_EQ(periph::CHAN_CONFIG<0>::read().get<periph::CHAN_CONFIG<0>::SOURCE>(), 0xAAu);
+  EXPECT_EQ(periph::CHAN_CONFIG<1>::read().get<periph::CHAN_CONFIG<1>::SOURCE>(), 0u);  // untouched
+  EXPECT_EQ(periph::CHAN_CONFIG<2>::read().get<periph::CHAN_CONFIG<2>::SOURCE>(), 0xCCu);
+  EXPECT_EQ(periph::CHAN_CONFIG<3>::read().get<periph::CHAN_CONFIG<3>::SOURCE>(), 0u);  // untouched
+}
+
+TEST_F(MmioTest, ClusterEightBitStateIsByteStore) {
+  // CHAN_STATE<1> is at 0x10000058 — only that byte may change.
+  std::memset(periphBytes(), 0xFF, kPeriphBytes);
+  periph::CHAN_STATE<1>::write(periph::CHAN_STATE<1>::VALUE{std::uint8_t{0x42}});
+  EXPECT_EQ(periphBytes()[0x57], 0xFFu);
+  EXPECT_EQ(periphBytes()[0x58], 0x42u);
+  EXPECT_EQ(periphBytes()[0x59], 0xFFu);
+  EXPECT_EQ(periphBytes()[0x5A], 0xFFu);
+  EXPECT_EQ(periphBytes()[0x5B], 0xFFu);
+}
+
+TEST_F(MmioTest, ClusterStorageTypesMatchSvdSize) {
+  static_assert(std::is_same_v<periph::CHAN_CONFIG<0>::storage_type, std::uint32_t>);
+  static_assert(std::is_same_v<periph::CHAN_STATE<0>::storage_type,  std::uint8_t>);
+}

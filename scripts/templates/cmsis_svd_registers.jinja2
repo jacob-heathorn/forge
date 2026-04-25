@@ -9,9 +9,10 @@
 // NOTE: This file was generated from the forge CMSIS-svd wrapper tool.
 namespace regs::{{ peripheral.name | lower }} {
 
-{#- Register arrays / clusters are rejected by SVDParserWrapper._validate_peripheral
-    before this template runs, so we only ever see plain SVDRegister here. -#}
-{%- for r in peripheral.registers %}
+{#- peripheral_render_items flattens both plain registers and cluster-array
+    inner registers into a uniform stream. -#}
+{%- for item in peripheral_render_items(peripheral) %}
+{%-   set r = item.register %}
 
 {% include "cmsis_svd_register.jinja2" with context %}
 {%- endfor %}

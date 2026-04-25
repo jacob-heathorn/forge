@@ -29,7 +29,7 @@
       <baseAddress>0x10000000</baseAddress>
       <addressBlock>
         <offset>0</offset>
-        <size>0x20</size>
+        <size>0x80</size>
         <usage>registers</usage>
       </addressBlock>
       <registers>
@@ -242,6 +242,52 @@
             </field>
           </fields>
         </register>
+
+        <cluster>
+          <dim>4</dim>
+          <dimIncrement>0x10</dimIncrement>
+          <name>CHAN[%s]</name>
+          <description>Per-channel registers, exercises register clusters.</description>
+          <addressOffset>0x40</addressOffset>
+          <register>
+            <name>CHAN_CONFIG</name>
+            <description>Channel config (32-bit). Inner addressOffset is cluster-relative.</description>
+            <addressOffset>0</addressOffset>
+            <size>32</size>
+            <access>read-write</access>
+            <resetValue>0x00000000</resetValue>
+            <fields>
+              <field>
+                <name>SOURCE</name>
+                <bitOffset>0</bitOffset>
+                <bitWidth>8</bitWidth>
+                <access>read-write</access>
+              </field>
+              <field>
+                <name>ENABLE</name>
+                <bitOffset>31</bitOffset>
+                <bitWidth>1</bitWidth>
+                <access>read-write</access>
+              </field>
+            </fields>
+          </register>
+          <register>
+            <name>CHAN_STATE</name>
+            <description>Channel state (8-bit, exercises byte access in cluster).</description>
+            <addressOffset>0x8</addressOffset>
+            <size>8</size>
+            <access>read-write</access>
+            <resetValue>0x00</resetValue>
+            <fields>
+              <field>
+                <name>VALUE</name>
+                <bitOffset>0</bitOffset>
+                <bitWidth>8</bitWidth>
+                <access>read-write</access>
+              </field>
+            </fields>
+          </register>
+        </cluster>
 
       </registers>
     </peripheral>

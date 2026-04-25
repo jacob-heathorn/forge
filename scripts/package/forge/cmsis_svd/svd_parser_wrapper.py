@@ -112,6 +112,66 @@ def register_storage_type(register):
   return 'std::uint32_t'
 
 
+def peripheral_render_items(peripheral):
+  """Flatten a peripheral's registers + cluster arrays into a uniform iterable
+  of dicts that the jinja template can render without needing to know about
+  cluster shape. Each item carries everything needed:
+
+    {'kind':       'register' | 'cluster_register',
+     'register':   the SVDRegister (cluster[0]'s copy for cluster items),
+     'name':       C++ struct name (cluster prefix stripped for cluster items),
+     'addr_expr':  literal '0xNNu' for plain regs, '0xNNu + (Index * 0xMMu)'
+                   for cluster items (substituted into the Register<> template
+                   parameter list verbatim),
+     'is_templated': bool — emit `template<std::uint32_t Index>` + bound check,
+     'dim':        cluster size when is_templated, else 0}
+  """
+  for r in peripheral.registers:
+    cls = r.__class__.__name__
+    if cls == 'SVDRegister':
+      addr = peripheral.base_address + r.address_offset
+      yield {
+        'kind': 'register',
+        'register': r,
+        'name': normalize_register_name(r.name),
+        'addr_expr': f'0x{addr:08X}u',
+        'is_templated': False,
+        'dim': 0,
+      }
+    elif cls == 'SVDRegisterClusterArray':
+      # cmsis-svd dim-expands the cluster: clusters[i] contains inner registers
+      # whose .address_offset is already peripheral-relative for instance i.
+      # We emit ONE templated struct per inner register, parameterized by the
+      # cluster index, using cluster[0]'s copy to extract layout.
+      proto = r.clusters[0]
+      dim = len(r.clusters)
+      dim_increment = proto.dim_increment
+      cluster_prefix = proto.name + '_'
+      for inner in proto.registers:
+        # Some vendor SVDs (e.g. NXP MIMXRT DMA) put peripheral-relative offsets
+        # on inner registers instead of cluster-relative. cmsis-svd always adds
+        # cluster.address_offset, double-counting in those cases. Detect when
+        # the resolved offset lands past the cluster's own range and undo the
+        # extra cluster offset.
+        resolved_offset = inner.address_offset
+        if resolved_offset >= proto.address_offset + dim_increment:
+          resolved_offset -= proto.address_offset
+        addr0 = peripheral.base_address + resolved_offset
+        stripped = inner.name[len(cluster_prefix):] if inner.name.startswith(cluster_prefix) else inner.name
+        yield {
+          'kind': 'cluster_register',
+          'register': inner,
+          'name': normalize_register_name(stripped),
+          'addr_expr': f'0x{addr0:08X}u + (Index * 0x{dim_increment:X}u)',
+          'is_templated': True,
+          'dim': dim,
+        }
+    else:
+      raise NotImplementedError(
+          f"Peripheral {peripheral.name!r} has a register of type {cls} "
+          f"which the generator does not yet support.")
+
+
 def register_reset_literal(register):
   """Format a reset-value literal sized to match the register's storage type."""
   bits = register_size(register)
@@ -228,15 +288,15 @@ class SVDParserWrapper:
       build_field_rows=build_field_rows,
       mmio_access=mmio_access,
       mmio_modify_write=mmio_modify_write,
+      peripheral_render_items=peripheral_render_items,
       SVDAccessType=SVDAccessType,
     )
     self.template = self.env.get_template('cmsis_svd_registers.jinja2')
 
-  # Register classes the generator emits today. Anything else (register arrays,
-  # clusters, cluster arrays) is silently dropped by the current template, which
-  # is how DMA's TCDs went missing from dma0.hpp. Fail loud so the next gap is
-  # caught at generation time, not at use time.
-  _SUPPORTED_REGISTER_CLASSES = {'SVDRegister'}
+  # Register classes the generator can emit. SVDRegisterArray (a single
+  # register replicated by <dim>) is still unhandled — we haven't seen one yet
+  # and adding it lazily means we get a hard error when one shows up.
+  _SUPPORTED_REGISTER_CLASSES = {'SVDRegister', 'SVDRegisterClusterArray'}
 
   def _validate_peripheral(self, peripheral):
     for register in peripheral.registers:
@@ -245,10 +305,10 @@ class SVDParserWrapper:
         name = getattr(register, 'name', '<unnamed>')
         raise NotImplementedError(
             f"Peripheral {peripheral.name!r} contains a register {name!r} "
-            f"of type {cls} which the generator does not yet emit "
-            f"(register arrays / clusters). Add support to "
-            f"cmsis_svd_registers.jinja2 plus a fixture in "
-            f"forge/test/native/mmio/test_peripheral.svd before regenerating.")
+            f"of type {cls} which the generator does not yet emit. "
+            f"Add support to peripheral_render_items() + the jinja templates, "
+            f"plus a fixture in forge/test/native/mmio/test_peripheral.svd, "
+            f"before regenerating.")
 
   def _render(self, peripheral):
     self._validate_peripheral(peripheral)
