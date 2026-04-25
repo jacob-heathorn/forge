@@ -10,10 +10,9 @@
 
 namespace periph = regs::testperiph;
 
-// Peripheral base from the fixture SVD. A 16 KB scratch span is mmap'd here
-// with MAP_FIXED at test-suite startup so Register addresses are backed by
-// real memory. Span covers TESTPERIPH (0x10000000) + the PORT family
-// (PORT1=0x10001000, PORT2=0x10001100, PORT3=0x10001200).
+// 16 KB scratch span mmap'd at the fixture peripheral base so Register<>
+// addresses resolve to real memory. Covers TESTPERIPH (0x10000000) and the
+// PORT family (0x10001000..0x100012FF).
 constexpr std::uintptr_t kPeriphBase  = 0x10000000u;
 constexpr std::size_t    kPeriphBytes = 16 * 1024u;
 
@@ -24,142 +23,112 @@ inline std::uint8_t* periphBytes() {
 class MmioTest : public ::testing::Test {
  protected:
   static void SetUpTestSuite() {
-    void* p = ::mmap(reinterpret_cast<void*>(kPeriphBase),
-                     kPeriphBytes,
+    void* p = ::mmap(reinterpret_cast<void*>(kPeriphBase), kPeriphBytes,
                      PROT_READ | PROT_WRITE,
-                     MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED,
-                     -1, 0);
+                     MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
     ASSERT_NE(p, MAP_FAILED);
     ASSERT_EQ(reinterpret_cast<std::uintptr_t>(p), kPeriphBase);
   }
   static void TearDownTestSuite() {
     ::munmap(reinterpret_cast<void*>(kPeriphBase), kPeriphBytes);
   }
-  void SetUp() override {
-    std::memset(periphBytes(), 0, kPeriphBytes);
-  }
+  void SetUp() override { std::memset(periphBytes(), 0, kPeriphBytes); }
 };
 
-// --- 32-bit register ---------------------------------------------------------
+// --- Plain 32-bit register ---------------------------------------------------
 
-TEST_F(MmioTest, WriteReadRoundtripStatus) {
-  periph::STATUS::write(
-      periph::STATUS::READY{true},
-      periph::STATUS::MODE{periph::STATUS::eMODE::eACTIVE},
-      periph::STATUS::COUNT{std::uint8_t{0x42}});
+TEST_F(MmioTest, WriteThenReadRoundtrip) {
+  using Status = periph::STATUS;
+  Status::write(Status::READY{true},
+                Status::MODE  {Status::eMODE::eACTIVE},
+                Status::COUNT {std::uint8_t{0x42}});
 
-  auto snap = periph::STATUS::read();
-  EXPECT_TRUE(snap.get<periph::STATUS::READY>());
-  EXPECT_EQ(snap.get<periph::STATUS::MODE>(), periph::STATUS::eMODE::eACTIVE);
-  EXPECT_EQ(snap.get<periph::STATUS::COUNT>(), 0x42u);
+  auto snap = Status::read();
+  EXPECT_TRUE(snap.get<Status::READY>());
+  EXPECT_EQ  (snap.get<Status::MODE>(),  Status::eMODE::eACTIVE);
+  EXPECT_EQ  (snap.get<Status::COUNT>(), 0x42u);
 }
 
-TEST_F(MmioTest, ResetWritesResetValue) {
-  periph::STATUS::write(
-      periph::STATUS::READY{false},
-      periph::STATUS::COUNT{std::uint8_t{0xAA}});
-  periph::STATUS::reset();
-  EXPECT_EQ(periph::STATUS::raw(), 0x00000001u);   // SVD resetValue
+TEST_F(MmioTest, ResetWritesSvdResetValue) {
+  using Status = periph::STATUS;
+  Status::write(Status::READY{false}, Status::COUNT{std::uint8_t{0xAA}});
+  Status::reset();
+  EXPECT_EQ(Status::raw(), 0x00000001u);
 }
 
-TEST_F(MmioTest, ModifyPreservesOtherFields) {
-  periph::STATUS::write(
-      periph::STATUS::READY{true},
-      periph::STATUS::COUNT{std::uint8_t{0x55}});
-  periph::STATUS::modify(periph::STATUS::MODE{periph::STATUS::eMODE::eSLEEP});
+TEST_F(MmioTest, ModifyPreservesUnspecifiedFields) {
+  using Status = periph::STATUS;
+  Status::write(Status::READY{true}, Status::COUNT{std::uint8_t{0x55}});
+  Status::modify(Status::MODE{Status::eMODE::eSLEEP});
 
-  auto snap = periph::STATUS::read();
-  EXPECT_TRUE(snap.get<periph::STATUS::READY>());
-  EXPECT_EQ(snap.get<periph::STATUS::COUNT>(), 0x55u);
-  EXPECT_EQ(snap.get<periph::STATUS::MODE>(), periph::STATUS::eMODE::eSLEEP);
+  auto snap = Status::read();
+  EXPECT_TRUE(snap.get<Status::READY>());
+  EXPECT_EQ  (snap.get<Status::COUNT>(), 0x55u);
+  EXPECT_EQ  (snap.get<Status::MODE>(),  Status::eMODE::eSLEEP);
 }
 
 // --- W1C semantics -----------------------------------------------------------
 //
-// mmap'd RAM is plain memory: writing 0 to a W1C bit on RAM stores 0, but on
-// real hardware it would be a no-op. These tests assert the *write pattern*
-// the software emits, which is what the abstraction controls.
+// mmap'd RAM doesn't honor W1C (write-0 just stores 0), so these tests assert
+// the *write pattern* the abstraction emits — what the software puts on the
+// bus. Hardware would then apply its W1C semantics.
 
-TEST_F(MmioTest, W1cClearEmitsOnlyTargetBit) {
-  // FLAGS is pure-W1C (no normal RW, no reserved), so clear<>() bypasses RMW
-  // and writes the mask directly. We verify the exact word written.
+TEST_F(MmioTest, ClearEmitsOnlyTargetBitOnPureFlagsRegister) {
+  // FLAGS has only W1C fields, so clear<>() bypasses RMW and stores the mask.
   periph::FLAGS::clear<periph::FLAGS::OVERFLOW>();
   EXPECT_EQ(periph::FLAGS::raw(), 1u << 0);
 }
 
-TEST_F(MmioTest, W1cClearMultipleFields) {
+TEST_F(MmioTest, ClearMultipleFieldsCombinesMasks) {
   periph::FLAGS::clear<periph::FLAGS::OVERFLOW, periph::FLAGS::UNDERFLOW>();
   EXPECT_EQ(periph::FLAGS::raw(), (1u << 0) | (1u << 1));
 }
 
-TEST_F(MmioTest, ModifyNeutralizesW1cBitsOnMixedRegister) {
-  // COUNTER has VALUE (normal RW, bits 0..15) and SATURATED (W1C, bit 31).
-  // modify(VALUE{...}) must update VALUE and write 0 to SATURATED so the
-  // RMW doesn't re-trigger it on hardware. On RAM we observe SATURATED as 0.
-  periph::COUNTER::raw() = 0x1234u | (1u << 31);
-  periph::COUNTER::modify(periph::COUNTER::VALUE{std::uint16_t{0x5678}});
-  EXPECT_EQ(periph::COUNTER::raw() & 0xFFFFu,   0x5678u);  // VALUE updated
-  EXPECT_EQ(periph::COUNTER::raw() & (1u << 31), 0u);      // W1C neutralized
+TEST_F(MmioTest, ModifyZerosW1cBitsOnMixedRegister) {
+  // COUNTER mixes a normal RW field (VALUE) with a W1C flag (SATURATED).
+  // modify(VALUE{...}) must store 0 to SATURATED so it isn't re-triggered.
+  using Counter = periph::COUNTER;
+  Counter::raw() = 0x1234u | (1u << 31);
+  Counter::modify(Counter::VALUE{std::uint16_t{0x5678}});
+
+  EXPECT_EQ(Counter::raw() & 0xFFFFu,    0x5678u);
+  EXPECT_EQ(Counter::raw() & (1u << 31), 0u);
 }
 
-// --- 16-bit register ---------------------------------------------------------
+// --- Storage width: 8 / 16 / 32-bit MMIO accesses ---------------------------
 
-TEST_F(MmioTest, SixteenBitRegisterUsesHalfwordStore) {
-  // Seed flanking bytes; a well-formed 16-bit store must not disturb them.
-  periphBytes()[0x0A] = 0xAA;                      // unused gap
-  // CONTROL sits at offset 0x08..0x09, so bytes at 0x0A/0x0B are outside.
-  periph::CONTROL::write(
-      periph::CONTROL::ENABLE{true},
-      periph::CONTROL::SCALE{std::uint8_t{0x5}});
+TEST_F(MmioTest, SixteenBitRegisterDoesNotDisturbFlankingBytes) {
+  // CONTROL is 2 bytes at offset 0x08. A correct halfword store must leave
+  // bytes at 0x0A onward alone.
+  periphBytes()[0x0A] = 0xAA;
+
+  using Control = periph::CONTROL;
+  Control::write(Control::ENABLE{true}, Control::SCALE{std::uint8_t{0x5}});
+
   EXPECT_EQ(periphBytes()[0x0A], 0xAAu);
-  auto snap = periph::CONTROL::read();
-  EXPECT_TRUE(snap.get<periph::CONTROL::ENABLE>());
-  EXPECT_EQ(snap.get<periph::CONTROL::SCALE>(), 0x5u);
+  auto snap = Control::read();
+  EXPECT_TRUE(snap.get<Control::ENABLE>());
+  EXPECT_EQ  (snap.get<Control::SCALE>(), 0x5u);
 }
-
-// --- 8-bit register at unaligned offset (the SERQ regression guard) ---------
 
 TEST_F(MmioTest, EightBitRegisterAtUnalignedOffsetIsByteStore) {
-  // TRIGGER sits at offset 0x0B — three bytes into a 32-bit word. Flanking
-  // bytes must survive every write to TRIGGER; if the generator regresses to
-  // uint32_t storage for this register we'd stomp 0x0B..0x0E.
+  // TRIGGER lives at byte offset 0x0B. If storage regresses to uint32_t the
+  // store would smear across 0x0B..0x0E (this is the SERQ regression guard).
   std::memset(periphBytes(), 0xFF, kPeriphBytes);
-
   periph::TRIGGER::write(periph::TRIGGER::CHANNEL{std::uint8_t{0x05}});
 
-  EXPECT_EQ(periphBytes()[0x0A], 0xFFu);           // before
-  EXPECT_EQ(periphBytes()[0x0B], 0x05u);           // our write
-  EXPECT_EQ(periphBytes()[0x0C], 0xFFu);           // after — would be clobbered
-  EXPECT_EQ(periphBytes()[0x0D], 0xFFu);           //   by a 32-bit store at 0x0B
+  EXPECT_EQ(periphBytes()[0x0A], 0xFFu);
+  EXPECT_EQ(periphBytes()[0x0B], 0x05u);
+  EXPECT_EQ(periphBytes()[0x0C], 0xFFu);
+  EXPECT_EQ(periphBytes()[0x0D], 0xFFu);
   EXPECT_EQ(periphBytes()[0x0E], 0xFFu);
 }
 
-TEST_F(MmioTest, EightBitResetValue) {
+TEST_F(MmioTest, EightBitResetWritesByteResetValue) {
   periphBytes()[0x0B] = 0xFF;
   periph::TRIGGER::reset();
   EXPECT_EQ(periphBytes()[0x0B], 0x00u);
 }
-
-// --- Read-only / write-only access (compile-time policy) ---------------------
-
-TEST_F(MmioTest, ReadOnlyRegisterSnapshot) {
-  // VERSION is RO. We poke the backing memory directly; Register::read()
-  // then returns a Snapshot without ever writing.
-  *reinterpret_cast<volatile std::uint32_t*>(kPeriphBase + 0x0C) = 0x00030004u;
-  auto snap = periph::VERSION::read();
-  EXPECT_EQ(snap.get<periph::VERSION::MINOR>(), 0x0004u);
-  EXPECT_EQ(snap.get<periph::VERSION::MAJOR>(), 0x0003u);
-}
-
-TEST_F(MmioTest, WriteOnlyRegisterWrite) {
-  periph::COMMAND::write(
-      periph::COMMAND::OPCODE {std::uint8_t { 0x12}},
-      periph::COMMAND::PAYLOAD{std::uint32_t{0xABCDEFu}});
-  EXPECT_EQ(*reinterpret_cast<volatile std::uint32_t*>(kPeriphBase + 0x10),
-            (0xABCDEFu << 8) | 0x12u);
-}
-
-// --- Storage-type sanity check ----------------------------------------------
 
 TEST_F(MmioTest, StorageTypesMatchSvdSize) {
   static_assert(std::is_same_v<periph::STATUS::storage_type,  std::uint32_t>);
@@ -167,38 +136,48 @@ TEST_F(MmioTest, StorageTypesMatchSvdSize) {
   static_assert(std::is_same_v<periph::TRIGGER::storage_type, std::uint8_t>);
 }
 
-// --- Register array (single register replicated by <dim>) ------------------
-//
-// SLOT[N] in the fixture: 4 instances at peripheral offsets 0x20, 0x24, 0x28,
-// 0x2C. Single VALUE field covering all 32 bits.
+// --- Access policy ----------------------------------------------------------
 
-TEST_F(MmioTest, RegisterArrayAddressesAreCorrect) {
+TEST_F(MmioTest, ReadOnlyRegisterReturnsBackingBytes) {
+  // VERSION is RO. Poke memory directly; read() returns a Snapshot of it.
+  *reinterpret_cast<volatile std::uint32_t*>(kPeriphBase + 0x0C) = 0x00030004u;
+
+  using Version = periph::VERSION;
+  auto snap = Version::read();
+  EXPECT_EQ(snap.get<Version::MINOR>(), 0x0004u);
+  EXPECT_EQ(snap.get<Version::MAJOR>(), 0x0003u);
+}
+
+TEST_F(MmioTest, WriteOnlyRegisterStoresFieldsAtomically) {
+  using Command = periph::COMMAND;
+  Command::write(Command::OPCODE {std::uint8_t {0x12}},
+                 Command::PAYLOAD{std::uint32_t{0xABCDEFu}});
+  EXPECT_EQ(*reinterpret_cast<volatile std::uint32_t*>(kPeriphBase + 0x10),
+            (0xABCDEFu << 8) | 0x12u);
+}
+
+// --- Register array: <register dim=N> -> templated by Index -----------------
+
+TEST_F(MmioTest, RegisterArrayAddressArithmetic) {
   EXPECT_EQ(periph::SLOT<0>::kAddr, 0x10000020u);
   EXPECT_EQ(periph::SLOT<1>::kAddr, 0x10000024u);
   EXPECT_EQ(periph::SLOT<2>::kAddr, 0x10000028u);
   EXPECT_EQ(periph::SLOT<3>::kAddr, 0x1000002Cu);
 }
 
-TEST_F(MmioTest, RegisterArrayWriteIsolatedPerIndex) {
+TEST_F(MmioTest, RegisterArrayWritesAreIndexIsolated) {
   periph::SLOT<0>::write(periph::SLOT<0>::VALUE{0xAAAAAAAAu});
   periph::SLOT<2>::write(periph::SLOT<2>::VALUE{0x12345678u});
+
   EXPECT_EQ(periph::SLOT<0>::read().get<periph::SLOT<0>::VALUE>(), 0xAAAAAAAAu);
-  EXPECT_EQ(periph::SLOT<1>::read().get<periph::SLOT<1>::VALUE>(), 0u);  // untouched
+  EXPECT_EQ(periph::SLOT<1>::read().get<periph::SLOT<1>::VALUE>(), 0u);
   EXPECT_EQ(periph::SLOT<2>::read().get<periph::SLOT<2>::VALUE>(), 0x12345678u);
-  EXPECT_EQ(periph::SLOT<3>::read().get<periph::SLOT<3>::VALUE>(), 0u);  // untouched
+  EXPECT_EQ(periph::SLOT<3>::read().get<periph::SLOT<3>::VALUE>(), 0u);
 }
 
-// --- Cluster array (templated index) -----------------------------------------
-//
-// Fixture: peripheral has a cluster of 4 channels, dim_increment=0x10, starting
-// at peripheral offset 0x40. CHAN_CONFIG (32-bit) at intra-cluster offset 0,
-// CHAN_STATE (8-bit) at intra-cluster offset 0x8.
+// --- Cluster array: 4 channels, dim_increment=0x10 from offset 0x40 ---------
 
-TEST_F(MmioTest, ClusterAddressesAreCorrectPerIndex) {
-  // Channel 0: 0x10000040 (CONFIG), 0x10000048 (STATE)
-  // Channel 1: 0x10000050,           0x10000058
-  // Channel 2: 0x10000060,           0x10000068
-  // Channel 3: 0x10000070,           0x10000078
+TEST_F(MmioTest, ClusterAddressArithmetic) {
   EXPECT_EQ(periph::CHAN_CONFIG<0>::kAddr, 0x10000040u);
   EXPECT_EQ(periph::CHAN_CONFIG<1>::kAddr, 0x10000050u);
   EXPECT_EQ(periph::CHAN_CONFIG<2>::kAddr, 0x10000060u);
@@ -207,45 +186,40 @@ TEST_F(MmioTest, ClusterAddressesAreCorrectPerIndex) {
   EXPECT_EQ(periph::CHAN_STATE<3>::kAddr,  0x10000078u);
 }
 
-TEST_F(MmioTest, ClusterWriteIsolatedPerChannel) {
-  periph::CHAN_CONFIG<0>::write(periph::CHAN_CONFIG<0>::SOURCE{std::uint8_t{0xAA}});
-  periph::CHAN_CONFIG<2>::write(periph::CHAN_CONFIG<2>::SOURCE{std::uint8_t{0xCC}});
-  EXPECT_EQ(periph::CHAN_CONFIG<0>::read().get<periph::CHAN_CONFIG<0>::SOURCE>(), 0xAAu);
-  EXPECT_EQ(periph::CHAN_CONFIG<1>::read().get<periph::CHAN_CONFIG<1>::SOURCE>(), 0u);  // untouched
-  EXPECT_EQ(periph::CHAN_CONFIG<2>::read().get<periph::CHAN_CONFIG<2>::SOURCE>(), 0xCCu);
-  EXPECT_EQ(periph::CHAN_CONFIG<3>::read().get<periph::CHAN_CONFIG<3>::SOURCE>(), 0u);  // untouched
+TEST_F(MmioTest, ClusterWritesAreChannelIsolated) {
+  using Cfg0 = periph::CHAN_CONFIG<0>;
+  using Cfg1 = periph::CHAN_CONFIG<1>;
+  using Cfg2 = periph::CHAN_CONFIG<2>;
+  using Cfg3 = periph::CHAN_CONFIG<3>;
+
+  Cfg0::write(Cfg0::SOURCE{std::uint8_t{0xAA}});
+  Cfg2::write(Cfg2::SOURCE{std::uint8_t{0xCC}});
+
+  EXPECT_EQ(Cfg0::read().get<Cfg0::SOURCE>(), 0xAAu);
+  EXPECT_EQ(Cfg1::read().get<Cfg1::SOURCE>(), 0u);
+  EXPECT_EQ(Cfg2::read().get<Cfg2::SOURCE>(), 0xCCu);
+  EXPECT_EQ(Cfg3::read().get<Cfg3::SOURCE>(), 0u);
 }
 
-TEST_F(MmioTest, ClusterEightBitStateIsByteStore) {
-  // CHAN_STATE<1> is at 0x10000058 — only that byte may change.
+TEST_F(MmioTest, ClusterEightBitMemberIsByteStore) {
   std::memset(periphBytes(), 0xFF, kPeriphBytes);
+  // CHAN_STATE<1> is at byte offset 0x58 — only that byte may change.
   periph::CHAN_STATE<1>::write(periph::CHAN_STATE<1>::VALUE{std::uint8_t{0x42}});
+
   EXPECT_EQ(periphBytes()[0x57], 0xFFu);
   EXPECT_EQ(periphBytes()[0x58], 0x42u);
   EXPECT_EQ(periphBytes()[0x59], 0xFFu);
-  EXPECT_EQ(periphBytes()[0x5A], 0xFFu);
-  EXPECT_EQ(periphBytes()[0x5B], 0xFFu);
 }
 
-TEST_F(MmioTest, ClusterStorageTypesMatchSvdSize) {
+TEST_F(MmioTest, ClusterMemberStorageTypesMatchSvd) {
   static_assert(std::is_same_v<periph::CHAN_CONFIG<0>::storage_type, std::uint32_t>);
   static_assert(std::is_same_v<periph::CHAN_STATE<0>::storage_type,  std::uint8_t>);
 }
 
-// --- Nested register array inside cluster array (2D template) ---------------
-//
-// Fixture: each channel cluster (CHAN[0..3]) contains a CHAN_SETPOINT[0..1]
-// array at intra-cluster offset 0xC, dim_increment 4. So:
-//   CHAN_SETPOINT<C, S>::kAddr = 0x10000040 + (C * 0x10) + 0xC + (S * 0x4)
-// Channel 0: 0x1000004C, 0x10000050
-// Channel 1: 0x1000005C, 0x10000060
-// Channel 2: 0x1000006C, 0x10000070
-// Channel 3: 0x1000007C, ... wait — CHAN_SETPOINT<3,1> would be 0x10000080,
-// which is past the addressBlock; addressBlock is 0x80 sized so 0x10000080
-// is just past the end. That's fine for the test — the addresses are still
-// inside the mmap'd 4 KB scratch page.
+// --- Nested array inside cluster: 2D template <ClusterIndex, ArrayIndex> ----
 
-TEST_F(MmioTest, NestedArrayAddressesAreCorrect) {
+TEST_F(MmioTest, NestedArrayAddressArithmetic) {
+  // CHAN_SETPOINT<C, S> = 0x10000040 + C*0x10 + 0xC + S*0x4.
   EXPECT_EQ((periph::CHAN_SETPOINT<0, 0>::kAddr), 0x1000004Cu);
   EXPECT_EQ((periph::CHAN_SETPOINT<0, 1>::kAddr), 0x10000050u);
   EXPECT_EQ((periph::CHAN_SETPOINT<1, 0>::kAddr), 0x1000005Cu);
@@ -253,13 +227,24 @@ TEST_F(MmioTest, NestedArrayAddressesAreCorrect) {
   EXPECT_EQ((periph::CHAN_SETPOINT<3, 1>::kAddr), 0x10000080u);
 }
 
-// --- Peripheral family (derivedFrom -> templated class) ---------------------
-//
-// Fixture: PORT1 (canonical) at 0x10001000, PORT2 derivedFrom PORT1 at
-// 0x10001100, PORT3 at 0x10001200. The generator emits one
-// `template<u32 Instance> struct Port` covering all three.
+TEST_F(MmioTest, NestedArrayWritesAreCellIsolated) {
+  using S00 = periph::CHAN_SETPOINT<0, 0>;
+  using S01 = periph::CHAN_SETPOINT<0, 1>;
+  using S10 = periph::CHAN_SETPOINT<1, 0>;
+  using S11 = periph::CHAN_SETPOINT<1, 1>;
 
-TEST_F(MmioTest, FamilyAddressesAreCorrectPerInstance) {
+  S00::write(S00::POINT{0xAA000000u});
+  S11::write(S11::POINT{0x000000BBu});
+
+  EXPECT_EQ(S00::read().get<S00::POINT>(), 0xAA000000u);
+  EXPECT_EQ(S01::read().get<S01::POINT>(), 0u);
+  EXPECT_EQ(S10::read().get<S10::POINT>(), 0u);
+  EXPECT_EQ(S11::read().get<S11::POINT>(), 0x000000BBu);
+}
+
+// --- Peripheral family: <derivedFrom> siblings -> templated class -----------
+
+TEST_F(MmioTest, FamilyAddressesPickedFromInstanceTable) {
   EXPECT_EQ((regs::Port<1>::CTRL::kAddr), 0x10001000u);
   EXPECT_EQ((regs::Port<2>::CTRL::kAddr), 0x10001100u);
   EXPECT_EQ((regs::Port<3>::CTRL::kAddr), 0x10001200u);
@@ -267,36 +252,22 @@ TEST_F(MmioTest, FamilyAddressesAreCorrectPerInstance) {
   EXPECT_EQ((regs::Port<3>::DATA::kAddr), 0x10001204u);
 }
 
-TEST_F(MmioTest, FamilyWriteIsolatedPerInstance) {
-  using p1 = regs::Port<1>;
-  using p2 = regs::Port<2>;
-  using p3 = regs::Port<3>;
+TEST_F(MmioTest, FamilyWritesAreInstanceIsolated) {
+  using P1 = regs::Port<1>;
+  using P2 = regs::Port<2>;
+  using P3 = regs::Port<3>;
 
-  p1::CTRL::write(p1::CTRL::ENABLE{true}, p1::CTRL::MODE{std::uint8_t{0x5}});
-  p3::DATA::write(p3::DATA::VALUE{0xDEADBEEFu});
+  P1::CTRL::write(P1::CTRL::ENABLE{true}, P1::CTRL::MODE{std::uint8_t{0x5}});
+  P3::DATA::write(P3::DATA::VALUE{0xDEADBEEFu});
 
-  EXPECT_TRUE (p1::CTRL::read().get<p1::CTRL::ENABLE>());
-  EXPECT_EQ   (p1::CTRL::read().get<p1::CTRL::MODE>(), 0x5u);
-  EXPECT_FALSE(p2::CTRL::read().get<p2::CTRL::ENABLE>());     // untouched
-  EXPECT_EQ   (p2::DATA::read().get<p2::DATA::VALUE>(), 0u);  // untouched
-  EXPECT_EQ   (p3::DATA::read().get<p3::DATA::VALUE>(), 0xDEADBEEFu);
+  EXPECT_TRUE (P1::CTRL::read().get<P1::CTRL::ENABLE>());
+  EXPECT_EQ   (P1::CTRL::read().get<P1::CTRL::MODE>(), 0x5u);
+  EXPECT_FALSE(P2::CTRL::read().get<P2::CTRL::ENABLE>());
+  EXPECT_EQ   (P2::DATA::read().get<P2::DATA::VALUE>(), 0u);
+  EXPECT_EQ   (P3::DATA::read().get<P3::DATA::VALUE>(), 0xDEADBEEFu);
 }
 
-TEST_F(MmioTest, FamilyStorageTypeMatchesSvd) {
+TEST_F(MmioTest, FamilyMemberStorageTypesMatchSvd) {
   static_assert(std::is_same_v<regs::Port<1>::CTRL::storage_type, std::uint32_t>);
   static_assert(std::is_same_v<regs::Port<2>::DATA::storage_type, std::uint32_t>);
-}
-
-TEST_F(MmioTest, NestedArrayWriteIsolatedPerCellOfTwoDimensions) {
-  using s00 = periph::CHAN_SETPOINT<0, 0>;
-  using s01 = periph::CHAN_SETPOINT<0, 1>;
-  using s10 = periph::CHAN_SETPOINT<1, 0>;
-  using s11 = periph::CHAN_SETPOINT<1, 1>;
-
-  s00::write(s00::POINT{0xAA000000u});
-  s11::write(s11::POINT{0x000000BBu});
-  EXPECT_EQ(s00::read().get<s00::POINT>(), 0xAA000000u);
-  EXPECT_EQ(s01::read().get<s01::POINT>(), 0u);             // untouched
-  EXPECT_EQ(s10::read().get<s10::POINT>(), 0u);             // untouched
-  EXPECT_EQ(s11::read().get<s11::POINT>(), 0x000000BBu);
 }
