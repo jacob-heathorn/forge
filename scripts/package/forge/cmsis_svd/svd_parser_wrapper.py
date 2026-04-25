@@ -112,79 +112,121 @@ def register_storage_type(register):
   return 'std::uint32_t'
 
 
-def peripheral_render_items(peripheral):
-  """Flatten a peripheral's registers + cluster arrays into a uniform iterable
-  of dicts that the jinja template can render without needing to know about
-  cluster shape. Each item carries everything needed:
+def _undo_double_counted_offset(inner_offset, container_offset, container_dim_increment):
+  """Some vendor SVDs (e.g. NXP MIMXRT DMA TCDs) put peripheral-relative
+  offsets on inner registers instead of container-relative. cmsis-svd then
+  uniformly adds the container offset, double-counting. Detect when the
+  resolved offset lands past the container's own range and undo it."""
+  if inner_offset >= container_offset + container_dim_increment:
+    return inner_offset - container_offset
+  return inner_offset
 
-    {'kind':       'register' | 'cluster_register',
-     'register':   the SVDRegister (cluster[0]'s copy for cluster items),
-     'name':       C++ struct name (cluster prefix stripped for cluster items),
-     'addr_expr':  literal '0xNNu' for plain regs, '0xNNu + (Index * 0xMMu)'
-                   for cluster items (substituted into the Register<> template
-                   parameter list verbatim),
-     'is_templated': bool — emit `template<std::uint32_t Index>` + bound check,
-     'dim':        cluster size when is_templated, else 0}
+
+def _format_addr_expr(base_addr, template_params):
+  """Build the address expression substituted into the Register<> template
+  parameter list. Plain registers get a literal hex constant; templated
+  registers get '<base> + (Index0 * <inc0>) + (Index1 * <inc1>) + ...'."""
+  expr = f'0x{base_addr:08X}u'
+  for tp in template_params:
+    expr += f' + ({tp["name"]} * 0x{tp["increment"]:X}u)'
+  return expr
+
+
+def _make_render_item(register, name, base_addr, template_params):
+  """Uniform render-item shape regardless of how the register is reached.
+  template_params is a list of dicts with keys {'name', 'dim', 'increment'};
+  empty list = plain register, length 1 = 1D array/cluster, length 2 = nested."""
+  return {
+    'register': register,
+    'name': normalize_register_name(name),
+    'addr_expr': _format_addr_expr(base_addr, template_params),
+    'is_templated': bool(template_params),
+    'template_params': template_params,
+  }
+
+
+def peripheral_render_items(peripheral):
+  """Flatten a peripheral's registers + arrays + cluster arrays into a uniform
+  iterable of render-item dicts that the jinja template can render without
+  needing to know about container shape.
+
+  Supports:
+    SVDRegister                                  -> 0 template params
+    SVDRegisterArray                             -> 1 template param (Index)
+    SVDRegisterClusterArray of SVDRegister       -> 1 (ClusterIndex)
+    SVDRegisterClusterArray of SVDRegisterArray  -> 2 (ClusterIndex, ArrayIndex)
   """
   for r in peripheral.registers:
     cls = r.__class__.__name__
     if cls == 'SVDRegister':
-      addr = peripheral.base_address + r.address_offset
-      yield {
-        'kind': 'register',
-        'register': r,
-        'name': normalize_register_name(r.name),
-        'addr_expr': f'0x{addr:08X}u',
-        'is_templated': False,
-        'dim': 0,
-      }
+      yield _make_render_item(
+          r,
+          name=r.name,
+          base_addr=peripheral.base_address + r.address_offset,
+          template_params=[])
     elif cls == 'SVDRegisterArray':
-      # A single register replicated by <dim> (e.g. DMAMUX CHCFG[N]). cmsis-svd
-      # exposes the dim-expanded list via .registers and the prototype via
-      # .meta_register (which carries the original 'NAME[%s]' template and
-      # dim_increment).
+      # A single register replicated by <dim> (e.g. DMAMUX CHCFG[N]).
       proto = r.registers[0]
       meta = r.meta_register
-      dim = len(r.registers)
-      # 'CHCFG[%s]' -> 'CHCFG'.
       base_name = meta.name.replace('[%s]', '').replace('%s', '')
-      addr0 = peripheral.base_address + proto.address_offset
-      yield {
-        'kind': 'cluster_register',
-        'register': proto,
-        'name': normalize_register_name(base_name),
-        'addr_expr': f'0x{addr0:08X}u + (Index * 0x{meta.dim_increment:X}u)',
-        'is_templated': True,
-        'dim': dim,
-      }
+      yield _make_render_item(
+          proto,
+          name=base_name,
+          base_addr=peripheral.base_address + proto.address_offset,
+          template_params=[{
+            'name': 'Index',
+            'dim': len(r.registers),
+            'increment': meta.dim_increment,
+          }])
     elif cls == 'SVDRegisterClusterArray':
-      # cmsis-svd dim-expands the cluster: clusters[i] contains inner registers
-      # whose .address_offset is already peripheral-relative for instance i.
-      # We emit ONE templated struct per inner register, parameterized by the
-      # cluster index, using cluster[0]'s copy to extract layout.
-      proto = r.clusters[0]
-      dim = len(r.clusters)
-      dim_increment = proto.dim_increment
-      cluster_prefix = proto.name + '_'
-      for inner in proto.registers:
-        # Some vendor SVDs (e.g. NXP MIMXRT DMA) put peripheral-relative offsets
-        # on inner registers instead of cluster-relative. cmsis-svd always adds
-        # cluster.address_offset, double-counting in those cases. Detect when
-        # the resolved offset lands past the cluster's own range and undo the
-        # extra cluster offset.
-        resolved_offset = inner.address_offset
-        if resolved_offset >= proto.address_offset + dim_increment:
-          resolved_offset -= proto.address_offset
-        addr0 = peripheral.base_address + resolved_offset
-        stripped = inner.name[len(cluster_prefix):] if inner.name.startswith(cluster_prefix) else inner.name
-        yield {
-          'kind': 'cluster_register',
-          'register': inner,
-          'name': normalize_register_name(stripped),
-          'addr_expr': f'0x{addr0:08X}u + (Index * 0x{dim_increment:X}u)',
-          'is_templated': True,
-          'dim': dim,
-        }
+      # An array of multi-register clusters (e.g. DMA TCD[0..31]).
+      cluster_proto = r.clusters[0]
+      cluster_param = {
+        'name': 'ClusterIndex',
+        'dim': len(r.clusters),
+        'increment': cluster_proto.dim_increment,
+      }
+      cluster_prefix = cluster_proto.name + '_'
+      def _strip(name):
+        return name[len(cluster_prefix):] if name.startswith(cluster_prefix) else name
+      for inner in cluster_proto.registers:
+        inner_cls = inner.__class__.__name__
+        if inner_cls == 'SVDRegister':
+          inner_offset = _undo_double_counted_offset(
+              inner.address_offset,
+              cluster_proto.address_offset,
+              cluster_proto.dim_increment)
+          yield _make_render_item(
+              inner,
+              name=_strip(inner.name),
+              base_addr=peripheral.base_address + inner_offset,
+              template_params=[cluster_param])
+        elif inner_cls == 'SVDRegisterArray':
+          # A register-array nested inside each cluster instance — e.g. CCM
+          # CLOCK_ROOT[C]_CLOCK_ROOT_SETPOINT[S]. Two template params: cluster
+          # index and array index.
+          array_proto = inner.registers[0]
+          array_meta = inner.meta_register
+          array_offset = _undo_double_counted_offset(
+              array_proto.address_offset,
+              cluster_proto.address_offset,
+              cluster_proto.dim_increment)
+          array_base = array_meta.name.replace('[%s]', '').replace('%s', '')
+          yield _make_render_item(
+              array_proto,
+              name=_strip(array_base),
+              base_addr=peripheral.base_address + array_offset,
+              template_params=[cluster_param, {
+                'name': 'ArrayIndex',
+                'dim': len(inner.registers),
+                'increment': array_meta.dim_increment,
+              }])
+        else:
+          raise NotImplementedError(
+              f"Peripheral {peripheral.name!r} cluster {cluster_proto.name!r} "
+              f"contains an inner element of type {inner_cls} which is not "
+              f"yet supported. Extend peripheral_render_items() and add a "
+              f"fixture in forge/test/native/mmio/test_peripheral.svd.")
     else:
       raise NotImplementedError(
           f"Peripheral {peripheral.name!r} has a register of type {cls} "

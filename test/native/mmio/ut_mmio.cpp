@@ -229,3 +229,38 @@ TEST_F(MmioTest, ClusterStorageTypesMatchSvdSize) {
   static_assert(std::is_same_v<periph::CHAN_CONFIG<0>::storage_type, std::uint32_t>);
   static_assert(std::is_same_v<periph::CHAN_STATE<0>::storage_type,  std::uint8_t>);
 }
+
+// --- Nested register array inside cluster array (2D template) ---------------
+//
+// Fixture: each channel cluster (CHAN[0..3]) contains a CHAN_SETPOINT[0..1]
+// array at intra-cluster offset 0xC, dim_increment 4. So:
+//   CHAN_SETPOINT<C, S>::kAddr = 0x10000040 + (C * 0x10) + 0xC + (S * 0x4)
+// Channel 0: 0x1000004C, 0x10000050
+// Channel 1: 0x1000005C, 0x10000060
+// Channel 2: 0x1000006C, 0x10000070
+// Channel 3: 0x1000007C, ... wait — CHAN_SETPOINT<3,1> would be 0x10000080,
+// which is past the addressBlock; addressBlock is 0x80 sized so 0x10000080
+// is just past the end. That's fine for the test — the addresses are still
+// inside the mmap'd 4 KB scratch page.
+
+TEST_F(MmioTest, NestedArrayAddressesAreCorrect) {
+  EXPECT_EQ((periph::CHAN_SETPOINT<0, 0>::kAddr), 0x1000004Cu);
+  EXPECT_EQ((periph::CHAN_SETPOINT<0, 1>::kAddr), 0x10000050u);
+  EXPECT_EQ((periph::CHAN_SETPOINT<1, 0>::kAddr), 0x1000005Cu);
+  EXPECT_EQ((periph::CHAN_SETPOINT<2, 1>::kAddr), 0x10000070u);
+  EXPECT_EQ((periph::CHAN_SETPOINT<3, 1>::kAddr), 0x10000080u);
+}
+
+TEST_F(MmioTest, NestedArrayWriteIsolatedPerCellOfTwoDimensions) {
+  using s00 = periph::CHAN_SETPOINT<0, 0>;
+  using s01 = periph::CHAN_SETPOINT<0, 1>;
+  using s10 = periph::CHAN_SETPOINT<1, 0>;
+  using s11 = periph::CHAN_SETPOINT<1, 1>;
+
+  s00::write(s00::POINT{0xAA000000u});
+  s11::write(s11::POINT{0x000000BBu});
+  EXPECT_EQ(s00::read().get<s00::POINT>(), 0xAA000000u);
+  EXPECT_EQ(s01::read().get<s01::POINT>(), 0u);             // untouched
+  EXPECT_EQ(s10::read().get<s10::POINT>(), 0u);             // untouched
+  EXPECT_EQ(s11::read().get<s11::POINT>(), 0x000000BBu);
+}

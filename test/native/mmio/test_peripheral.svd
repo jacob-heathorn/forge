@@ -307,6 +307,24 @@
               </field>
             </fields>
           </register>
+          <register>
+            <dim>2</dim>
+            <dimIncrement>0x4</dimIncrement>
+            <name>CHAN_SETPOINT%s</name>
+            <description>Per-channel register array (nested array inside cluster).</description>
+            <addressOffset>0xC</addressOffset>
+            <size>32</size>
+            <access>read-write</access>
+            <resetValue>0x00000000</resetValue>
+            <fields>
+              <field>
+                <name>POINT</name>
+                <bitOffset>0</bitOffset>
+                <bitWidth>32</bitWidth>
+                <access>read-write</access>
+              </field>
+            </fields>
+          </register>
         </cluster>
 
       </registers>

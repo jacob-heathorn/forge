@@ -37,7 +37,7 @@ namespace {{ reg_name }}_fields_ {
 }  // namespace {{ reg_name }}_fields_
 
 {% if item.is_templated -%}
-template<std::uint32_t Index>
+template<{% for tp in item.template_params %}{% if not loop.first %}, {% endif %}std::uint32_t {{ tp.name }}{% endfor %}>
 {% endif -%}
 struct {{ reg_name }} : ftl::mmio::Register<
     {{ item.addr_expr }},
@@ -52,9 +52,9 @@ struct {{ reg_name }} : ftl::mmio::Register<
     ftl::mmio::Reserved<{{ row.width }}, {{ row.offset }}>
     {%- endif -%}
   {%- endfor %}> {
-  {%- if item.is_templated %}
-  static_assert(Index < {{ item.dim }}u, "{{ reg_name }}: Index out of range");
-  {%- endif %}
+  {%- for tp in item.template_params %}
+  static_assert({{ tp.name }} < {{ tp.dim }}u, "{{ reg_name }}: {{ tp.name }} out of range");
+  {%- endfor %}
   {#- Re-export enums into the struct. -#}
   {%- for row in rows if row.kind == 'field' and row.field.is_enumerated_type and row.field.enumerated_values %}
   {%- for enum_set in row.field.enumerated_values %}
