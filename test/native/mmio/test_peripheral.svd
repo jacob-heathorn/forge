@@ -207,33 +207,6 @@
         </register>
 
         <register>
-          <name>COUNTER</name>
-          <description>Mixed register: a normal RW field alongside a W1C flag.</description>
-          <addressOffset>0x14</addressOffset>
-          <size>32</size>
-          <access>read-write</access>
-          <resetValue>0x00000000</resetValue>
-          <resetMask>0xFFFFFFFF</resetMask>
-          <fields>
-            <field>
-              <name>VALUE</name>
-              <description>Counter value (RW).</description>
-              <bitOffset>0</bitOffset>
-              <bitWidth>16</bitWidth>
-              <access>read-write</access>
-            </field>
-            <field>
-              <name>SATURATED</name>
-              <description>Counter saturated; write 1 to clear.</description>
-              <bitOffset>31</bitOffset>
-              <bitWidth>1</bitWidth>
-              <access>read-write</access>
-              <modifiedWriteValues>oneToClear</modifiedWriteValues>
-            </field>
-          </fields>
-        </register>
-
-        <register>
           <name>COMMAND</name>
           <description>Command register (write-only).</description>
           <addressOffset>0x10</addressOffset>

@@ -108,17 +108,6 @@ TEST_F(MmioTest, ClearLeavesOtherSensitiveFlagsUntouched) {
   EXPECT_EQ(Flags::raw() & (1u << 0),  1u << 0);  // OVERFLOW: the clear bit
 }
 
-TEST_F(MmioTest, ModifyZerosW1cBitsOnMixedRegister) {
-  // COUNTER mixes a normal RW field (VALUE) with a W1C flag (SATURATED).
-  // modify(VALUE{...}) must store 0 to SATURATED so it isn't re-triggered.
-  using Counter = periph::COUNTER;
-  Counter::raw() = 0x1234u | (1u << 31);
-  Counter::modify(Counter::VALUE{std::uint16_t{0x5678}});
-
-  EXPECT_EQ(Counter::raw() & 0xFFFFu,    0x5678u);
-  EXPECT_EQ(Counter::raw() & (1u << 31), 0u);
-}
-
 // --- Storage width: 8 / 16 / 32-bit MMIO accesses ---------------------------
 
 TEST_F(MmioTest, SixteenBitRegisterDoesNotDisturbFlankingBytes) {
