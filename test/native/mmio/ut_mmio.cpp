@@ -165,6 +165,27 @@ TEST_F(MmioTest, StorageTypesMatchSvdSize) {
   static_assert(std::is_same_v<periph::TRIGGER::storage_type, std::uint8_t>);
 }
 
+// --- Register array (single register replicated by <dim>) ------------------
+//
+// SLOT[N] in the fixture: 4 instances at peripheral offsets 0x20, 0x24, 0x28,
+// 0x2C. Single VALUE field covering all 32 bits.
+
+TEST_F(MmioTest, RegisterArrayAddressesAreCorrect) {
+  EXPECT_EQ(periph::SLOT<0>::kAddr, 0x10000020u);
+  EXPECT_EQ(periph::SLOT<1>::kAddr, 0x10000024u);
+  EXPECT_EQ(periph::SLOT<2>::kAddr, 0x10000028u);
+  EXPECT_EQ(periph::SLOT<3>::kAddr, 0x1000002Cu);
+}
+
+TEST_F(MmioTest, RegisterArrayWriteIsolatedPerIndex) {
+  periph::SLOT<0>::write(periph::SLOT<0>::VALUE{0xAAAAAAAAu});
+  periph::SLOT<2>::write(periph::SLOT<2>::VALUE{0x12345678u});
+  EXPECT_EQ(periph::SLOT<0>::read().get<periph::SLOT<0>::VALUE>(), 0xAAAAAAAAu);
+  EXPECT_EQ(periph::SLOT<1>::read().get<periph::SLOT<1>::VALUE>(), 0u);  // untouched
+  EXPECT_EQ(periph::SLOT<2>::read().get<periph::SLOT<2>::VALUE>(), 0x12345678u);
+  EXPECT_EQ(periph::SLOT<3>::read().get<periph::SLOT<3>::VALUE>(), 0u);  // untouched
+}
+
 // --- Cluster array (templated index) -----------------------------------------
 //
 // Fixture: peripheral has a cluster of 4 channels, dim_increment=0x10, starting

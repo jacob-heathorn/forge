@@ -138,6 +138,25 @@ def peripheral_render_items(peripheral):
         'is_templated': False,
         'dim': 0,
       }
+    elif cls == 'SVDRegisterArray':
+      # A single register replicated by <dim> (e.g. DMAMUX CHCFG[N]). cmsis-svd
+      # exposes the dim-expanded list via .registers and the prototype via
+      # .meta_register (which carries the original 'NAME[%s]' template and
+      # dim_increment).
+      proto = r.registers[0]
+      meta = r.meta_register
+      dim = len(r.registers)
+      # 'CHCFG[%s]' -> 'CHCFG'.
+      base_name = meta.name.replace('[%s]', '').replace('%s', '')
+      addr0 = peripheral.base_address + proto.address_offset
+      yield {
+        'kind': 'cluster_register',
+        'register': proto,
+        'name': normalize_register_name(base_name),
+        'addr_expr': f'0x{addr0:08X}u + (Index * 0x{meta.dim_increment:X}u)',
+        'is_templated': True,
+        'dim': dim,
+      }
     elif cls == 'SVDRegisterClusterArray':
       # cmsis-svd dim-expands the cluster: clusters[i] contains inner registers
       # whose .address_offset is already peripheral-relative for instance i.
@@ -293,10 +312,11 @@ class SVDParserWrapper:
     )
     self.template = self.env.get_template('cmsis_svd_registers.jinja2')
 
-  # Register classes the generator can emit. SVDRegisterArray (a single
-  # register replicated by <dim>) is still unhandled — we haven't seen one yet
-  # and adding it lazily means we get a hard error when one shows up.
-  _SUPPORTED_REGISTER_CLASSES = {'SVDRegister', 'SVDRegisterClusterArray'}
+  _SUPPORTED_REGISTER_CLASSES = {
+    'SVDRegister',
+    'SVDRegisterArray',
+    'SVDRegisterClusterArray',
+  }
 
   def _validate_peripheral(self, peripheral):
     for register in peripheral.registers:

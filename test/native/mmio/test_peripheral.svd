@@ -243,6 +243,26 @@
           </fields>
         </register>
 
+        <register>
+          <dim>4</dim>
+          <dimIncrement>0x4</dimIncrement>
+          <name>SLOT[%s]</name>
+          <description>Register array (single register replicated by dim).</description>
+          <addressOffset>0x20</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
+          <resetMask>0xFFFFFFFF</resetMask>
+          <fields>
+            <field>
+              <name>VALUE</name>
+              <bitOffset>0</bitOffset>
+              <bitWidth>32</bitWidth>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+
         <cluster>
           <dim>4</dim>
           <dimIncrement>0x10</dimIncrement>
