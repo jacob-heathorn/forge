@@ -10,8 +10,17 @@
 {%- set reg_bits = register_size(r) -%}
 {%- set reg_access = mmio_access(r.access) -%}
 {%- set rows = build_field_rows(r) -%}
+{#- Inside a peripheral-family (templated class), references to the
+    REG_fields_ struct are dependent names and require `typename`.
+    Standalone peripherals don't have any enclosing template, so the
+    qualifier is empty there. -#}
+{%- set type_qual = 'typename ' if family is defined else '' -%}
+{#- Field types live in a struct (not a namespace) so this same partial works
+    inside a templated peripheral-family class — namespaces are not allowed
+    at struct scope, but a struct full of typedefs is interchangeable for
+    our purposes. #}
 {{ format_comment(r.description, width=100, indent_width=0) }}
-namespace {{ reg_name }}_fields_ {
+struct {{ reg_name }}_fields_ {
   {#- Enum classes for enumerated fields. -#}
   {%- for row in rows if row.kind == 'field' and row.field.is_enumerated_type and row.field.enumerated_values %}
   {%- for enum_set in row.field.enumerated_values %}
@@ -34,7 +43,7 @@ namespace {{ reg_name }}_fields_ {
   {%- endif %}
   using {{ row.name }} = ftl::mmio::Field<{{ row.width }}, {{ row.offset }}, {{ row.value_type }}, {{ row.access }}, {{ row.modify }}>;
   {%- endfor %}
-}  // namespace {{ reg_name }}_fields_
+};  // struct {{ reg_name }}_fields_
 
 {% if item.is_templated -%}
 template<{% for tp in item.template_params %}{% if not loop.first %}, {% endif %}std::uint32_t {{ tp.name }}{% endfor %}>
@@ -47,7 +56,7 @@ struct {{ reg_name }} : ftl::mmio::Register<
   {%- for row in rows -%}
   ,
     {%- if row.kind == 'field' %}
-    {{ reg_name }}_fields_::{{ row.name }}
+    {{ type_qual }}{{ reg_name }}_fields_::{{ row.name }}
     {%- else %}
     ftl::mmio::Reserved<{{ row.width }}, {{ row.offset }}>
     {%- endif -%}
@@ -59,7 +68,7 @@ struct {{ reg_name }} : ftl::mmio::Register<
   {%- for row in rows if row.kind == 'field' and row.field.is_enumerated_type and row.field.enumerated_values %}
   {%- for enum_set in row.field.enumerated_values %}
   {%- set enum_name = enum_set.name if enum_set.name else row.field.name %}
-  using e{{ enum_name }} = {{ reg_name }}_fields_::e{{ enum_name }};
+  using e{{ enum_name }} = {{ type_qual }}{{ reg_name }}_fields_::e{{ enum_name }};
   {%- endfor %}
   {%- endfor %}
   {#- Re-export field types into the struct.
@@ -67,9 +76,9 @@ struct {{ reg_name }} : ftl::mmio::Register<
       expose it as `value_` to avoid the "nested type with same name as enclosing class" error. -#}
   {%- for row in rows if row.kind == 'field' %}
   {%- if row.name == reg_name %}
-  using value_ = {{ reg_name }}_fields_::{{ row.name }};
+  using value_ = {{ type_qual }}{{ reg_name }}_fields_::{{ row.name }};
   {%- else %}
-  using {{ row.name }} = {{ reg_name }}_fields_::{{ row.name }};
+  using {{ row.name }} = {{ type_qual }}{{ reg_name }}_fields_::{{ row.name }};
   {%- endif %}
   {%- endfor %}
 };

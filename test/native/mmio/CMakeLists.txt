@@ -4,6 +4,8 @@
 
 set(TEST_SVD ${CMAKE_CURRENT_SOURCE_DIR}/test_peripheral.svd)
 set(GENERATED_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated)
+# generate() emits both standalone (testperiph.hpp) and family (port.hpp)
+# headers from one SVD; we use testperiph.hpp as the OUTPUT sentinel for ninja.
 set(GENERATED_HEADER ${GENERATED_DIR}/testperiph.hpp)
 
 # Use forge's nox dev env so `import forge` resolves.
@@ -17,7 +19,7 @@ add_custom_command(
   OUTPUT ${GENERATED_HEADER}
   COMMAND ${CMAKE_COMMAND} -E make_directory ${GENERATED_DIR}
   COMMAND ${FORGE_PYTHON} -c
-    "from forge import SVDParserWrapper; SVDParserWrapper('${TEST_SVD}', '${GENERATED_DIR}').generate_peripheral('TESTPERIPH')"
+    "from forge import SVDParserWrapper; SVDParserWrapper('${TEST_SVD}', '${GENERATED_DIR}').generate()"
   DEPENDS
     ${TEST_SVD}
     $ENV{FORGE_ROOT}/scripts/package/forge/cmsis_svd/svd_parser_wrapper.py

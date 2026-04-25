@@ -329,5 +329,68 @@
 
       </registers>
     </peripheral>
+
+    <!-- Peripheral family: PORT1..PORT3 share TESTPERIPH-style layout via
+         derivedFrom. Only the base address differs. The generator should
+         consolidate them into one template<u32 Instance> struct Port. -->
+    <peripheral>
+      <name>PORT1</name>
+      <description>Test port 1 (canonical) — drives the family-template path.</description>
+      <baseAddress>0x10001000</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x10</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <registers>
+        <register>
+          <name>CTRL</name>
+          <description>Control</description>
+          <addressOffset>0x0</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0</resetValue>
+          <fields>
+            <field>
+              <name>ENABLE</name>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>MODE</name>
+              <bitOffset>4</bitOffset>
+              <bitWidth>4</bitWidth>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>DATA</name>
+          <description>Data</description>
+          <addressOffset>0x4</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0</resetValue>
+          <fields>
+            <field>
+              <name>VALUE</name>
+              <bitOffset>0</bitOffset>
+              <bitWidth>32</bitWidth>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral derivedFrom="PORT1">
+      <name>PORT2</name>
+      <baseAddress>0x10001100</baseAddress>
+    </peripheral>
+    <peripheral derivedFrom="PORT1">
+      <name>PORT3</name>
+      <baseAddress>0x10001200</baseAddress>
+    </peripheral>
+
   </peripherals>
 </device>
