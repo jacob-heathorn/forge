@@ -6,6 +6,7 @@
 /.claude
 /.nox
 # Bazel
+/.bazel/
 /bazel-*
 /MODULE.bazel.lock
 /user.bazelrc
