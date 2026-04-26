@@ -9,6 +9,8 @@ import os
 import pickle
 import re
 import textwrap
+import time
+from contextlib import contextmanager
 from pathlib import Path
 
 from cmsis_svd.model import (
@@ -33,7 +35,6 @@ class SVDParserWrapper:
   """Generate ftl::mmio register headers from a CMSIS-SVD XML file."""
 
   def __init__(self, svd_file, output_dir):
-    print(f"Using svd file: {svd_file}")
     self.output_dir = Path(output_dir)
     self.device = _load_device(svd_file)
     env = _make_jinja_env()
@@ -45,11 +46,15 @@ class SVDParserWrapper:
     for hpp in self.output_dir.glob("*.hpp"):
       hpp.unlink()
     standalone, families = self._group_peripherals()
-    for peripheral in standalone:
-      self._write_standalone(peripheral)
-    for family in families:
-      self._write_family(family)
-    print(f"Register definitions generated in: {self.output_dir}")
+    total = len(standalone) + len(families)
+    print(f"Generating {total} header(s) "
+          f"({len(standalone)} standalone, {len(families)} families) "
+          f"into {self.output_dir}...")
+    with _phase_timer():
+      for peripheral in standalone:
+        self._write_standalone(peripheral)
+      for family in families:
+        self._write_family(family)
 
   def generate_peripheral(self, peripheral_name):
     """Regenerate one peripheral's header. If the peripheral belongs to a
@@ -58,10 +63,12 @@ class SVDParserWrapper:
     standalone, families = self._group_peripherals()
     for family in families:
       if any(p.name == peripheral_name for _, p in family["instances"]):
+        print(f"Rendering family {family['class_name']}...")
         print(f"Generated family: {self._write_family(family)}")
         return
     for peripheral in standalone:
       if peripheral.name == peripheral_name:
+        print(f"Rendering {peripheral.name}...")
         print(f"Generated: {self._write_standalone(peripheral)}")
         return
     names = [p.name for p in self.device.peripherals]
@@ -134,15 +141,25 @@ def _load_device(svd_file):
   """
   cache_path = BIN_DIR / f"{Path(svd_file).stem}.pkl"
   if cache_path.exists() and cache_path.stat().st_mtime >= os.path.getmtime(svd_file):
-    print(f"Loading device from: {cache_path}")
-    with cache_path.open("rb") as f:
+    print(f"Loading cached device from {cache_path}...")
+    with _phase_timer(), cache_path.open("rb") as f:
       return pickle.load(f)
-  print(f"Parsing and saving device to {cache_path}")
-  device = SVDParser.for_xml_file(svd_file).get_device()
-  BIN_DIR.mkdir(parents=True, exist_ok=True)
-  with cache_path.open("wb") as f:
-    pickle.dump(device, f)
+
+  print(f"Parsing {svd_file}...")
+  with _phase_timer():
+    device = SVDParser.for_xml_file(svd_file).get_device()
+    BIN_DIR.mkdir(parents=True, exist_ok=True)
+    with cache_path.open("wb") as f:
+      pickle.dump(device, f)
   return device
+
+
+@contextmanager
+def _phase_timer():
+  """Print 'Done (Xs)' when the wrapped block exits."""
+  start = time.monotonic()
+  yield
+  print(f"Done ({time.monotonic() - start:.2f}s)")
 
 
 def _make_jinja_env():
