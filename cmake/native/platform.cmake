@@ -3,6 +3,7 @@
 
 # Include the common platform cmake.
 include(${CMAKE_CURRENT_LIST_DIR}/../common/platform.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/../common/codegen.cmake)
 
 # Adds a gtest unit test executable, which can be executed with ctest.
 function(add_platform_test)
