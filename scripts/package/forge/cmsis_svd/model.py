@@ -86,7 +86,16 @@ class Peripheral:
     """Yield Register objects in declaration order. Cluster arrays expand
     into one Register per inner register."""
     for r in self._svd.registers:
-      yield from Register.expand(r, self._svd, self._addr)
+      if isinstance(r, SVDRegister):
+        yield Register.from_svd(r, self._svd, self._addr)
+      elif isinstance(r, SVDRegisterArray):
+        yield RegisterArray.from_svd(r, self._svd, self._addr)
+      elif isinstance(r, SVDRegisterClusterArray):
+        yield from Cluster(r, self._svd, self._addr).expand()
+      else:
+        raise NotImplementedError(
+            f"Peripheral {self._svd.name!r} has a register of type "
+            f"{type(r).__name__} which the generator does not yet emit.")
 
 
 @dataclass(frozen=True)
@@ -137,82 +146,19 @@ class PeripheralFamily:
 # Register
 
 class Register:
-  """One register declaration. Multiple Registers can come from one SVD entry
-  when expanding cluster arrays."""
+  """One register declaration emitted as `struct NAME : ftl::mmio::Register<...>`.
+  Plain registers have no template params; subclasses (RegisterArray) and
+  cluster-inner Registers carry an Index/ClusterIndex/ArrayIndex.
+  """
 
   @classmethod
-  def expand(cls, svd, svd_peripheral, addr_mode):
-    """Yield 1+ Register objects from one SVD register/array/cluster-array."""
-    if isinstance(svd, SVDRegister):
-      yield cls._plain(svd, svd_peripheral, addr_mode)
-    elif isinstance(svd, SVDRegisterArray):
-      yield cls._array(svd, svd_peripheral, addr_mode)
-    elif isinstance(svd, SVDRegisterClusterArray):
-      yield from cls._cluster_array(svd, svd_peripheral, addr_mode)
-    else:
-      raise NotImplementedError(
-          f"Peripheral {svd_peripheral.name!r} has a register of type "
-          f"{type(svd).__name__} which the generator does not yet emit.")
-
-  @classmethod
-  def _plain(cls, svd, svd_peripheral, addr_mode):
+  def from_svd(cls, svd, peripheral, addr_mode):
     return cls(svd,
                name=_normalize_name(svd.name),
                offset=svd.address_offset,
                template_params=[],
                addr_mode=addr_mode,
-               peripheral_name=svd_peripheral.name)
-
-  @classmethod
-  def _array(cls, svd_array, svd_peripheral, addr_mode):
-    proto = svd_array.registers[0]
-    meta = svd_array.meta_register
-    return cls(proto,
-               name=_normalize_name(_strip_dim_placeholder(meta.name)),
-               offset=proto.address_offset,
-               template_params=[TemplateParam(
-                   "Index", len(svd_array.registers), meta.dim_increment)],
-               addr_mode=addr_mode,
-               peripheral_name=svd_peripheral.name)
-
-  @classmethod
-  def _cluster_array(cls, svd_cluster_array, svd_peripheral, addr_mode):
-    cluster_proto = svd_cluster_array.clusters[0]
-    cluster_param = TemplateParam(
-        "ClusterIndex", len(svd_cluster_array.clusters), cluster_proto.dim_increment)
-    prefix = cluster_proto.name + "_"
-
-    def strip_prefix(name):
-      return name[len(prefix):] if name.startswith(prefix) else name
-
-    for inner in cluster_proto.registers:
-      where = f"{svd_peripheral.name}.{cluster_proto.name}"
-      if isinstance(inner, SVDRegister):
-        offset = _resolve_inner_offset(
-            inner.address_offset, cluster_proto, f"{where}.{inner.name}")
-        yield cls(inner,
-                  name=_normalize_name(strip_prefix(inner.name)),
-                  offset=offset,
-                  template_params=[cluster_param],
-                  addr_mode=addr_mode,
-                  peripheral_name=svd_peripheral.name)
-      elif isinstance(inner, SVDRegisterArray):
-        proto = inner.registers[0]
-        meta = inner.meta_register
-        offset = _resolve_inner_offset(
-            proto.address_offset, cluster_proto, f"{where}.{meta.name}")
-        yield cls(proto,
-                  name=_normalize_name(strip_prefix(_strip_dim_placeholder(meta.name))),
-                  offset=offset,
-                  template_params=[cluster_param, TemplateParam(
-                      "ArrayIndex", len(inner.registers), meta.dim_increment)],
-                  addr_mode=addr_mode,
-                  peripheral_name=svd_peripheral.name)
-      else:
-        raise NotImplementedError(
-            f"Peripheral {svd_peripheral.name!r} cluster {cluster_proto.name!r} "
-            f"contains an inner element of type {type(inner).__name__} which is "
-            f"not yet supported.")
+               peripheral_name=peripheral.name)
 
   def __init__(self, svd_register, *,
                name, offset, template_params, addr_mode, peripheral_name):
@@ -314,6 +260,81 @@ class Register:
           f"re-exported as {_REEXPORT_FALLBACK!r}, but a field named "
           f"{_REEXPORT_FALLBACK!r} already exists in this register. Edit the "
           f"SVD or change the rename strategy in Field.cpp_reexport.")
+
+
+class RegisterArray(Register):
+  """N copies of one register at a stride. Renders as a Register templated on
+  Index. All runtime behavior is inherited; only construction differs."""
+
+  @classmethod
+  def from_svd(cls, svd_array, peripheral, addr_mode):
+    proto = svd_array.registers[0]
+    meta = svd_array.meta_register
+    return cls(proto,
+               name=_normalize_name(_strip_dim_placeholder(meta.name)),
+               offset=proto.address_offset,
+               template_params=[TemplateParam(
+                   "Index", len(svd_array.registers), meta.dim_increment)],
+               addr_mode=addr_mode,
+               peripheral_name=peripheral.name)
+
+
+# =================================================================================================
+# Cluster — aggregates an SVD cluster array, expands into Register/RegisterArray instances
+
+class Cluster:
+  """A cluster array — N copies of a group of registers at a stride. Not a
+  Register itself; expands into one Register (or RegisterArray) per inner
+  entry, each carrying an extra ClusterIndex template param."""
+
+  def __init__(self, svd_cluster_array, peripheral, addr_mode):
+    self._proto = svd_cluster_array.clusters[0]
+    self._addr_mode = addr_mode
+    self._peripheral_name = peripheral.name
+    self._cluster_param = TemplateParam(
+        "ClusterIndex", len(svd_cluster_array.clusters), self._proto.dim_increment)
+    self._prefix = self._proto.name + "_"
+
+  def expand(self):
+    """Yield Register / RegisterArray instances, one per inner entry."""
+    for inner in self._proto.registers:
+      if isinstance(inner, SVDRegister):
+        yield self._inner_register(inner)
+      elif isinstance(inner, SVDRegisterArray):
+        yield self._inner_array(inner)
+      else:
+        raise NotImplementedError(
+            f"Peripheral {self._peripheral_name!r} cluster {self._proto.name!r} "
+            f"contains an inner element of type {type(inner).__name__} which is "
+            f"not yet supported.")
+
+  def _inner_register(self, inner):
+    return Register(inner,
+                    name=_normalize_name(self._strip_prefix(inner.name)),
+                    offset=self._resolve_offset(inner.address_offset, inner.name),
+                    template_params=[self._cluster_param],
+                    addr_mode=self._addr_mode,
+                    peripheral_name=self._peripheral_name)
+
+  def _inner_array(self, inner):
+    proto = inner.registers[0]
+    meta = inner.meta_register
+    return RegisterArray(proto,
+                         name=_normalize_name(
+                             self._strip_prefix(_strip_dim_placeholder(meta.name))),
+                         offset=self._resolve_offset(proto.address_offset, meta.name),
+                         template_params=[self._cluster_param, TemplateParam(
+                             "ArrayIndex", len(inner.registers), meta.dim_increment)],
+                         addr_mode=self._addr_mode,
+                         peripheral_name=self._peripheral_name)
+
+  def _strip_prefix(self, name):
+    return name[len(self._prefix):] if name.startswith(self._prefix) else name
+
+  def _resolve_offset(self, raw_offset, register_name):
+    return _resolve_inner_offset(
+        raw_offset, self._proto,
+        f"{self._peripheral_name}.{self._proto.name}.{register_name}")
 
 
 # =================================================================================================
