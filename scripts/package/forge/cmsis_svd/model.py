@@ -28,7 +28,7 @@ from cmsis_svd.model import (
 
 def standalone_peripheral(svd_peripheral):
   """Wrap a standalone (non-family) SVD peripheral. Addresses are absolute."""
-  return Peripheral(svd_peripheral, _AddrMode.absolute(svd_peripheral.base_address))
+  return Peripheral(svd_peripheral, AddrMode.absolute(svd_peripheral.base_address))
 
 
 def family(canonical_name, members):
@@ -111,7 +111,7 @@ class PeripheralFamily:
   kBase per Instance."""
 
   def __init__(self, svd_parent, family_name, instances):
-    self._parent = Peripheral(svd_parent, _AddrMode.symbolic("kBase"))
+    self._parent = Peripheral(svd_parent, AddrMode.symbolic("kBase"))
     self._family_name = family_name
     self._instances = instances
 
@@ -467,7 +467,7 @@ class TemplateParam:
 # Address mode (encapsulates standalone-vs-family addressing for one peripheral)
 
 @dataclass(frozen=True)
-class _AddrMode:
+class AddrMode:
   base_address: Optional[int]
   base_symbol: Optional[str]
   type_qualifier: str
