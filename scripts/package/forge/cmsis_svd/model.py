@@ -13,7 +13,7 @@ Public entry points:
 
 import re
 from dataclasses import dataclass
-from typing import Optional, Union
+from typing import Optional
 
 from cmsis_svd.model import (
     SVDAccessType,
@@ -370,9 +370,12 @@ class Field:
     if len(enums) == 1:
       return f"e{enums[0].name}"
     w = self.width
-    if w == 1:  return "bool"
-    if w <= 8:  return "std::uint8_t"
-    if w <= 16: return "std::uint16_t"
+    if w == 1:
+      return "bool"
+    if w <= 8:
+      return "std::uint8_t"
+    if w <= 16:
+      return "std::uint16_t"
     return "std::uint32_t"
 
   @property
@@ -537,10 +540,10 @@ _REEXPORT_FALLBACK = "VALUE"
 
 
 _ACCESS_TO_MMIO = {
-    SVDAccessType.READ_ONLY:       "ftl::mmio::RO",
-    SVDAccessType.WRITE_ONLY:      "ftl::mmio::WO",
-    SVDAccessType.WRITE_ONCE:      "ftl::mmio::WO",
-    SVDAccessType.READ_WRITE:      "ftl::mmio::RW",
+    SVDAccessType.READ_ONLY: "ftl::mmio::RO",
+    SVDAccessType.WRITE_ONLY: "ftl::mmio::WO",
+    SVDAccessType.WRITE_ONCE: "ftl::mmio::WO",
+    SVDAccessType.READ_WRITE: "ftl::mmio::RW",
     SVDAccessType.READ_WRITE_ONCE: "ftl::mmio::RW",
 }
 
@@ -550,10 +553,10 @@ def _access_to_mmio(access):
 
 
 _MODIFY_WRITE_TO_MMIO = {
-    "ONE_TO_CLEAR":  "ftl::mmio::OneToClear",
-    "ONE_TO_SET":    "ftl::mmio::OneToSet",
+    "ONE_TO_CLEAR": "ftl::mmio::OneToClear",
+    "ONE_TO_SET": "ftl::mmio::OneToSet",
     "ONE_TO_TOGGLE": "ftl::mmio::OneToToggle",
-    "MODIFY":        "ftl::mmio::Normal",
+    "MODIFY": "ftl::mmio::Normal",
 }
 
 
@@ -570,8 +573,10 @@ def _modify_write_to_mmio(mwv, *, where):
 
 
 def _storage_type(bits):
-  if bits <= 8:  return "std::uint8_t"
-  if bits <= 16: return "std::uint16_t"
+  if bits <= 8:
+    return "std::uint8_t"
+  if bits <= 16:
+    return "std::uint16_t"
   return "std::uint32_t"
 
 

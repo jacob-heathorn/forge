@@ -48,17 +48,17 @@ class SVDParserWrapper:
     with _phase_timer():
       for svd_peripheral in standalone:
         self._write_standalone(svd_peripheral)
-      for family in families:
-        self._write_family(family)
+      for fam in families:
+        self._write_family(fam)
 
   def generate_peripheral(self, peripheral_name):
     """Regenerate one peripheral's header. If the peripheral belongs to a
     derivedFrom family the entire family file is regenerated."""
     standalone, families = self._group_peripherals()
-    for family in families:
-      if any(i.name == peripheral_name for i in family.instances):
-        print(f"Rendering family {family.class_name}...")
-        print(f"Generated family: {self._write_family(family)}")
+    for fam in families:
+      if any(i.name == peripheral_name for i in fam.instances):
+        print(f"Rendering family {fam.class_name}...")
+        print(f"Generated family: {self._write_family(fam)}")
         return
     for svd_peripheral in standalone:
       if svd_peripheral.name == peripheral_name:
@@ -81,7 +81,7 @@ class SVDParserWrapper:
 
   def _group_peripherals(self):
     """Split SVD peripherals into (standalone SVDPeripherals, PeripheralFamilies)."""
-    by_canonical = {}
+    by_canonical: dict = {}
     for p in self.device.peripherals:
       by_canonical.setdefault(p.derived_from or p.name, []).append(p)
 
