@@ -1,0 +1,10 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+# Header-only ThreadX-flavored wrappers. Not built into any native test
+# target, but kept buildable so consumers downstream can pick it up.
+cc_library(
+    name = "ftl-threadx",
+    hdrs = glob(["include/**/*.hpp"]),
+    includes = ["include"],
+    visibility = ["//visibility:public"],
+)

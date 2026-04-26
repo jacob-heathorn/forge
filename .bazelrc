@@ -1,0 +1,28 @@
+build --enable_bzlmod
+build --incompatible_strict_action_env
+
+# Tuck the convenience symlinks (bazel-bin, bazel-out, bazel-testlogs, etc.)
+# into a single hidden directory so the repo root stays uncluttered. Tools
+# (clangd, IDEs) that look for outputs can find them at .bazel/bin, etc.
+build --symlink_prefix=.bazel/
+
+# C++20 across the build. External deps (gtest, etl) tolerate this.
+build --cxxopt=-std=c++20
+build --host_cxxopt=-std=c++20
+
+# Treat headers from external repos as system headers so our -Werror set
+# doesn't fire inside ETL/gtest. Mirrors CMake's `target_include_directories
+# SYSTEM` behavior for those deps.
+build --features=external_include_paths
+
+# Test output: show errors immediately rather than burying them in log files.
+test --test_output=errors
+
+# ThreadSanitizer config.
+build:tsan --copt=-fsanitize=thread
+build:tsan --copt=-g
+build:tsan --copt=-O1
+build:tsan --linkopt=-fsanitize=thread
+
+# Allow a developer overlay (gitignored).
+try-import %workspace%/user.bazelrc

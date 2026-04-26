@@ -1,0 +1,28 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("//bazel:copts.bzl", "FORGE_COPTS", "FORGE_CXXOPTS")
+
+# Vendored Pigweed unit-test framework. The forge `pw-ut-*` tests link this
+# instead of GoogleTest.
+cc_library(
+    name = "pw_unit_test",
+    srcs = [
+        "src/framework.cpp",
+        "src/googletest_style_event_handler.cpp",
+        "src/simple_printing_event_handler.cpp",
+    ],
+    hdrs = glob(["include/**/*.h"]),
+    includes = ["include"],
+    copts = FORGE_COPTS + FORGE_CXXOPTS,
+    visibility = ["//visibility:public"],
+)
+
+# Default main() that wires up the simple printing event handler. Tests link
+# this if they don't define their own main().
+cc_library(
+    name = "pw_ut_main",
+    srcs = ["//firmware/native:pw_ut_main.cpp"],
+    copts = FORGE_COPTS + FORGE_CXXOPTS,
+    deps = [":pw_unit_test"],
+    visibility = ["//visibility:public"],
+    alwayslink = True,
+)

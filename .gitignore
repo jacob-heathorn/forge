@@ -5,3 +5,7 @@
 /.pycache
 /.claude
 /.nox
+# Bazel
+/bazel-*
+/MODULE.bazel.lock
+/user.bazelrc

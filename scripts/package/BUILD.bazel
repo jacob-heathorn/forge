@@ -1,0 +1,24 @@
+load("@rules_python//python:defs.bzl", "py_binary", "py_library")
+load("@forge_pip//:requirements.bzl", "requirement")
+
+# The forge Python package. `imports = ["."]` puts this directory on
+# PYTHONPATH so `import forge` works.
+py_library(
+    name = "forge",
+    srcs = glob(["forge/**/*.py"]),
+    data = glob(["forge/**/*.jinja2"]),
+    imports = ["."],
+    deps = [
+        requirement("jinja2"),
+        requirement("cmsis-svd"),
+    ],
+    visibility = ["//visibility:public"],
+)
+
+# Build-time SVD code generator, used by //bazel:svd.bzl.
+py_binary(
+    name = "svd_generate",
+    srcs = ["svd_generate.py"],
+    deps = [":forge"],
+    visibility = ["//visibility:public"],
+)
