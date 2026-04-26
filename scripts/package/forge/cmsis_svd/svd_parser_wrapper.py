@@ -1,9 +1,4 @@
-"""Generate type-safe peripheral register headers from a CMSIS-SVD file.
-
-The wrapper parses an SVD, hands the result to the model builders in model.py,
-then renders the resulting Peripheral / PeripheralFamily objects through the
-jinja templates in ./templates/.
-"""
+"""Generate ftl::mmio register headers from a CMSIS-SVD file."""
 
 import os
 import pickle
@@ -11,7 +6,7 @@ import textwrap
 import time
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any, Iterator, Optional
 
 from cmsis_svd.parser import SVDParser
 from jinja2 import Environment, FileSystemLoader
@@ -24,12 +19,7 @@ BIN_DIR = PROJECT_ROOT / ".bin"
 TEMPLATE_DIR = Path(__file__).parent / "templates"
 
 
-# =================================================================================================
-# Public API
-
 class SVDParserWrapper:
-  """Generate ftl::mmio register headers from a CMSIS-SVD XML file."""
-
   def __init__(self, svd_file: str, output_dir: str) -> None:
     self.output_dir = Path(output_dir)
     self.device = _load_device(svd_file)
@@ -38,7 +28,7 @@ class SVDParserWrapper:
     self.family_template = env.get_template("family.jinja2")
 
   def generate(self) -> None:
-    """Regenerate every peripheral header, wiping existing .hpp files first."""
+    """Wipe existing .hpp files in output_dir, then regenerate all."""
     for hpp in self.output_dir.glob("*.hpp"):
       hpp.unlink()
     standalone, families = self._group_peripherals()
@@ -53,8 +43,8 @@ class SVDParserWrapper:
         self._write_family(fam)
 
   def generate_peripheral(self, peripheral_name: str) -> None:
-    """Regenerate one peripheral's header. If the peripheral belongs to a
-    derivedFrom family the entire family file is regenerated."""
+    """Regenerate one peripheral's header. If it's a derivedFrom family
+    member, the whole family file is regenerated."""
     standalone, families = self._group_peripherals()
     for fam in families:
       if any(i.name == peripheral_name for i in fam.instances):
@@ -81,7 +71,6 @@ class SVDParserWrapper:
     return out_path
 
   def _group_peripherals(self) -> tuple[list[Any], list[PeripheralFamily]]:
-    """Split SVD peripherals into (standalone SVDPeripherals, PeripheralFamilies)."""
     by_canonical: dict[str, list[Any]] = {}
     for p in self.device.peripherals:
       by_canonical.setdefault(p.derived_from or p.name, []).append(p)
@@ -101,15 +90,9 @@ class SVDParserWrapper:
     return standalone, families
 
 
-# =================================================================================================
-# Device loading + jinja environment
-
 def _load_device(svd_file: str) -> Any:
-  """Parse a CMSIS-SVD file, caching the parsed device alongside .bin/.
-
-  Cache is invalidated when the SVD source is newer — otherwise edits to test
-  fixtures (or vendor SVDs) silently use a stale parse.
-  """
+  # Cache invalidation by mtime: edits to test fixtures or vendor SVDs would
+  # otherwise silently reuse a stale parse.
   cache_path = BIN_DIR / f"{Path(svd_file).stem}.pkl"
   if cache_path.exists() and cache_path.stat().st_mtime >= os.path.getmtime(svd_file):
     print(f"Loading cached device from {cache_path}...")
@@ -134,8 +117,7 @@ def _make_jinja_env() -> Environment:
   return env
 
 
-def _cpp_comment(text: str | None, width: int = 100, indent: int = 0) -> str:
-  """Wrap a description into '// ' lines at the given column / indent."""
+def _cpp_comment(text: Optional[str], width: int = 100, indent: int = 0) -> str:
   collapsed = " ".join((text or "").split())
   if not collapsed:
     return ""
@@ -148,7 +130,6 @@ def _cpp_comment(text: str | None, width: int = 100, indent: int = 0) -> str:
 
 @contextmanager
 def _phase_timer() -> Iterator[None]:
-  """Print 'Done (Xs)' when the wrapped block exits."""
   start = time.monotonic()
   yield
   print(f"Done ({time.monotonic() - start:.2f}s)")

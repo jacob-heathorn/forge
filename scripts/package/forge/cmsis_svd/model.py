@@ -1,15 +1,4 @@
-"""Model objects wrapping cmsis-svd parser output.
-
-Each class wraps one SVD concept and exposes the data the templates need.
-Methods that build new objects are spelled with parens (`peripheral.registers()`,
-`register.fields()`); cheap derivations are properties. The conversion logic
-lives on the classes themselves — there are no separate "build_*" functions.
-
-Public entry points:
-    standalone_peripheral(svd_peripheral)        -> Peripheral
-    family(canonical_name, members)              -> (PeripheralFamily | None,
-                                                      orphan_members)
-"""
+"""Model objects wrapping cmsis-svd parser output, walked directly by jinja."""
 
 import re
 from dataclasses import dataclass
@@ -22,12 +11,12 @@ from cmsis_svd.model import (
     SVDRegisterClusterArray,
 )
 
+# cmsis-svd inputs are typed as Any: cmsis-svd marks most fields Optional[X]
+# per the SVD spec, but we assume well-formed input. Strict typing here would
+# add ~30 asserts to satisfy mypy without catching real bugs.
 
-# =================================================================================================
-# Public entry points
 
 def standalone_peripheral(svd_peripheral: Any) -> "Peripheral":
-  """Wrap a standalone (non-family) SVD peripheral. Addresses are absolute."""
   return Peripheral(svd_peripheral, AddrMode.absolute(svd_peripheral.base_address))
 
 
@@ -35,13 +24,8 @@ def family(
     canonical_name: str,
     members: list[Any],
 ) -> tuple[Optional["PeripheralFamily"], list[Any]]:
-  """Group derivedFrom siblings into a PeripheralFamily.
-
-  Returns (family_or_None, orphan_members). family is None and the caller
-  should treat each member as standalone if there aren't at least 2
-  numbered instances. orphan_members are members of the group that don't
-  fit the digit-suffixed naming pattern.
-  """
+  """Returns (family_or_None, orphan_members). family is None unless at least
+  2 members have a digit suffix; orphans are members without one."""
   family_name = re.sub(r"\d+$", "", canonical_name) or canonical_name
   instances: list[FamilyInstance] = []
   orphans: list[Any] = []
@@ -58,13 +42,7 @@ def family(
   return PeripheralFamily(parent, family_name, instances), orphans
 
 
-# =================================================================================================
-# Peripheral / PeripheralFamily
-
 class Peripheral:
-  """One peripheral worth of registers. Wraps an SVDPeripheral plus the
-  address-emission mode (absolute for standalone, kBase-symbolic for family)."""
-
   def __init__(self, svd_peripheral: Any, addr_mode: "AddrMode") -> None:
     self._svd = svd_peripheral
     self._addr = addr_mode
@@ -86,8 +64,6 @@ class Peripheral:
     return self._addr.type_qualifier
 
   def registers(self) -> Iterator["Register"]:
-    """Yield Register objects in declaration order. Cluster arrays expand
-    into one Register per inner register."""
     for r in self._svd.registers:
       if isinstance(r, SVDRegister):
         yield Register(r, self._svd, self._addr)
@@ -109,10 +85,6 @@ class FamilyInstance:
 
 
 class PeripheralFamily:
-  """A peripheral family (derivedFrom siblings sharing one register layout).
-  The parent peripheral renders inside a templated struct; instances supply
-  kBase per Instance."""
-
   def __init__(
       self,
       svd_parent: Any,
@@ -150,14 +122,10 @@ class PeripheralFamily:
             f'      "{self.class_name}: Instance must be one of {nums}");')
 
 
-# =================================================================================================
-# Register
-
 class Register:
-  """One register declaration emitted as `struct NAME : ftl::mmio::Register<...>`.
-  Plain registers have no template params; subclasses (RegisterArray) and
-  cluster-inner Registers carry an Index/ClusterIndex/ArrayIndex.
-  """
+  """A single register declaration. Plain registers have no template params;
+  RegisterArray (subclass) and cluster-inner Registers carry an
+  Index/ClusterIndex/ArrayIndex."""
 
   def __init__(
       self,
@@ -219,7 +187,8 @@ class Register:
     return [Field(f) for f in sorted(self._svd.fields, key=lambda f: f.bit_offset)]
 
   def slots(self) -> list[Union["Field", "Reserved"]]:
-    """Field/Reserved gap-filled list covering every bit of the register."""
+    """Fields plus Reserved entries filling the bit-gaps. Used for the
+    Register<> template arg list, which has to cover every bit."""
     out: list[Union[Field, Reserved]] = []
     cursor = 0
     for f in self.fields():
@@ -232,7 +201,6 @@ class Register:
     return out
 
   def enums(self) -> list["Enum"]:
-    """Distinct enums declared by this register's fields, in field order."""
     seen: set[str] = set()
     out: list[Enum] = []
     for f in self.fields():
@@ -247,33 +215,31 @@ class Register:
     return self._svd.size if self._svd.size is not None else 32
 
   def _validate_field_names(self) -> None:
-    """cpp_reexport renames a field whose name matches the register to VALUE.
-    Fail loud if that rename target is already taken (or if the register
-    itself is named VALUE) — silent collision would compile but pick the
-    wrong type."""
+    # cpp_reexport renames same-name fields to VALUE; fail loud if that target
+    # is taken or if the register itself is named VALUE.
     field_names = [f.name for f in self._svd.fields]
     if self._name not in field_names:
       return
     if self._name == _REEXPORT_FALLBACK:
       raise ValueError(
-          f"{self._peripheral.name}.{self._name}: cannot apply rename fallback — "
-          f"the register itself is named {_REEXPORT_FALLBACK!r} so the renamed "
-          f"field would still shadow the enclosing struct. Edit the SVD or "
-          f"change the rename strategy in Field.cpp_reexport.")
+          f"{self._peripheral.name}.{self._name}: register itself is "
+          f"{_REEXPORT_FALLBACK!r}; rename fallback can't help.")
     if _REEXPORT_FALLBACK in field_names:
       raise ValueError(
-          f"{self._peripheral.name}.{self._name}: rename fallback collision — "
-          f"field {self._name!r} shares the register name and would be "
-          f"re-exported as {_REEXPORT_FALLBACK!r}, but a field named "
-          f"{_REEXPORT_FALLBACK!r} already exists in this register. Edit the "
-          f"SVD or change the rename strategy in Field.cpp_reexport.")
+          f"{self._peripheral.name}.{self._name}: field {self._name!r} would "
+          f"be re-exported as {_REEXPORT_FALLBACK!r}, but that name is already "
+          f"taken by another field in this register.")
 
 
 class RegisterArray(Register):
-  """N copies of one register at a stride. Renders as a Register templated on
-  Index. All runtime behavior is inherited; only construction differs."""
+  """A Register array — emitted as a Register templated on Index."""
 
-  def __init__(self, svd_array: Any, peripheral: Any, addr_mode: "AddrMode") -> None:
+  def __init__(
+      self,
+      svd_array: Any,
+      peripheral: Any,
+      addr_mode: "AddrMode",
+  ) -> None:
     proto = svd_array.registers[0]
     meta = svd_array.meta_register
     super().__init__(
@@ -283,15 +249,17 @@ class RegisterArray(Register):
             "Index", len(svd_array.registers), meta.dim_increment)])
 
 
-# =================================================================================================
-# Cluster — aggregates an SVD cluster array, expands into Register/RegisterArray instances
-
 class Cluster:
-  """A cluster array — N copies of a group of registers at a stride. Not a
-  Register itself; expands into one Register (or RegisterArray) per inner
-  entry, each carrying an extra ClusterIndex template param."""
+  """A cluster array — N copies of a group of registers. Not a Register
+  itself; expands into one Register per inner entry, each carrying an
+  extra ClusterIndex template param."""
 
-  def __init__(self, svd_cluster_array: Any, peripheral: Any, addr_mode: "AddrMode") -> None:
+  def __init__(
+      self,
+      svd_cluster_array: Any,
+      peripheral: Any,
+      addr_mode: "AddrMode",
+  ) -> None:
     self._proto = svd_cluster_array.clusters[0]
     self._peripheral = peripheral
     self._addr_mode = addr_mode
@@ -300,7 +268,6 @@ class Cluster:
     self._prefix = self._proto.name + "_"
 
   def expand(self) -> Iterator[Register]:
-    """Yield Register / RegisterArray instances, one per inner entry."""
     for inner in self._proto.registers:
       if isinstance(inner, SVDRegister):
         yield self._inner_register(inner)
@@ -338,12 +305,7 @@ class Cluster:
         f"{self._peripheral.name}.{self._proto.name}.{register_name}")
 
 
-# =================================================================================================
-# Field / Reserved / Enum
-
 class Field:
-  """One bit-field within a register. Wraps an SVDField."""
-
   def __init__(self, svd_field: Any) -> None:
     self._svd = svd_field
 
@@ -365,8 +327,6 @@ class Field:
 
   @property
   def value_type(self) -> str:
-    """C++ type used for the field's value: enum class for enumerated fields,
-    else the smallest unsigned int that fits the width (or bool for w==1)."""
     enums = self.enums()
     if len(enums) == 1:
       return f"e{enums[0].name}"
@@ -401,10 +361,8 @@ class Field:
     return f"{type_qualifier}{register_name}_fields_::{self.name}"
 
   def cpp_reexport(self, register_name: str, type_qualifier: str = "") -> str:
-    # When a field shares its register's name (e.g. GPIO::DR), re-exporting
-    # it under that name shadows the enclosing struct's injected-class-name.
-    # Emit it as VALUE instead. Register._validate_field_names guarantees the
-    # rename target is unique within the register.
+    # Same-name fields (e.g. GPIO::DR) get aliased to VALUE — `using DR = ...`
+    # inside `struct DR` would shadow the injected-class-name.
     rhs = f"{type_qualifier}{register_name}_fields_::{self.name}"
     lhs = _REEXPORT_FALLBACK if self.name == register_name else self.name
     return f"using {lhs} = {rhs};"
@@ -415,15 +373,12 @@ class Reserved:
   offset: int
   width: int
 
-  # register_name and type_qualifier are unused but required so this method
-  # is polymorphic with Field.cpp_template_arg — jinja calls them uniformly.
+  # Unused args mirror Field.cpp_template_arg so jinja calls both uniformly.
   def cpp_template_arg(self, register_name: str = "", type_qualifier: str = "") -> str:
     return f"ftl::mmio::Reserved<{self.width}, {self.offset}>"
 
 
 class Enum:
-  """One enumeratedValues set, generated as a C++ `enum class`."""
-
   def __init__(self, svd_enum_set: Any, fallback_name: str) -> None:
     self._svd = svd_enum_set
     self._fallback = fallback_name
@@ -455,7 +410,7 @@ class EnumValue:
 
 @dataclass(frozen=True)
 class TemplateParam:
-  name: str    # 'Index' | 'ClusterIndex' | 'ArrayIndex'
+  name: str    # Index | ClusterIndex | ArrayIndex
   dim: int
   increment: int
 
@@ -467,11 +422,10 @@ class TemplateParam:
             f'"{register_name}: {self.name} out of range");')
 
 
-# =================================================================================================
-# Address mode (encapsulates standalone-vs-family addressing for one peripheral)
-
 @dataclass(frozen=True)
 class AddrMode:
+  """Per-peripheral addressing: absolute (standalone) or symbolic kBase (family)."""
+
   base_address: Optional[int]
   base_symbol: Optional[str]
   type_qualifier: str
@@ -495,19 +449,12 @@ class AddrMode:
     return expr
 
 
-# =================================================================================================
-# Cluster-inner offset resolution
-
 def _resolve_inner_offset(inner_offset: int, cluster: Any, where: str) -> int:
-  """Resolve a cluster-inner register's offset to a peripheral-relative offset.
-
-  SVDs disagree on whether an inner <addressOffset> is cluster-relative (per
-  spec) or peripheral-relative (NXP MIMXRT DMA TCD style). cmsis-svd always
-  treats it as cluster-relative and adds the cluster offset, double-counting
-  the broken case. Try both interpretations against the cluster's stride: use
-  whichever uniquely fits, raise loudly when both fit (ambiguous) or neither
-  fits (malformed).
-  """
+  """SVDs disagree on whether a cluster-inner <addressOffset> is cluster- or
+  peripheral-relative (NXP MIMXRT DMA TCD style). cmsis-svd always adds the
+  cluster offset, double-counting the broken case. We accept whichever
+  interpretation uniquely fits the cluster stride; ambiguity or no-fit
+  raises."""
   spec = inner_offset
   fix = inner_offset - cluster.address_offset
   span_start = cluster.address_offset
@@ -534,9 +481,6 @@ def _resolve_inner_offset(inner_offset: int, cluster: Any, where: str) -> int:
       f"nor double-counted ({fix:#x}) lands within the cluster's "
       f"[{span_start:#x}, {span_end:#x}) stride.")
 
-
-# =================================================================================================
-# SVD attribute → C++ / ftl::mmio mappings
 
 _REEXPORT_FALLBACK = "VALUE"
 
@@ -588,11 +532,11 @@ def _reset_literal(bits: int, reset: int) -> str:
 
 
 def _normalize_name(name: str) -> str:
-  """'FOO[3]' → 'FOO_3' for array-element registers."""
+  # FOO[3] → FOO_3
   m = re.fullmatch(r"(.+)\[(\d+)\]", name)
   return f"{m.group(1)}_{m.group(2)}" if m else name
 
 
 def _strip_dim_placeholder(name: str) -> str:
-  """Remove the [%s] / %s SVD <dim> placeholder from an array name."""
+  # FOO[%s] / FOO%s → FOO
   return name.replace("[%s]", "").replace("%s", "")
