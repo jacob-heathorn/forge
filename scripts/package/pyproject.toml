@@ -5,8 +5,6 @@ description = "Embedded tooling"
 authors = [{name = "Jacob", email = "jacob.heathorn@gmail.com"}]
 requires-python = ">=3.12"
 dependencies = [
-    "semver>=3.0.1",
-    "gitpython",
     "jinja2",
     "json5",
     "cmsis-svd==0.6.0",

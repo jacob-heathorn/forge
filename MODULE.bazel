@@ -7,6 +7,10 @@ bazel_dep(name = "rules_cc", version = "0.2.17")
 bazel_dep(name = "rules_python", version = "1.7.0")
 bazel_dep(name = "googletest", version = "1.17.0.bcr.2")
 
+# Native C++ uses the auto-detected host toolchain (system gcc/g++ on
+# Linux). Cross-compile toolchains (arm-none-eabi for mimxrt) will get
+# registered here when downstream repos move to bazel.
+
 # Python toolchain + pip deps for the SVD code generator.
 python = use_extension("@rules_python//python/extensions:python.bzl", "python")
 python.toolchain(
@@ -22,8 +26,8 @@ pip.parse(
 )
 use_repo(pip, "forge_pip")
 
-# ETL — defaults to the pinned upstream tag, but if ETL_ROOT is set in the
-# environment (gordion's local checkout) the extension uses that path
-# instead.
+# ETL — resolved via gordion. The extension reads ETL_ROOT, or falls back
+# to `gordion -f etl` if unset. There is no upstream-fetch fallback;
+# gordion is the single source of truth for the ETL pin.
 etl = use_extension("//bazel:etl.bzl", "etl")
 use_repo(etl, "etl")

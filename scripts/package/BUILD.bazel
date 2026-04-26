@@ -9,8 +9,10 @@ py_library(
     data = glob(["forge/**/*.jinja2"]),
     imports = ["."],
     deps = [
-        requirement("jinja2"),
         requirement("cmsis-svd"),
+        requirement("jinja2"),
+        requirement("json5"),
+        requirement("pyserial"),
     ],
     visibility = ["//visibility:public"],
 )
@@ -19,6 +21,17 @@ py_library(
 py_binary(
     name = "svd_generate",
     srcs = ["svd_generate.py"],
+    deps = [":forge"],
+    visibility = ["//visibility:public"],
+)
+
+# `rip` CLI as a runnable bazel target. Mirrors the old scripts/bin/rip
+# wrapper but routes through the bazel-managed python env. Run with:
+#   bazel run //scripts/package:rip -- <args>
+py_binary(
+    name = "rip",
+    srcs = ["rip.py"],
+    main = "rip.py",
     deps = [":forge"],
     visibility = ["//visibility:public"],
 )
