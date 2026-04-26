@@ -24,6 +24,7 @@ add_custom_command(
     ${TEST_SVD}
     $ENV{FORGE_ROOT}/scripts/package/forge/cmsis_svd/register_generator.py
     $ENV{FORGE_ROOT}/scripts/package/forge/cmsis_svd/register_parser.py
+    $ENV{FORGE_ROOT}/scripts/package/forge/cmsis_svd/model.py
     $ENV{FORGE_ROOT}/scripts/package/forge/cmsis_svd/templates/register.jinja2
     $ENV{FORGE_ROOT}/scripts/package/forge/cmsis_svd/templates/peripheral.jinja2
     $ENV{FORGE_ROOT}/scripts/package/forge/cmsis_svd/templates/family.jinja2
