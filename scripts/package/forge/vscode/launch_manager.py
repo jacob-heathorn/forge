@@ -9,11 +9,11 @@ class LaunchManager:
   Provides an interface to manage the .vscode/launch.json file.
   """
 
-  def __init__(self, file: str):
+  def __init__(self, file: str) -> None:
     self.file = file
     self.data = self._load_or_create_default()
 
-  def _load_or_create_default(self):
+  def _load_or_create_default(self) -> dict[str, Any]:
     """
     Loads the launch.json file or creates a default file.
     """
@@ -37,7 +37,7 @@ class LaunchManager:
             json5.dump(data, file, indent=4)
         return data
 
-  def _create_default_file(self):
+  def _create_default_file(self) -> dict[str, Any]:
     """
     Generates a default launch.json file.
     """
@@ -48,7 +48,7 @@ class LaunchManager:
       json5.dump(default_data, file, indent=4)
     return default_data
 
-  def update(self, template_fullfile, context):
+  def update(self, template_fullfile: str, context: dict[str, Any]) -> None:
     """
     Adds a new configuration to the launch.json file.
     """

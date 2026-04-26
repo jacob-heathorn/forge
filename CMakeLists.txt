@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.27.4)
 
 project(Forge VERSION 1.0 LANGUAGES C CXX ASM)
 
-# Use C++17. Force it, No Extensions (-std=c++17 not -std=gnu++17) to increase portability.
-set(CMAKE_CXX_STANDARD 17)
+# Use C++20. Force it, No Extensions (-std=c++20 not -std=gnu++20) to increase portability.
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_EXTENSIONS OFF)
 

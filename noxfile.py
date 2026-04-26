@@ -86,6 +86,7 @@ def lint(session):
   session.run(
       "mypy",
       "--ignore-missing-imports",
+      "--disallow-untyped-defs",
       "--check-untyped-defs",
       "--cache-dir=../../.pycache",
       "--package=forge"

@@ -1,0 +1,20 @@
+{#- Standalone peripheral header: a struct with absolute addresses. -#}
+{%- from 'register.jinja2' import render -%}
+#pragma once
+
+#include <cstdint>
+#include "ftl/mmio.hpp"
+
+{{ peripheral.description | cpp_comment }}
+//
+// NOTE: This file was generated from the forge CMSIS-svd wrapper tool.
+namespace regs {
+
+struct {{ peripheral.class_name }} {
+{% for r in peripheral.registers() %}
+{{ render(r, peripheral) | indent(2, first=true) }}
+
+{% endfor %}
+};
+
+}  // namespace regs
