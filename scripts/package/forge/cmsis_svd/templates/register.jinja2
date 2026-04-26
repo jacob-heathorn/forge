@@ -8,7 +8,7 @@
 struct {{ register.name }}_fields_ {
 {% for enum in register.enums() %}
   enum class e{{ enum.name }} : std::uint32_t {
-{% for v in enum.values %}
+{% for v in enum.values() %}
 {% if v.description %}
     // {{ v.description }}
 {% endif %}
@@ -17,7 +17,7 @@ struct {{ register.name }}_fields_ {
   };
 
 {% endfor %}
-{% for f in register.fields %}
+{% for f in register.fields() %}
 {% if f.description %}
   // {{ f.description }}
 {% endif %}
@@ -33,7 +33,7 @@ struct {{ register.name }} : ftl::mmio::Register<
     {{ register.storage_type }},
     {{ register.reset_literal }},
     {{ register.access }}
-{%- for s in register.slots %},
+{%- for s in register.slots() %},
     {{ s.cpp_template_arg(register.name, tq) }}
 {%- endfor %}> {
 {% for tp in register.template_params %}
@@ -42,7 +42,7 @@ struct {{ register.name }} : ftl::mmio::Register<
 {% for enum in register.enums() %}
   using e{{ enum.name }} = {{ tq }}{{ register.name }}_fields_::e{{ enum.name }};
 {% endfor %}
-{% for f in register.fields %}
+{% for f in register.fields() %}
   {{ f.cpp_reexport(register.name, tq) }}
 {% endfor %}
 };

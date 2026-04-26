@@ -10,7 +10,7 @@
 // NOTE: This file was generated from the forge CMSIS-svd wrapper tool.
 namespace regs::{{ peripheral.lower_name }} {
 
-{% for r in peripheral.registers %}
+{% for r in peripheral.registers() %}
 {{ render(r, peripheral) }}
 
 {% endfor %}

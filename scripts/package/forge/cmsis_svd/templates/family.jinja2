@@ -21,7 +21,7 @@ struct {{ family.class_name }} {
 {% endfor %}
       0u;
 
-{% for r in family.parent.registers %}
+{% for r in family.parent.registers() %}
 {{ render(r, family.parent) | indent(2, first=true) }}
 
 {% endfor %}

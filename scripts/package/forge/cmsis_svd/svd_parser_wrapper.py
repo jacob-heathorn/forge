@@ -15,7 +15,7 @@ from pathlib import Path
 from cmsis_svd.parser import SVDParser
 from jinja2 import Environment, FileSystemLoader
 
-from .model import build_family, build_peripheral
+from .model import family, standalone_peripheral
 
 
 PROJECT_ROOT = Path(os.environ.get("PROJECT_ROOT", ""))
@@ -69,14 +69,14 @@ class SVDParserWrapper:
     print(f"Could not find peripheral {peripheral_name!r}. Options:\n{names}")
 
   def _write_standalone(self, svd_peripheral):
-    peripheral = build_peripheral(svd_peripheral)
+    peripheral = standalone_peripheral(svd_peripheral)
     out_path = self.output_dir / f"{peripheral.lower_name}.hpp"
     out_path.write_text(self.standalone_template.render(peripheral=peripheral))
     return out_path
 
-  def _write_family(self, family):
-    out_path = self.output_dir / f"{family.lower_name}.hpp"
-    out_path.write_text(self.family_template.render(family=family))
+  def _write_family(self, fam):
+    out_path = self.output_dir / f"{fam.lower_name}.hpp"
+    out_path.write_text(self.family_template.render(family=fam))
     return out_path
 
   def _group_peripherals(self):
@@ -91,11 +91,11 @@ class SVDParserWrapper:
       if len(members) < 2:
         standalone.append(members[0])
         continue
-      family, orphans = build_family(canonical_name, members)
-      if family is None:
+      fam, orphans = family(canonical_name, members)
+      if fam is None:
         standalone.extend(members)
         continue
-      families.append(family)
+      families.append(fam)
       standalone.extend(orphans)
     return standalone, families
 
