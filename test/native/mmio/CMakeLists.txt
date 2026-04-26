@@ -19,11 +19,11 @@ add_custom_command(
   OUTPUT ${GENERATED_HEADER}
   COMMAND ${CMAKE_COMMAND} -E make_directory ${GENERATED_DIR}
   COMMAND ${FORGE_PYTHON} -c
-    "from forge import SVDParserWrapper; SVDParserWrapper('${TEST_SVD}', '${GENERATED_DIR}').generate()"
+    "from forge import RegisterGenerator; RegisterGenerator('${TEST_SVD}', '${GENERATED_DIR}').generate()"
   DEPENDS
     ${TEST_SVD}
-    $ENV{FORGE_ROOT}/scripts/package/forge/cmsis_svd/svd_parser_wrapper.py
-    $ENV{FORGE_ROOT}/scripts/package/forge/cmsis_svd/model.py
+    $ENV{FORGE_ROOT}/scripts/package/forge/cmsis_svd/register_generator.py
+    $ENV{FORGE_ROOT}/scripts/package/forge/cmsis_svd/register_parser.py
     $ENV{FORGE_ROOT}/scripts/package/forge/cmsis_svd/templates/register.jinja2
     $ENV{FORGE_ROOT}/scripts/package/forge/cmsis_svd/templates/peripheral.jinja2
     $ENV{FORGE_ROOT}/scripts/package/forge/cmsis_svd/templates/family.jinja2

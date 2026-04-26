@@ -11,7 +11,7 @@ from typing import Any, Iterator, Optional
 from cmsis_svd.parser import SVDParser
 from jinja2 import Environment, FileSystemLoader
 
-from .model import family, PeripheralFamily, standalone_peripheral
+from .register_parser import family, PeripheralFamily, standalone_peripheral
 
 
 PROJECT_ROOT = Path(os.environ.get("PROJECT_ROOT", ""))
@@ -19,7 +19,7 @@ BIN_DIR = PROJECT_ROOT / ".bin"
 TEMPLATE_DIR = Path(__file__).parent / "templates"
 
 
-class SVDParserWrapper:
+class RegisterGenerator:
   def __init__(self, svd_file: str, output_dir: str) -> None:
     self.output_dir = Path(output_dir)
     self.device = _load_device(svd_file)
