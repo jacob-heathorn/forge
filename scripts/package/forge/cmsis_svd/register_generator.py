@@ -18,7 +18,7 @@ TEMPLATE_DIR = Path(__file__).parent / "templates"
 class RegisterGenerator:
   def __init__(self, svd_file: str, output_dir: str) -> None:
     self.output_dir = Path(output_dir)
-    with _phase_timer():
+    with _stopwatch():
       self._standalone, self._families = parse(svd_file)
     env = _make_jinja_env()
     self._peripheral_template = env.get_template("peripheral.jinja2")
@@ -32,7 +32,7 @@ class RegisterGenerator:
     print(f"Generating {total} header(s) "
           f"({len(self._standalone)} standalone, {len(self._families)} families) "
           f"into {self.output_dir}...")
-    with _phase_timer():
+    with _stopwatch():
       for peripheral in self._standalone:
         self._write_peripheral(peripheral)
       for fam in self._families:
@@ -86,7 +86,7 @@ def _cpp_comment(text: Optional[str], width: int = 100, indent: int = 0) -> str:
 
 
 @contextmanager
-def _phase_timer() -> Iterator[None]:
+def _stopwatch() -> Iterator[None]:
   start = time.monotonic()
   yield
   print(f"Done ({time.monotonic() - start:.2f}s)")
