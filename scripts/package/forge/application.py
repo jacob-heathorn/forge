@@ -5,13 +5,14 @@ import forge
 import subprocess
 from abc import ABC, abstractmethod
 from pathlib import Path
+from typing import Any, Union
 import re
 
 PROJECT_ROOT = os.environ.get("PROJECT_ROOT", "")
 CMAKE_PRESETS_JSON = os.path.join(PROJECT_ROOT, "CMakePresets.json")
 
 
-def check_preset(preset_name):
+def check_preset(preset_name: str) -> bool:
   """
   Verifies that a preset exists in the CMakePresets.json file.
   """
@@ -36,7 +37,7 @@ def check_preset(preset_name):
   return False
 
 
-def split_preset_application(preset_application: str):
+def split_preset_application(preset_application: str) -> tuple[str, str]:
   """
   Separates and returns the preset and application from a string.
   """
@@ -53,7 +54,7 @@ def split_preset_application(preset_application: str):
   return preset, application
 
 
-def expand_penv_variables(path):
+def expand_penv_variables(path: str) -> str:
   """
   Expand environment variables in the form of $penv{VAR_NAME}.
 
@@ -64,7 +65,7 @@ def expand_penv_variables(path):
   pattern = re.compile(r"\$penv\{(.*?)\}")
 
   # Function to replace each match with its environment variable value
-  def replace_var(match):
+  def replace_var(match: re.Match) -> str:
     var_name = match.group(1)  # Extract the variable name
     return os.environ.get(var_name, "")  # Get the value or use an empty string if undefined
 
@@ -72,7 +73,7 @@ def expand_penv_variables(path):
   return pattern.sub(replace_var, path)
 
 
-def expand_cmake_presets(presets_path):
+def expand_cmake_presets(presets_path: Union[str, Path]) -> dict[str, Any]:
   """
   Recursively expand and merge CMakePresets.json files.
 
@@ -131,12 +132,11 @@ def resolve_bin_dir(preset_name: str) -> str:
     forge.error(f"Error: {e}")
 
   if binary_dir is None:
-    return forge.error(f"Preset<{preset_name}> does not set \"binaryDir\"!")
-  else:
-    # Expand cmake environment variables.
-    binary_dir = binary_dir.replace("${sourceDir}", os.path.dirname(CMAKE_PRESETS_JSON))
-    binary_dir = binary_dir.replace("${presetName}", preset_name)
-    return binary_dir
+    forge.error(f"Preset<{preset_name}> does not set \"binaryDir\"!")
+  # Expand cmake environment variables.
+  binary_dir = binary_dir.replace("${sourceDir}", os.path.dirname(CMAKE_PRESETS_JSON))
+  binary_dir = binary_dir.replace("${presetName}", preset_name)
+  return binary_dir
 
 
 def find_application(application_name: str, dir: str) -> str:
@@ -166,7 +166,7 @@ def find_application(application_name: str, dir: str) -> str:
   return application_fullfile
 
 
-def print_size(fullfile):
+def print_size(fullfile: str) -> None:
   subprocess.check_call(['size', fullfile])
 
 
@@ -175,17 +175,17 @@ class Application(ABC):
   Provides an interface to run/debug applications on various platforms.
   """
 
-  def __init__(self, preset_application: str):
+  def __init__(self, preset_application: str) -> None:
     self.preset_name, self.application_name = split_preset_application(preset_application)
     self.bin_dir = resolve_bin_dir(self.preset_name)
     self.application_fullfile = find_application(self.application_name, self.bin_dir)
 
   @abstractmethod
-  def run(self):
+  def run(self) -> None:
     pass
 
   @abstractmethod
-  def debug(self):
+  def debug(self) -> None:
     pass
 
 
@@ -194,10 +194,10 @@ class NativeApplication(Application):
   Provides the interface to run/debug applications on the native platform.
   """
 
-  def __init__(self, preset_application: str):
+  def __init__(self, preset_application: str) -> None:
     super().__init__(preset_application)
 
-  def run(self):
+  def run(self) -> None:
     print("\n\nApplication information:")
     print_size(self.application_fullfile)
     print("Running locally...")
@@ -209,6 +209,6 @@ class NativeApplication(Application):
       print("\nApplication interrupted by user")
       return
 
-  def debug(self):
+  def debug(self) -> None:
     debugger = forge.NativeDebugger(name=f"{self.preset_name}:{self.application_name}")
     debugger.debug(self.application_fullfile)

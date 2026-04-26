@@ -11,11 +11,12 @@ import textwrap
 import time
 from contextlib import contextmanager
 from pathlib import Path
+from typing import Any, Iterator
 
 from cmsis_svd.parser import SVDParser
 from jinja2 import Environment, FileSystemLoader
 
-from .model import family, standalone_peripheral
+from .model import family, PeripheralFamily, standalone_peripheral
 
 
 PROJECT_ROOT = Path(os.environ.get("PROJECT_ROOT", ""))
@@ -29,14 +30,14 @@ TEMPLATE_DIR = Path(__file__).parent / "templates"
 class SVDParserWrapper:
   """Generate ftl::mmio register headers from a CMSIS-SVD XML file."""
 
-  def __init__(self, svd_file, output_dir):
+  def __init__(self, svd_file: str, output_dir: str) -> None:
     self.output_dir = Path(output_dir)
     self.device = _load_device(svd_file)
     env = _make_jinja_env()
     self.standalone_template = env.get_template("peripheral.jinja2")
     self.family_template = env.get_template("family.jinja2")
 
-  def generate(self):
+  def generate(self) -> None:
     """Regenerate every peripheral header, wiping existing .hpp files first."""
     for hpp in self.output_dir.glob("*.hpp"):
       hpp.unlink()
@@ -51,7 +52,7 @@ class SVDParserWrapper:
       for fam in families:
         self._write_family(fam)
 
-  def generate_peripheral(self, peripheral_name):
+  def generate_peripheral(self, peripheral_name: str) -> None:
     """Regenerate one peripheral's header. If the peripheral belongs to a
     derivedFrom family the entire family file is regenerated."""
     standalone, families = self._group_peripherals()
@@ -68,25 +69,25 @@ class SVDParserWrapper:
     names = [p.name for p in self.device.peripherals]
     print(f"Could not find peripheral {peripheral_name!r}. Options:\n{names}")
 
-  def _write_standalone(self, svd_peripheral):
+  def _write_standalone(self, svd_peripheral: Any) -> Path:
     peripheral = standalone_peripheral(svd_peripheral)
     out_path = self.output_dir / f"{peripheral.lower_name}.hpp"
     out_path.write_text(self.standalone_template.render(peripheral=peripheral))
     return out_path
 
-  def _write_family(self, fam):
+  def _write_family(self, fam: PeripheralFamily) -> Path:
     out_path = self.output_dir / f"{fam.lower_name}.hpp"
     out_path.write_text(self.family_template.render(family=fam))
     return out_path
 
-  def _group_peripherals(self):
+  def _group_peripherals(self) -> tuple[list[Any], list[PeripheralFamily]]:
     """Split SVD peripherals into (standalone SVDPeripherals, PeripheralFamilies)."""
-    by_canonical: dict = {}
+    by_canonical: dict[str, list[Any]] = {}
     for p in self.device.peripherals:
       by_canonical.setdefault(p.derived_from or p.name, []).append(p)
 
-    standalone = []
-    families = []
+    standalone: list[Any] = []
+    families: list[PeripheralFamily] = []
     for canonical_name, members in by_canonical.items():
       if len(members) < 2:
         standalone.append(members[0])
@@ -103,7 +104,7 @@ class SVDParserWrapper:
 # =================================================================================================
 # Device loading + jinja environment
 
-def _load_device(svd_file):
+def _load_device(svd_file: str) -> Any:
   """Parse a CMSIS-SVD file, caching the parsed device alongside .bin/.
 
   Cache is invalidated when the SVD source is newer — otherwise edits to test
@@ -124,7 +125,7 @@ def _load_device(svd_file):
   return device
 
 
-def _make_jinja_env():
+def _make_jinja_env() -> Environment:
   env = Environment(
       loader=FileSystemLoader(str(TEMPLATE_DIR)),
       trim_blocks=True,
@@ -133,7 +134,7 @@ def _make_jinja_env():
   return env
 
 
-def _cpp_comment(text, width=100, indent=0):
+def _cpp_comment(text: str | None, width: int = 100, indent: int = 0) -> str:
   """Wrap a description into '// ' lines at the given column / indent."""
   collapsed = " ".join((text or "").split())
   if not collapsed:
@@ -146,7 +147,7 @@ def _cpp_comment(text, width=100, indent=0):
 
 
 @contextmanager
-def _phase_timer():
+def _phase_timer() -> Iterator[None]:
   """Print 'Done (Xs)' when the wrapped block exits."""
   start = time.monotonic()
   yield

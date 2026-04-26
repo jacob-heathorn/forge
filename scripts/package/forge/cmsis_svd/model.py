@@ -13,7 +13,7 @@ Public entry points:
 
 import re
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Iterator, Optional, Union
 
 from cmsis_svd.model import (
     SVDAccessType,
@@ -26,12 +26,15 @@ from cmsis_svd.model import (
 # =================================================================================================
 # Public entry points
 
-def standalone_peripheral(svd_peripheral):
+def standalone_peripheral(svd_peripheral: Any) -> "Peripheral":
   """Wrap a standalone (non-family) SVD peripheral. Addresses are absolute."""
   return Peripheral(svd_peripheral, AddrMode.absolute(svd_peripheral.base_address))
 
 
-def family(canonical_name, members):
+def family(
+    canonical_name: str,
+    members: list[Any],
+) -> tuple[Optional["PeripheralFamily"], list[Any]]:
   """Group derivedFrom siblings into a PeripheralFamily.
 
   Returns (family_or_None, orphan_members). family is None and the caller
@@ -40,8 +43,8 @@ def family(canonical_name, members):
   fit the digit-suffixed naming pattern.
   """
   family_name = re.sub(r"\d+$", "", canonical_name) or canonical_name
-  instances = []
-  orphans = []
+  instances: list[FamilyInstance] = []
+  orphans: list[Any] = []
   for m in members:
     suffix = m.name[len(family_name):]
     if suffix.isdigit():
@@ -62,27 +65,27 @@ class Peripheral:
   """One peripheral worth of registers. Wraps an SVDPeripheral plus the
   address-emission mode (absolute for standalone, kBase-symbolic for family)."""
 
-  def __init__(self, svd_peripheral, addr_mode):
+  def __init__(self, svd_peripheral: Any, addr_mode: "AddrMode") -> None:
     self._svd = svd_peripheral
     self._addr = addr_mode
 
   @property
-  def name(self):
+  def name(self) -> str:
     return self._svd.name
 
   @property
-  def description(self):
+  def description(self) -> Optional[str]:
     return self._svd.description
 
   @property
-  def lower_name(self):
+  def lower_name(self) -> str:
     return self.name.lower()
 
   @property
-  def type_qualifier(self):
+  def type_qualifier(self) -> str:
     return self._addr.type_qualifier
 
-  def registers(self):
+  def registers(self) -> Iterator["Register"]:
     """Yield Register objects in declaration order. Cluster arrays expand
     into one Register per inner register."""
     for r in self._svd.registers:
@@ -110,32 +113,37 @@ class PeripheralFamily:
   The parent peripheral renders inside a templated struct; instances supply
   kBase per Instance."""
 
-  def __init__(self, svd_parent, family_name, instances):
+  def __init__(
+      self,
+      svd_parent: Any,
+      family_name: str,
+      instances: list[FamilyInstance],
+  ) -> None:
     self._parent = Peripheral(svd_parent, AddrMode.symbolic("kBase"))
     self._family_name = family_name
     self._instances = instances
 
   @property
-  def family_name(self):
+  def family_name(self) -> str:
     return self._family_name
 
   @property
-  def class_name(self):
+  def class_name(self) -> str:
     return self._family_name.capitalize()
 
   @property
-  def lower_name(self):
+  def lower_name(self) -> str:
     return self._family_name.lower()
 
   @property
-  def instances(self):
+  def instances(self) -> list[FamilyInstance]:
     return self._instances
 
   @property
-  def parent(self):
+  def parent(self) -> Peripheral:
     return self._parent
 
-  def cpp_instance_assert(self):
+  def cpp_instance_assert(self) -> str:
     clauses = " || ".join(f"Instance == {i.number}u" for i in self._instances)
     nums = ", ".join(str(i.number) for i in self._instances)
     return (f'static_assert(\n      {clauses},\n'
@@ -152,7 +160,7 @@ class Register:
   """
 
   @classmethod
-  def from_svd(cls, svd, peripheral, addr_mode):
+  def from_svd(cls, svd: Any, peripheral: Any, addr_mode: "AddrMode") -> "Register":
     return cls(svd,
                name=_normalize_name(svd.name),
                offset=svd.address_offset,
@@ -160,8 +168,16 @@ class Register:
                addr_mode=addr_mode,
                peripheral_name=peripheral.name)
 
-  def __init__(self, svd_register, *,
-               name, offset, template_params, addr_mode, peripheral_name):
+  def __init__(
+      self,
+      svd_register: Any,
+      *,
+      name: str,
+      offset: int,
+      template_params: list["TemplateParam"],
+      addr_mode: "AddrMode",
+      peripheral_name: str,
+  ) -> None:
     self._svd = svd_register
     self._name = name
     self._offset = offset
@@ -171,49 +187,49 @@ class Register:
     self._validate_field_names()
 
   @property
-  def name(self):
+  def name(self) -> str:
     return self._name
 
   @property
-  def description(self):
+  def description(self) -> Optional[str]:
     return self._svd.description
 
   @property
-  def addr_expr(self):
+  def addr_expr(self) -> str:
     return self._addr_mode.format(self._offset, self._template_params)
 
   @property
-  def storage_type(self):
+  def storage_type(self) -> str:
     return _storage_type(self._bits)
 
   @property
-  def reset_literal(self):
+  def reset_literal(self) -> str:
     return _reset_literal(self._bits, self._svd.reset_value or 0)
 
   @property
-  def access(self):
+  def access(self) -> str:
     return _access_to_mmio(self._svd.access)
 
   @property
-  def template_params(self):
+  def template_params(self) -> list["TemplateParam"]:
     return self._template_params
 
   @property
-  def is_templated(self):
+  def is_templated(self) -> bool:
     return bool(self._template_params)
 
-  def cpp_template_decl(self):
+  def cpp_template_decl(self) -> str:
     if not self._template_params:
       return ""
     params = ", ".join(p.cpp_decl() for p in self._template_params)
     return f"template<{params}>"
 
-  def fields(self):
+  def fields(self) -> list["Field"]:
     return [Field(f) for f in sorted(self._svd.fields, key=lambda f: f.bit_offset)]
 
-  def slots(self):
+  def slots(self) -> list[Union["Field", "Reserved"]]:
     """Field/Reserved gap-filled list covering every bit of the register."""
-    out = []
+    out: list[Union[Field, Reserved]] = []
     cursor = 0
     for f in self.fields():
       if f.offset > cursor:
@@ -224,10 +240,10 @@ class Register:
       out.append(Reserved(cursor, self._bits - cursor))
     return out
 
-  def enums(self):
+  def enums(self) -> list["Enum"]:
     """Distinct enums declared by this register's fields, in field order."""
-    seen = set()
-    out = []
+    seen: set[str] = set()
+    out: list[Enum] = []
     for f in self.fields():
       for e in f.enums():
         if e.name not in seen:
@@ -236,10 +252,10 @@ class Register:
     return out
 
   @property
-  def _bits(self):
+  def _bits(self) -> int:
     return self._svd.size if self._svd.size is not None else 32
 
-  def _validate_field_names(self):
+  def _validate_field_names(self) -> None:
     """cpp_reexport renames a field whose name matches the register to VALUE.
     Fail loud if that rename target is already taken (or if the register
     itself is named VALUE) — silent collision would compile but pick the
@@ -267,7 +283,7 @@ class RegisterArray(Register):
   Index. All runtime behavior is inherited; only construction differs."""
 
   @classmethod
-  def from_svd(cls, svd_array, peripheral, addr_mode):
+  def from_svd(cls, svd_array: Any, peripheral: Any, addr_mode: "AddrMode") -> "RegisterArray":
     proto = svd_array.registers[0]
     meta = svd_array.meta_register
     return cls(proto,
@@ -287,7 +303,7 @@ class Cluster:
   Register itself; expands into one Register (or RegisterArray) per inner
   entry, each carrying an extra ClusterIndex template param."""
 
-  def __init__(self, svd_cluster_array, peripheral, addr_mode):
+  def __init__(self, svd_cluster_array: Any, peripheral: Any, addr_mode: "AddrMode") -> None:
     self._proto = svd_cluster_array.clusters[0]
     self._addr_mode = addr_mode
     self._peripheral_name = peripheral.name
@@ -295,7 +311,7 @@ class Cluster:
         "ClusterIndex", len(svd_cluster_array.clusters), self._proto.dim_increment)
     self._prefix = self._proto.name + "_"
 
-  def expand(self):
+  def expand(self) -> Iterator[Register]:
     """Yield Register / RegisterArray instances, one per inner entry."""
     for inner in self._proto.registers:
       if isinstance(inner, SVDRegister):
@@ -308,7 +324,7 @@ class Cluster:
             f"contains an inner element of type {type(inner).__name__} which is "
             f"not yet supported.")
 
-  def _inner_register(self, inner):
+  def _inner_register(self, inner: Any) -> Register:
     return Register(inner,
                     name=_normalize_name(self._strip_prefix(inner.name)),
                     offset=self._resolve_offset(inner.address_offset, inner.name),
@@ -316,7 +332,7 @@ class Cluster:
                     addr_mode=self._addr_mode,
                     peripheral_name=self._peripheral_name)
 
-  def _inner_array(self, inner):
+  def _inner_array(self, inner: Any) -> RegisterArray:
     proto = inner.registers[0]
     meta = inner.meta_register
     return RegisterArray(proto,
@@ -328,10 +344,10 @@ class Cluster:
                          addr_mode=self._addr_mode,
                          peripheral_name=self._peripheral_name)
 
-  def _strip_prefix(self, name):
+  def _strip_prefix(self, name: str) -> str:
     return name[len(self._prefix):] if name.startswith(self._prefix) else name
 
-  def _resolve_offset(self, raw_offset, register_name):
+  def _resolve_offset(self, raw_offset: int, register_name: str) -> int:
     return _resolve_inner_offset(
         raw_offset, self._proto,
         f"{self._peripheral_name}.{self._proto.name}.{register_name}")
@@ -343,27 +359,27 @@ class Cluster:
 class Field:
   """One bit-field within a register. Wraps an SVDField."""
 
-  def __init__(self, svd_field):
+  def __init__(self, svd_field: Any) -> None:
     self._svd = svd_field
 
   @property
-  def name(self):
+  def name(self) -> str:
     return self._svd.name
 
   @property
-  def description(self):
+  def description(self) -> Optional[str]:
     return self._svd.description
 
   @property
-  def offset(self):
+  def offset(self) -> int:
     return self._svd.bit_offset
 
   @property
-  def width(self):
+  def width(self) -> int:
     return self._svd.bit_width
 
   @property
-  def value_type(self):
+  def value_type(self) -> str:
     """C++ type used for the field's value: enum class for enumerated fields,
     else the smallest unsigned int that fits the width (or bool for w==1)."""
     enums = self.enums()
@@ -379,27 +395,27 @@ class Field:
     return "std::uint32_t"
 
   @property
-  def access(self):
+  def access(self) -> str:
     return _access_to_mmio(self._svd.access)
 
   @property
-  def modify(self):
+  def modify(self) -> str:
     return _modify_write_to_mmio(self._svd.modified_write_values, where=self.name)
 
-  def enums(self):
+  def enums(self) -> list["Enum"]:
     if not (self._svd.is_enumerated_type and self._svd.enumerated_values):
       return []
     return [Enum(es, self.name) for es in self._svd.enumerated_values]
 
-  def cpp_using(self):
+  def cpp_using(self) -> str:
     return (f"using {self.name} = ftl::mmio::Field<"
             f"{self.width}, {self.offset}, {self.value_type}, "
             f"{self.access}, {self.modify}>;")
 
-  def cpp_template_arg(self, register_name, type_qualifier=""):
+  def cpp_template_arg(self, register_name: str, type_qualifier: str = "") -> str:
     return f"{type_qualifier}{register_name}_fields_::{self.name}"
 
-  def cpp_reexport(self, register_name, type_qualifier=""):
+  def cpp_reexport(self, register_name: str, type_qualifier: str = "") -> str:
     # When a field shares its register's name (e.g. GPIO::DR), re-exporting
     # it under that name shadows the enclosing struct's injected-class-name.
     # Emit it as VALUE instead. Register._validate_field_names guarantees the
@@ -416,39 +432,39 @@ class Reserved:
 
   # register_name and type_qualifier are unused but required so this method
   # is polymorphic with Field.cpp_template_arg — jinja calls them uniformly.
-  def cpp_template_arg(self, register_name="", type_qualifier=""):
+  def cpp_template_arg(self, register_name: str = "", type_qualifier: str = "") -> str:
     return f"ftl::mmio::Reserved<{self.width}, {self.offset}>"
 
 
 class Enum:
   """One enumeratedValues set, generated as a C++ `enum class`."""
 
-  def __init__(self, svd_enum_set, fallback_name):
+  def __init__(self, svd_enum_set: Any, fallback_name: str) -> None:
     self._svd = svd_enum_set
     self._fallback = fallback_name
 
   @property
-  def name(self):
+  def name(self) -> str:
     return self._svd.name or self._fallback
 
-  def values(self):
+  def values(self) -> list["EnumValue"]:
     return [EnumValue(v) for v in self._svd.enumerated_values]
 
 
 class EnumValue:
-  def __init__(self, svd_enum_value):
+  def __init__(self, svd_enum_value: Any) -> None:
     self._svd = svd_enum_value
 
   @property
-  def name(self):
+  def name(self) -> str:
     return self._svd.name
 
   @property
-  def value(self):
+  def value(self) -> int:
     return self._svd.value
 
   @property
-  def description(self):
+  def description(self) -> Optional[str]:
     return self._svd.description
 
 
@@ -458,10 +474,10 @@ class TemplateParam:
   dim: int
   increment: int
 
-  def cpp_decl(self):
+  def cpp_decl(self) -> str:
     return f"std::uint32_t {self.name}"
 
-  def cpp_static_assert(self, register_name):
+  def cpp_static_assert(self, register_name: str) -> str:
     return (f'static_assert({self.name} < {self.dim}u, '
             f'"{register_name}: {self.name} out of range");')
 
@@ -476,15 +492,16 @@ class AddrMode:
   type_qualifier: str
 
   @classmethod
-  def absolute(cls, base_address):
+  def absolute(cls, base_address: int) -> "AddrMode":
     return cls(base_address=base_address, base_symbol=None, type_qualifier="")
 
   @classmethod
-  def symbolic(cls, symbol):
+  def symbolic(cls, symbol: str) -> "AddrMode":
     return cls(base_address=None, base_symbol=symbol, type_qualifier="typename ")
 
-  def format(self, offset, template_params):
+  def format(self, offset: int, template_params: list[TemplateParam]) -> str:
     if self.base_symbol is None:
+      assert self.base_address is not None
       expr = f"0x{self.base_address + offset:08X}u"
     else:
       expr = f"{self.base_symbol} + 0x{offset:X}u"
@@ -496,7 +513,7 @@ class AddrMode:
 # =================================================================================================
 # Cluster-inner offset resolution
 
-def _resolve_inner_offset(inner_offset, cluster, where):
+def _resolve_inner_offset(inner_offset: int, cluster: Any, where: str) -> int:
   """Resolve a cluster-inner register's offset to a peripheral-relative offset.
 
   SVDs disagree on whether an inner <addressOffset> is cluster-relative (per
@@ -548,7 +565,7 @@ _ACCESS_TO_MMIO = {
 }
 
 
-def _access_to_mmio(access):
+def _access_to_mmio(access: Any) -> str:
   return _ACCESS_TO_MMIO.get(access, "ftl::mmio::RW")
 
 
@@ -560,7 +577,7 @@ _MODIFY_WRITE_TO_MMIO = {
 }
 
 
-def _modify_write_to_mmio(mwv, *, where):
+def _modify_write_to_mmio(mwv: Any, *, where: str) -> str:
   if mwv is None:
     return "ftl::mmio::Normal"
   name = getattr(mwv, "name", str(mwv))
@@ -572,7 +589,7 @@ def _modify_write_to_mmio(mwv, *, where):
       f"Supported values: {sorted(_MODIFY_WRITE_TO_MMIO)}.")
 
 
-def _storage_type(bits):
+def _storage_type(bits: int) -> str:
   if bits <= 8:
     return "std::uint8_t"
   if bits <= 16:
@@ -580,17 +597,17 @@ def _storage_type(bits):
   return "std::uint32_t"
 
 
-def _reset_literal(bits, reset):
+def _reset_literal(bits: int, reset: int) -> str:
   digits = {8: 2, 16: 4}.get(bits, 8)
   return f"0x{reset:0{digits}X}u"
 
 
-def _normalize_name(name):
+def _normalize_name(name: str) -> str:
   """'FOO[3]' → 'FOO_3' for array-element registers."""
   m = re.fullmatch(r"(.+)\[(\d+)\]", name)
   return f"{m.group(1)}_{m.group(2)}" if m else name
 
 
-def _strip_dim_placeholder(name):
+def _strip_dim_placeholder(name: str) -> str:
   """Remove the [%s] / %s SVD <dim> placeholder from an array name."""
   return name.replace("[%s]", "").replace("%s", "")

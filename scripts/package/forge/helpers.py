@@ -1,43 +1,44 @@
 import contextlib
 import os
+from typing import Iterator, NoReturn
 
 GREEN_CHECK = "\033[32m\u2713\033[0m"
 
 # Prints green
 
 
-def print_green(text):
+def print_green(text: str) -> None:
   print(f"\033[32m{text}\033[0m")
 
 # Prints red
 
 
-def print_red(text):
+def print_red(text: str) -> None:
   print(f"\033[91m{text}\033[0m")
 
 # Prints and raises an exception
 
 
-def error(message: str):
+def error(message: str) -> NoReturn:
   print_red(message)
   raise (Exception(message))
 
 # Erros if path/directory DNE
 
 
-def ensure_path(path: str):
+def ensure_path(path: str) -> None:
   if not os.path.exists(path):
     error(f'path<{path}> DNE!')
 
 # Erros if path/directory DNE
 
 
-def ensure_file(fullfile: str):
+def ensure_file(fullfile: str) -> None:
   if not os.path.exists(fullfile):
     error(f'file<{fullfile}> DNE!')
 
 
-def remove_file(fullfile):
+def remove_file(fullfile: str) -> None:
   if os.path.exists(fullfile):
     os.remove(fullfile)
 
@@ -45,7 +46,7 @@ def remove_file(fullfile):
 # Context manager for pushd. Example from
 # (https://stackoverflow.com/questions/6194499/pushd-through-os-system)
 @contextlib.contextmanager
-def pushd(new_dir):
+def pushd(new_dir: str) -> Iterator[None]:
   previous_dir = os.getcwd()
 
   # Create the directoy if it doesn't exsits (not exactly pushd)

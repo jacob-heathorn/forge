@@ -18,10 +18,10 @@ class NativeDebugger():
   Provides the interface to generate a native launch configuration for vscode.
   """
 
-  def __init__(self, name: str,):
+  def __init__(self, name: str) -> None:
     self.name = name
 
-  def debug(self, fullfile: str):
+  def debug(self, fullfile: str) -> None:
     launch_manager = forge.vscode.LaunchManager(LAUNCH_JSON)
 
     # Define the context for your template rendering

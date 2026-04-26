@@ -5,6 +5,7 @@ import traceback
 import forge
 import time
 import subprocess
+from typing import Any, Optional
 
 
 class SerialTerminal:
@@ -12,11 +13,11 @@ class SerialTerminal:
   Prints serial data to the console.
   """
 
-  def __init__(self, serial_device, baud_rate):
+  def __init__(self, serial_device: str, baud_rate: int) -> None:
     self.serial_device = serial_device
     self.baud_rate = baud_rate
-    self.ser = None
-    self.thread = None
+    self.ser: Optional[serial.Serial] = None
+    self.thread: Optional[threading.Thread] = None
 
     if not SerialTerminal.is_serial_device_available(self.serial_device):
       forge.error(f"Serial device {self.serial_device} is already in use!")
@@ -24,7 +25,7 @@ class SerialTerminal:
     self.ser = serial.Serial(self.serial_device, self.baud_rate)
 
   @staticmethod
-  def is_serial_device_available(serial_device):
+  def is_serial_device_available(serial_device: str) -> bool:
     """Check if a serial port is being used by another process."""
     try:
       result = subprocess.run(["lsof", serial_device], stdout=subprocess.PIPE,
@@ -42,7 +43,7 @@ class SerialTerminal:
     assert self.ser is not None, "Serial port not initialized"
     return self.ser.readline().decode('utf-8').strip('\r\n')
 
-  def read(self):
+  def read(self) -> None:
     """
     Blocking continuously read and print serial data.
     """
@@ -59,7 +60,7 @@ class SerialTerminal:
         self.ser.close()
         print("Serial connection closed.")
 
-  def read_background(self):
+  def read_background(self) -> None:
     """
     Reads the serial terminal in a background thread.
     """
@@ -70,20 +71,20 @@ class SerialTerminal:
     signal.signal(signal.SIGINT, self.signal_handler)
     print("Ctrl+c to exit serial terminal.")
 
-  def signal_handler(self, sig, frame):
+  def signal_handler(self, sig: int, frame: Any) -> None:
     """
     Handle Ctrl+C and exit cleanly.
     """
     print("\nClosing serial terminal...")
     self.cleanup()
 
-  def __del__(self):
+  def __del__(self) -> None:
     """
     Calls cleanup.
     """
     self.cleanup()
 
-  def cleanup(self):
+  def cleanup(self) -> None:
     """
     Cleans up resources.
     """
