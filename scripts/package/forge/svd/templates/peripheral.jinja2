@@ -1,4 +1,4 @@
-{#- Standalone peripheral header: namespace shape with absolute addresses. -#}
+{#- Standalone peripheral header: a struct with absolute addresses. -#}
 {%- from 'register.jinja2' import render -%}
 #pragma once
 
@@ -8,10 +8,13 @@
 {{ peripheral.description | cpp_comment }}
 //
 // NOTE: This file was generated from the forge CMSIS-svd wrapper tool.
-namespace regs::{{ peripheral.lower_name }} {
+namespace regs {
 
+struct {{ peripheral.class_name }} {
 {% for r in peripheral.registers() %}
-{{ render(r, peripheral) }}
+{{ render(r, peripheral) | indent(2, first=true) }}
 
 {% endfor %}
-}  // namespace regs::{{ peripheral.lower_name }}
+};
+
+}  // namespace regs

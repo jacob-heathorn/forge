@@ -8,7 +8,7 @@
 #include "testperiph.hpp"
 #include "port.hpp"
 
-namespace periph = regs::testperiph;
+using periph = regs::Testperiph;
 
 // 16 KB scratch span mmap'd at the fixture peripheral base so Register<>
 // addresses resolve to real memory. Covers TESTPERIPH (0x10000000) and the

@@ -34,6 +34,10 @@ class Peripheral:
     return self.name.lower()
 
   @property
+  def class_name(self) -> str:
+    return _pascal_case(self.name)
+
+  @property
   def type_qualifier(self) -> str:
     return self._addr.type_qualifier
 
@@ -75,7 +79,7 @@ class PeripheralFamily:
 
   @property
   def class_name(self) -> str:
-    return self._family_name.capitalize()
+    return _pascal_case(self._family_name)
 
   @property
   def lower_name(self) -> str:
@@ -514,3 +518,8 @@ def _normalize_name(name: str) -> str:
 def _strip_dim_placeholder(name: str) -> str:
   # FOO[%s] / FOO%s → FOO
   return name.replace("[%s]", "").replace("%s", "")
+
+
+def _pascal_case(name: str) -> str:
+  # USB_OTG → UsbOtg, CCM → Ccm, CM7_GPIO2 → Cm7Gpio2
+  return "".join(word.capitalize() for word in name.split("_"))
