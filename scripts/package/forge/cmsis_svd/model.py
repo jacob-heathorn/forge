@@ -80,9 +80,6 @@ class Enum:
   name: str
   values: list  # list[EnumValue]
 
-  def cpp_decl(self):
-    return f"enum class e{self.name} : std::uint32_t"
-
 
 @dataclass(frozen=True)
 class Field:
@@ -94,10 +91,6 @@ class Field:
   access: str       # already mapped: 'ftl::mmio::RO' | ...
   modify: str       # already mapped: 'ftl::mmio::OneToClear' | ...
   enums: list = _field(default_factory=list)  # list[Enum]
-
-  @property
-  def is_field(self):
-    return True
 
   def cpp_using(self):
     return (f"using {self.name} = ftl::mmio::Field<"
@@ -121,10 +114,8 @@ class Reserved:
   offset: int
   width: int
 
-  @property
-  def is_field(self):
-    return False
-
+  # register_name and type_qualifier are unused but required so this method
+  # is polymorphic with Field.cpp_template_arg — jinja calls them uniformly.
   def cpp_template_arg(self, register_name="", type_qualifier=""):
     return f"ftl::mmio::Reserved<{self.width}, {self.offset}>"
 
