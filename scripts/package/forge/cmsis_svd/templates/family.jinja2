@@ -1,0 +1,30 @@
+{#- Peripheral-family header: one templated struct, kBase per Instance,
+    inner registers addressed as `kBase + offset`. -#}
+{%- from 'register.jinja2' import render -%}
+#pragma once
+
+#include <cstdint>
+#include "ftl/mmio.hpp"
+
+{{ family.parent.description | cpp_comment }}
+//
+// NOTE: This file was generated from the forge CMSIS-svd wrapper tool.
+namespace regs {
+
+template<std::uint32_t Instance>
+struct {{ family.class_name }} {
+  {{ family.cpp_instance_assert() | indent(2) }}
+
+  static constexpr std::uintptr_t kBase =
+{% for i in family.instances %}
+      Instance == {{ i.number }}u ? 0x{{ '%08X' % i.base_address }}u :
+{% endfor %}
+      0u;
+
+{% for r in family.parent.registers %}
+{{ render(r, family.parent) | indent(2, first=true) }}
+
+{% endfor %}
+};
+
+}  // namespace regs
