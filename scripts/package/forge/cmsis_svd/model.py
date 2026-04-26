@@ -90,9 +90,9 @@ class Peripheral:
     into one Register per inner register."""
     for r in self._svd.registers:
       if isinstance(r, SVDRegister):
-        yield Register.from_svd(r, self._svd, self._addr)
+        yield Register(r, self._svd, self._addr)
       elif isinstance(r, SVDRegisterArray):
-        yield RegisterArray.from_svd(r, self._svd, self._addr)
+        yield RegisterArray(r, self._svd, self._addr)
       elif isinstance(r, SVDRegisterClusterArray):
         yield from Cluster(r, self._svd, self._addr).expand()
       else:
@@ -159,31 +159,22 @@ class Register:
   cluster-inner Registers carry an Index/ClusterIndex/ArrayIndex.
   """
 
-  @classmethod
-  def from_svd(cls, svd: Any, peripheral: Any, addr_mode: "AddrMode") -> "Register":
-    return cls(svd,
-               name=_normalize_name(svd.name),
-               offset=svd.address_offset,
-               template_params=[],
-               addr_mode=addr_mode,
-               peripheral_name=peripheral.name)
-
   def __init__(
       self,
       svd_register: Any,
-      *,
-      name: str,
-      offset: int,
-      template_params: list["TemplateParam"],
+      peripheral: Any,
       addr_mode: "AddrMode",
-      peripheral_name: str,
+      *,
+      name: Optional[str] = None,
+      offset: Optional[int] = None,
+      template_params: Optional[list["TemplateParam"]] = None,
   ) -> None:
     self._svd = svd_register
-    self._name = name
-    self._offset = offset
-    self._template_params = template_params
+    self._peripheral = peripheral
     self._addr_mode = addr_mode
-    self._peripheral_name = peripheral_name
+    self._name = name if name is not None else _normalize_name(svd_register.name)
+    self._offset = offset if offset is not None else svd_register.address_offset
+    self._template_params = template_params if template_params is not None else []
     self._validate_field_names()
 
   @property
@@ -265,13 +256,13 @@ class Register:
       return
     if self._name == _REEXPORT_FALLBACK:
       raise ValueError(
-          f"{self._peripheral_name}.{self._name}: cannot apply rename fallback — "
+          f"{self._peripheral.name}.{self._name}: cannot apply rename fallback — "
           f"the register itself is named {_REEXPORT_FALLBACK!r} so the renamed "
           f"field would still shadow the enclosing struct. Edit the SVD or "
           f"change the rename strategy in Field.cpp_reexport.")
     if _REEXPORT_FALLBACK in field_names:
       raise ValueError(
-          f"{self._peripheral_name}.{self._name}: rename fallback collision — "
+          f"{self._peripheral.name}.{self._name}: rename fallback collision — "
           f"field {self._name!r} shares the register name and would be "
           f"re-exported as {_REEXPORT_FALLBACK!r}, but a field named "
           f"{_REEXPORT_FALLBACK!r} already exists in this register. Edit the "
@@ -282,17 +273,14 @@ class RegisterArray(Register):
   """N copies of one register at a stride. Renders as a Register templated on
   Index. All runtime behavior is inherited; only construction differs."""
 
-  @classmethod
-  def from_svd(cls, svd_array: Any, peripheral: Any, addr_mode: "AddrMode") -> "RegisterArray":
+  def __init__(self, svd_array: Any, peripheral: Any, addr_mode: "AddrMode") -> None:
     proto = svd_array.registers[0]
     meta = svd_array.meta_register
-    return cls(proto,
-               name=_normalize_name(_strip_dim_placeholder(meta.name)),
-               offset=proto.address_offset,
-               template_params=[TemplateParam(
-                   "Index", len(svd_array.registers), meta.dim_increment)],
-               addr_mode=addr_mode,
-               peripheral_name=peripheral.name)
+    super().__init__(
+        proto, peripheral, addr_mode,
+        name=_normalize_name(_strip_dim_placeholder(meta.name)),
+        template_params=[TemplateParam(
+            "Index", len(svd_array.registers), meta.dim_increment)])
 
 
 # =================================================================================================
@@ -305,8 +293,8 @@ class Cluster:
 
   def __init__(self, svd_cluster_array: Any, peripheral: Any, addr_mode: "AddrMode") -> None:
     self._proto = svd_cluster_array.clusters[0]
+    self._peripheral = peripheral
     self._addr_mode = addr_mode
-    self._peripheral_name = peripheral.name
     self._cluster_param = TemplateParam(
         "ClusterIndex", len(svd_cluster_array.clusters), self._proto.dim_increment)
     self._prefix = self._proto.name + "_"
@@ -320,29 +308,26 @@ class Cluster:
         yield self._inner_array(inner)
       else:
         raise NotImplementedError(
-            f"Peripheral {self._peripheral_name!r} cluster {self._proto.name!r} "
+            f"Peripheral {self._peripheral.name!r} cluster {self._proto.name!r} "
             f"contains an inner element of type {type(inner).__name__} which is "
             f"not yet supported.")
 
   def _inner_register(self, inner: Any) -> Register:
-    return Register(inner,
-                    name=_normalize_name(self._strip_prefix(inner.name)),
-                    offset=self._resolve_offset(inner.address_offset, inner.name),
-                    template_params=[self._cluster_param],
-                    addr_mode=self._addr_mode,
-                    peripheral_name=self._peripheral_name)
+    return Register(
+        inner, self._peripheral, self._addr_mode,
+        name=_normalize_name(self._strip_prefix(inner.name)),
+        offset=self._resolve_offset(inner.address_offset, inner.name),
+        template_params=[self._cluster_param])
 
-  def _inner_array(self, inner: Any) -> RegisterArray:
+  def _inner_array(self, inner: Any) -> Register:
     proto = inner.registers[0]
     meta = inner.meta_register
-    return RegisterArray(proto,
-                         name=_normalize_name(
-                             self._strip_prefix(_strip_dim_placeholder(meta.name))),
-                         offset=self._resolve_offset(proto.address_offset, meta.name),
-                         template_params=[self._cluster_param, TemplateParam(
-                             "ArrayIndex", len(inner.registers), meta.dim_increment)],
-                         addr_mode=self._addr_mode,
-                         peripheral_name=self._peripheral_name)
+    return Register(
+        proto, self._peripheral, self._addr_mode,
+        name=_normalize_name(self._strip_prefix(_strip_dim_placeholder(meta.name))),
+        offset=self._resolve_offset(proto.address_offset, meta.name),
+        template_params=[self._cluster_param, TemplateParam(
+            "ArrayIndex", len(inner.registers), meta.dim_increment)])
 
   def _strip_prefix(self, name: str) -> str:
     return name[len(self._prefix):] if name.startswith(self._prefix) else name
@@ -350,7 +335,7 @@ class Cluster:
   def _resolve_offset(self, raw_offset: int, register_name: str) -> int:
     return _resolve_inner_offset(
         raw_offset, self._proto,
-        f"{self._peripheral_name}.{self._proto.name}.{register_name}")
+        f"{self._peripheral.name}.{self._proto.name}.{register_name}")
 
 
 # =================================================================================================
