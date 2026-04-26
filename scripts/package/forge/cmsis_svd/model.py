@@ -101,11 +101,12 @@ class Field:
     return f"{type_qualifier}{register_name}_fields_::{self.name}"
 
   def cpp_reexport(self, register_name, type_qualifier=""):
-    # When a single-field register has a field of the same name (e.g. GPIO::DR),
-    # re-exporting it as the same name shadows the enclosing struct — emit it
-    # as `value_` instead.
+    # When a field shares its register's name (e.g. GPIO::DR), re-exporting
+    # it under that name shadows the enclosing struct's injected-class-name.
+    # Emit it as VALUE instead. _validate_register_field_names() guarantees
+    # this rename target is unique within the register.
     rhs = f"{type_qualifier}{register_name}_fields_::{self.name}"
-    lhs = "value_" if self.name == register_name else self.name
+    lhs = "VALUE" if self.name == register_name else self.name
     return f"using {lhs} = {rhs};"
 
 
@@ -286,6 +287,7 @@ def _build_register(svd, peripheral, base_expr, type_qualifier, *,
                     name, template_params, offset_override=None):
   offset = svd.address_offset if offset_override is None else offset_override
   fields = [_build_field(f) for f in sorted(svd.fields, key=lambda f: f.bit_offset)]
+  _validate_register_field_names(fields, name, peripheral.name)
   bits = _register_size(svd)
   slots = _build_slots(fields, bits)
   return Register(
@@ -326,6 +328,35 @@ def _build_enums(svd_field):
         for v in enum_set.enumerated_values]
     out.append(Enum(name=name, values=values))
   return out
+
+
+_REEXPORT_FALLBACK = "VALUE"
+
+
+def _validate_register_field_names(fields, register_name, peripheral_name):
+  """Ensure cpp_reexport's rename strategy stays unambiguous.
+
+  When a field's name matches the register's name, cpp_reexport re-exports it
+  as VALUE to avoid shadowing the injected-class-name. Fail loud if a real
+  field already occupies that name (or if the register itself is named VALUE)
+  — silent collision would compile but pick the wrong type.
+  """
+  names = [f.name for f in fields]
+  if register_name not in names:
+    return
+  if register_name == _REEXPORT_FALLBACK:
+    raise ValueError(
+        f"{peripheral_name}.{register_name}: cannot apply rename fallback — "
+        f"the register itself is named {_REEXPORT_FALLBACK!r} so the renamed "
+        f"field would still shadow the enclosing struct. Edit the SVD or "
+        f"change the rename strategy in Field.cpp_reexport.")
+  if _REEXPORT_FALLBACK in names:
+    raise ValueError(
+        f"{peripheral_name}.{register_name}: rename fallback collision — "
+        f"field {register_name!r} shares the register name and would be "
+        f"re-exported as {_REEXPORT_FALLBACK!r}, but a field named "
+        f"{_REEXPORT_FALLBACK!r} already exists in this register. Edit the "
+        f"SVD or change the rename strategy in Field.cpp_reexport.")
 
 
 def _build_slots(fields, reg_bits):
