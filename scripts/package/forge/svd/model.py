@@ -128,6 +128,10 @@ class Register:
     return self._name
 
   @property
+  def fields_struct_name(self) -> str:
+    return f"{_pascal_case(self._name)}Fields"
+
+  @property
   def description(self) -> Optional[str]:
     return self._svd.description
 
@@ -335,13 +339,14 @@ class Field:
             f"{self.width}, {self.offset}, {self.value_type}, "
             f"{self.access}, {self.modify}>;")
 
-  def cpp_template_arg(self, register_name: str, type_qualifier: str = "") -> str:
-    return f"{type_qualifier}{register_name}_fields_::{self.name}"
+  def cpp_template_arg(self, fields_struct: str, type_qualifier: str = "") -> str:
+    return f"{type_qualifier}{fields_struct}::{self.name}"
 
-  def cpp_reexport(self, register_name: str, type_qualifier: str = "") -> str:
+  def cpp_reexport(self, register_name: str, fields_struct: str,
+                   type_qualifier: str = "") -> str:
     # Same-name fields (e.g. GPIO::DR) get aliased to VALUE — `using DR = ...`
     # inside `struct DR` would shadow the injected-class-name.
-    rhs = f"{type_qualifier}{register_name}_fields_::{self.name}"
+    rhs = f"{type_qualifier}{fields_struct}::{self.name}"
     lhs = _REEXPORT_FALLBACK if self.name == register_name else self.name
     return f"using {lhs} = {rhs};"
 
@@ -352,7 +357,7 @@ class Reserved:
   width: int
 
   # Unused args mirror Field.cpp_template_arg so jinja calls both uniformly.
-  def cpp_template_arg(self, register_name: str = "", type_qualifier: str = "") -> str:
+  def cpp_template_arg(self, fields_struct: str = "", type_qualifier: str = "") -> str:
     return f"ftl::mmio::Reserved<{self.width}, {self.offset}>"
 
 

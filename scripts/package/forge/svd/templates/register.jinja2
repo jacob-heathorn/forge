@@ -1,11 +1,12 @@
 {#- Render one Register: a fields struct + the Register declaration. Used by
-    both peripheral.jinja2 (standalone, namespace shape) and family.jinja2
+    both peripheral.jinja2 (standalone, struct shape) and family.jinja2
     (templated struct shape). The peripheral object carries `type_qualifier`
     which becomes "typename " in family mode (dependent name) or "" otherwise. -#}
 {%- macro render(register, peripheral) -%}
 {%- set tq = peripheral.type_qualifier -%}
+{%- set fs = register.fields_struct_name -%}
 {{ register.description | cpp_comment }}
-struct {{ register.name }}_fields_ {
+struct {{ fs }} {
 {% for enum in register.enums() %}
   enum class e{{ enum.name }} : std::uint32_t {
 {% for v in enum.values() %}
@@ -23,7 +24,7 @@ struct {{ register.name }}_fields_ {
 {% endif %}
   {{ f.cpp_using() }}
 {% endfor %}
-};  // struct {{ register.name }}_fields_
+};  // struct {{ fs }}
 
 {% if register.is_templated %}
 {{ register.cpp_template_decl() }}
@@ -34,16 +35,16 @@ struct {{ register.name }} : ftl::mmio::Register<
     {{ register.reset_literal }},
     {{ register.access }}
 {%- for s in register.slots() %},
-    {{ s.cpp_template_arg(register.name, tq) }}
+    {{ s.cpp_template_arg(fs, tq) }}
 {%- endfor %}> {
 {% for tp in register.template_params %}
   {{ tp.cpp_static_assert(register.name) }}
 {% endfor %}
 {% for enum in register.enums() %}
-  using e{{ enum.name }} = {{ tq }}{{ register.name }}_fields_::e{{ enum.name }};
+  using e{{ enum.name }} = {{ tq }}{{ fs }}::e{{ enum.name }};
 {% endfor %}
 {% for f in register.fields() %}
-  {{ f.cpp_reexport(register.name, tq) }}
+  {{ f.cpp_reexport(register.name, fs, tq) }}
 {% endfor %}
 };
 {%- endmacro -%}
