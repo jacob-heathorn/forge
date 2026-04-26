@@ -23,8 +23,9 @@ add_custom_command(
   DEPENDS
     ${TEST_SVD}
     $ENV{FORGE_ROOT}/scripts/package/forge/cmsis_svd/svd_parser_wrapper.py
-    $ENV{FORGE_ROOT}/scripts/templates/cmsis_svd_register.jinja2
-    $ENV{FORGE_ROOT}/scripts/templates/cmsis_svd_registers.jinja2
+    $ENV{FORGE_ROOT}/scripts/package/forge/cmsis_svd/templates/cmsis_svd_register.jinja2
+    $ENV{FORGE_ROOT}/scripts/package/forge/cmsis_svd/templates/cmsis_svd_registers.jinja2
+    $ENV{FORGE_ROOT}/scripts/package/forge/cmsis_svd/templates/cmsis_svd_family.jinja2
   COMMENT "Generating testperiph.hpp from test_peripheral.svd"
   VERBATIM
 )
