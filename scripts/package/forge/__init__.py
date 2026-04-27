@@ -1,6 +1,7 @@
 # flake8: noqa: F401
-# Lazy module: only re-exports the SVD generator, which is the one piece the
-# Bazel build invokes at codegen time. Tooling-side helpers (debugger, vscode,
-# serial_terminal) are imported from their submodules directly to avoid
-# pulling in their heavyweight deps when the build only needs codegen.
+from .helpers import error, print_green, print_red, remove_file, pushd
+from .application import Application, NativeApplication
+from .debugger import NativeDebugger
+from .vscode import launch_manager, tasks_manager
 from .svd import RegisterGenerator
+from .serial_terminal import SerialTerminal
