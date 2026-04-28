@@ -1,4 +1,5 @@
 import serial
+import sys
 import threading
 import signal
 import traceback
@@ -65,7 +66,9 @@ class SerialTerminal:
     Reads the serial terminal in a background thread.
     """
     forge.print_green("Reading serial terminal in the background...")
-    self.thread = threading.Thread(target=self.read, daemon=False)
+    # daemon=True so a readline() blocked on a closed port can't keep
+    # the process alive after the main thread exits.
+    self.thread = threading.Thread(target=self.read, daemon=True)
     self.thread.start()
     time.sleep(.1)  # For is_serial_device_available() to work immediately.
     signal.signal(signal.SIGINT, self.signal_handler)
@@ -77,6 +80,10 @@ class SerialTerminal:
     """
     print("\nClosing serial terminal...")
     self.cleanup()
+    # Exit the process; without this the caller's main loop keeps
+    # spinning because Python's default SIGINT->KeyboardInterrupt path
+    # was overridden when this handler was installed.
+    sys.exit(0)
 
   def __del__(self) -> None:
     """
