@@ -1,5 +1,5 @@
+import os
 import serial
-import sys
 import threading
 import signal
 import traceback
@@ -80,10 +80,13 @@ class SerialTerminal:
     """
     print("\nClosing serial terminal...")
     self.cleanup()
-    # Exit the process; without this the caller's main loop keeps
-    # spinning because Python's default SIGINT->KeyboardInterrupt path
-    # was overridden when this handler was installed.
-    sys.exit(0)
+    # os._exit instead of sys.exit: sys.exit raises SystemExit which has
+    # to unwind, and during that unwind threading._shutdown can re-enter
+    # this handler (re-printing the close message and dumping a noisy
+    # "Exception ignored ... SystemExit" trace). The port is already
+    # closed and the read thread is a daemon, so terminating immediately
+    # is correct.
+    os._exit(0)
 
   def __del__(self) -> None:
     """
