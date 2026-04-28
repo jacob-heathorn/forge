@@ -1,0 +1,17 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("//bazel:copts.bzl", "FORGE_COPTS", "FORGE_CXXOPTS")
+
+cc_library(
+    name = "ftl-native",
+    srcs = [
+        "native_ethernet_interface.cpp",
+        "native_udp_socket.cpp",
+    ],
+    hdrs = glob(["include/**/*.hpp"]),
+    includes = ["include"],
+    copts = FORGE_COPTS + FORGE_CXXOPTS,
+    deps = ["//firmware/ftl"],
+    visibility = ["//visibility:public"],
+)
+
+exports_files(["pw_ut_main.cpp"])

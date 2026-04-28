@@ -1,4 +1,0 @@
-#!/bin/bash
-set -e
-
-$PROJECT_ROOT/.nox/dev/bin/python $PROJECT_ROOT/scripts/package/rip.py "$@"

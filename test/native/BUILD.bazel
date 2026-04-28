@@ -1,0 +1,103 @@
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_test")
+load("//bazel:copts.bzl", "FORGE_COPTS", "FORGE_CXXOPTS")
+
+# Sanity check that GoogleTest itself works against ftl.
+cc_test(
+    name = "gtest-ut-simple",
+    srcs = ["ut_simple.cpp"],
+    copts = FORGE_COPTS + FORGE_CXXOPTS,
+    deps = [
+        "//firmware/ftl",
+        "@googletest//:gtest_main",
+    ],
+)
+
+# Same source, run under the Pigweed test framework.
+cc_test(
+    name = "pw-ut-simple",
+    srcs = ["ut_simple.cpp"],
+    copts = FORGE_COPTS + FORGE_CXXOPTS,
+    deps = [
+        "//firmware/ftl",
+        "//firmware/pw_unit_test",
+        "//firmware/pw_unit_test:pw_ut_main",
+    ],
+)
+
+# Core ftl unit tests.
+cc_test(
+    name = "ut-ftl",
+    srcs = [
+        "ut_byte_order.cpp",
+        "ut_map.cpp",
+        "ut_memory.cpp",
+        "ut_mutex.cpp",
+        "ut_singleton.cpp",
+        "ut_thread.cpp",
+    ],
+    copts = FORGE_COPTS + FORGE_CXXOPTS,
+    deps = [
+        "//firmware/ftl",
+        "//firmware/native:ftl-native",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "ut-allocator",
+    srcs = [
+        "allocator/ut_buffer_allocator.cpp",
+        "allocator/ut_bump_allocator.cpp",
+        "allocator/ut_bump_pool_buffer_strategy.cpp",
+        "allocator/ut_bump_pool_obj_strategy.cpp",
+        "allocator/ut_fixed_pool_buffer_strategy.cpp",
+        "allocator/ut_fixed_pool_obj_strategy.cpp",
+        "allocator/ut_malloc_buffer_strategy.cpp",
+        "allocator/ut_malloc_obj_strategy.cpp",
+        "allocator/ut_obj_allocator.cpp",
+    ],
+    copts = FORGE_COPTS + FORGE_CXXOPTS,
+    deps = [
+        "//firmware/ftl",
+        "//firmware/native:ftl-native",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "ut-network",
+    srcs = ["ut_udp_socket.cpp"],
+    copts = FORGE_COPTS + FORGE_CXXOPTS,
+    deps = [
+        "//firmware/ftl",
+        "//firmware/native:ftl-native",
+        "@googletest//:gtest_main",
+    ],
+)
+
+# Manual demo binaries (not run under `bazel test`).
+cc_binary(
+    name = "hello-world",
+    srcs = ["hello_world.cpp"],
+    copts = FORGE_COPTS + FORGE_CXXOPTS,
+)
+
+cc_binary(
+    name = "hello-udp",
+    srcs = ["hello_udp.cpp"],
+    copts = FORGE_COPTS + FORGE_CXXOPTS,
+    deps = [
+        "//firmware/ftl",
+        "//firmware/native:ftl-native",
+    ],
+)
+
+cc_binary(
+    name = "test-map-performance",
+    srcs = ["test_map_performance.cpp"],
+    copts = FORGE_COPTS + FORGE_CXXOPTS,
+    deps = [
+        "//firmware/ftl",
+        "//firmware/native:ftl-native",
+    ],
+)

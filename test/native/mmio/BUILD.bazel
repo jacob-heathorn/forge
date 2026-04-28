@@ -1,0 +1,23 @@
+load("@rules_cc//cc:defs.bzl", "cc_test")
+load("//bazel:copts.bzl", "FORGE_COPTS", "FORGE_CXXOPTS")
+load("//bazel:svd.bzl", "svd_cc_library")
+
+# End-to-end test: run the SVD generator on a fixture SVD and compile a test
+# against the generated header. Any regression in either ftl::mmio primitives
+# or the generator itself surfaces here.
+svd_cc_library(
+    name = "test-peripheral-headers",
+    svd = "test_peripheral.svd",
+    deps = ["//firmware/ftl"],
+)
+
+cc_test(
+    name = "ut-mmio",
+    srcs = ["ut_mmio.cpp"],
+    copts = FORGE_COPTS + FORGE_CXXOPTS,
+    deps = [
+        ":test-peripheral-headers",
+        "//firmware/ftl",
+        "@googletest//:gtest_main",
+    ],
+)

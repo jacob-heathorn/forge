@@ -4,51 +4,59 @@ Common tooling for embedded projects, including:
 * Forge template library (ftl)
 * Deployment and debugging tools
 * SVD register generators
-* Common nix environment
 
-# Setup Instructions
-The has only been tested in Ubuntu 24.04
+# Setup
 
-1) Clone this repository: `git clone https://github.com/jacob-heathorn/forge.git`
-2) Install gordion: `pipx install gordion`
-3) Update the gordion dependencies: `gor -u`
-4) Install direnv:
-  * `sudo apt install direnv`
-  * Add the following to your .bashrc: `eval "$(direnv hook bash)"`
-  * Open a new terminal and change directory to here.
-  * `direnv allow .`
-5) Install nix:
-  * `sh <(curl -L https://nixos.org/nix/install) --daemon`
-6) Install the workspace recommended VSCode extensions.
-7) Create the dev environment: `nox -s dev`
+Tested on Ubuntu 24.04.
 
-# Repository tests
-`nox`
+1. Install bazelisk: `npm i -g @bazel/bazelisk` (or `apt install bazelisk`).
+   It auto-fetches the bazel version pinned in `.bazelversion`.
+2. Install gordion: `pipx install gordion`.
+3. Materialize gordion-managed dependencies: `gor -u`.
 
-# Clean
-`rip -c`
+That's it. No nix devshell, no direnv, no nox, no cmake.
+
+# Test
+
+```
+bazel test //...
+```
+
+ETL is resolved automatically via gordion. Set `ETL_ROOT` to override.
 
 # Build
-`cmake --workflow --preset native-debug`
-`cmake --workflow --preset native-release`
 
-# Run
-`rip -r native-debug:hello-world`
-
-# Debug
-`rip -d native-debug:hello-world`
-Debug in VSCode (F5)
-
-# ctest
 ```
-cd /.bin/native-release/
-ctest
+bazel build //...                   # default fastbuild
+bazel build //... -c dbg            # debug (-Og -ggdb)
+bazel build //... -c opt            # release (-O3 -DNDEBUG)
+bazel test //... --config=tsan      # ThreadSanitizer
 ```
 
-# Hello udp
+# Run a manual binary
+
 ```
-cmake --workflow --preset native-debug && \
-rip -r native-debug:hello-udp
+bazel run //test/native:hello-world
+bazel run //test/native:hello-udp
+```
+
+# Codegen (SVD → register headers)
+
+The `svd_cc_library` macro in `bazel/svd.bzl` runs `forge.svd.RegisterGenerator`
+as a Bazel action. Edits to the SVD or to the generator/templates correctly
+invalidate the cached output. Example: `test/native/mmio/BUILD.bazel`.
+
+# Repo layout
+
+```
+firmware/
+  ftl/         header-only template library
+  native/      host-side ftl impls (sockets, ethernet)
+  pw_unit_test/  vendored Pigweed unit-test framework
+  threadx/     header-only ThreadX wrappers (consumed by downstream embedded targets)
+test/native/   host gtest + pigweed tests, demo binaries
+scripts/package/  forge python package + rip CLI
+bazel/         shared starlark (copts, svd codegen rule, etl extension)
 ```
 
 # Copyright & Licensing

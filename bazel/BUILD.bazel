@@ -1,0 +1,13 @@
+exports_files(["etl.BUILD"])
+
+config_setting(
+    name = "dbg",
+    values = {"compilation_mode": "dbg"},
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "opt",
+    values = {"compilation_mode": "opt"},
+    visibility = ["//visibility:public"],
+)

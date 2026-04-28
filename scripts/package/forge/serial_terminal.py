@@ -1,3 +1,4 @@
+import os
 import serial
 import threading
 import signal
@@ -65,7 +66,9 @@ class SerialTerminal:
     Reads the serial terminal in a background thread.
     """
     forge.print_green("Reading serial terminal in the background...")
-    self.thread = threading.Thread(target=self.read, daemon=False)
+    # daemon=True so a readline() blocked on a closed port can't keep
+    # the process alive after the main thread exits.
+    self.thread = threading.Thread(target=self.read, daemon=True)
     self.thread.start()
     time.sleep(.1)  # For is_serial_device_available() to work immediately.
     signal.signal(signal.SIGINT, self.signal_handler)
@@ -77,6 +80,13 @@ class SerialTerminal:
     """
     print("\nClosing serial terminal...")
     self.cleanup()
+    # os._exit instead of sys.exit: sys.exit raises SystemExit which has
+    # to unwind, and during that unwind threading._shutdown can re-enter
+    # this handler (re-printing the close message and dumping a noisy
+    # "Exception ignored ... SystemExit" trace). The port is already
+    # closed and the read thread is a daemon, so terminating immediately
+    # is correct.
+    os._exit(0)
 
   def __del__(self) -> None:
     """
