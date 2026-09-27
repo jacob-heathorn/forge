@@ -45,7 +45,7 @@ _svd_headers = rule(
         "svd": attr.label(allow_single_file = True, mandatory = True),
         "include_prefix": attr.string(),
         "_generator": attr.label(
-            default = "//scripts/package:svd_generate",
+            default = "//tools:svd_generate",
             executable = True,
             cfg = "exec",
         ),

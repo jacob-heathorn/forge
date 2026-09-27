@@ -28,6 +28,6 @@ pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
 pip.parse(
     hub_name = "forge_pip",
     python_version = "3.12",
-    requirements_lock = "//scripts/package:requirements.txt",
+    requirements_lock = "//tools:requirements.txt",
 )
 use_repo(pip, "forge_pip")

@@ -1,0 +1,20 @@
+load("//bazel:cc.bzl", "forge_cc_test")
+load("//bazel:svd.bzl", "svd_cc_library")
+
+# Register headers generated from a small fixture SVD.
+svd_cc_library(
+    name = "test_peripheral",
+    svd = "test_peripheral.svd",
+    deps = ["//forge/ftl"],
+)
+
+# Compiles against the generated headers, so a regression in the generator or ftl::mmio shows here.
+forge_cc_test(
+    name = "mmio_test",
+    srcs = ["mmio_test.cpp"],
+    deps = [
+        ":test_peripheral",
+        "//forge/ftl",
+        "@googletest//:gtest_main",
+    ],
+)

@@ -1,0 +1,27 @@
+load("//bazel:cc.bzl", "forge_cc_binary")
+
+# Prints a greeting.
+forge_cc_binary(
+    name = "hello_world",
+    srcs = ["hello_world.cpp"],
+)
+
+# Sends and receives UDP over the host's network stack.
+forge_cc_binary(
+    name = "hello_udp",
+    srcs = ["hello_udp.cpp"],
+    deps = [
+        "//forge/ftl",
+        "//forge/native",
+    ],
+)
+
+# Times ftl::Map against std::map.
+forge_cc_binary(
+    name = "map_performance",
+    srcs = ["map_performance.cpp"],
+    deps = [
+        "//forge/ftl",
+        "//forge/native",
+    ],
+)

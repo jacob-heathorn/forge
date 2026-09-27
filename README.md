@@ -31,15 +31,15 @@ bazel test //... --config=tsan      # ThreadSanitizer
 # Run a manual binary
 
 ```
-bazel run //test/native:hello-world
-bazel run //test/native:hello-udp
+bazel run //apps:hello_world
+bazel run //apps:hello_udp
 ```
 
 # Codegen (SVD → register headers)
 
 The `svd_cc_library` macro in `bazel/svd.bzl` runs `forge.svd.RegisterGenerator`
 as a Bazel action. Edits to the SVD or to the generator/templates correctly
-invalidate the cached output. Example: `test/native/mmio/BUILD.bazel`.
+invalidate the cached output. Example: `forge/svd/BUILD.bazel`.
 
 # Consuming forge
 
@@ -50,19 +50,23 @@ points bazel at gordion's checkout. Own code that should be held to forge's warn
 
 # Repo layout
 
+Headers, sources and tests live together; a header's include path is its repo path, e.g.
+`#include "forge/ftl/map.hpp"`.
+
 ```
-firmware/
-  ftl/         header-only template library
-  native/      host-side ftl impls (sockets, ethernet)
+forge/
+  ftl/           header-only template library and its tests
+  native/        host implementations of ftl's thread and network interfaces
+  threadx/       ThreadX implementations of the same (header-only)
   pw_unit_test/  vendored Pigweed unit-test framework
-  threadx/     header-only ThreadX wrappers (consumed by downstream embedded targets)
-test/native/   host gtest + pigweed tests, demo binaries
-scripts/package/  forge python package (SVD generator, serial terminal)
+  svd/           test of the SVD register codegen
+apps/            host demo binaries
+tools/           forge python package: SVD generator, serial terminal
 bazel/
   cc.bzl       forge_cc_library / forge_cc_binary / forge_cc_test
   copts.bzl    the warning set they apply
   svd.bzl      SVD → register header codegen rule
-  3p/ BUILD files for dependencies without bazel support (ETL)
+  3p/          BUILD files for dependencies without bazel support (ETL)
 ```
 
 # Copyright & Licensing

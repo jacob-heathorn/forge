@@ -1,0 +1,48 @@
+load("//bazel:cc.bzl", "forge_cc_library", "forge_cc_test")
+
+package(default_visibility = ["//visibility:public"])
+
+# The header-only template library. Its allocators include "forge/ftl/mutex.hpp", which a platform
+# backend provides: depend on //forge/native or //forge/threadx to choose one.
+forge_cc_library(
+    name = "ftl",
+    hdrs = glob(["**/*.hpp"]),
+    deps = ["@etl"],
+)
+
+# Platform-independent pieces, tested on the host with the native backend.
+forge_cc_test(
+    name = "ftl_test",
+    srcs = [
+        "byte_order_test.cpp",
+        "map_test.cpp",
+        "memory_test.cpp",
+        "singleton_test.cpp",
+    ],
+    deps = [
+        ":ftl",
+        "//forge/native",
+        "@googletest//:gtest_main",
+    ],
+)
+
+# The allocator strategies and the allocators built on them.
+forge_cc_test(
+    name = "allocator_test",
+    srcs = [
+        "allocator/buffer_allocator_test.cpp",
+        "allocator/bump_allocator_test.cpp",
+        "allocator/bump_pool_buffer_strategy_test.cpp",
+        "allocator/bump_pool_obj_strategy_test.cpp",
+        "allocator/fixed_pool_buffer_strategy_test.cpp",
+        "allocator/fixed_pool_obj_strategy_test.cpp",
+        "allocator/malloc_buffer_strategy_test.cpp",
+        "allocator/malloc_obj_strategy_test.cpp",
+        "allocator/obj_allocator_test.cpp",
+    ],
+    deps = [
+        ":ftl",
+        "//forge/native",
+        "@googletest//:gtest_main",
+    ],
+)
