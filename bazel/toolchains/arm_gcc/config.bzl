@@ -51,6 +51,12 @@ _CXX_FLAGS = [
     "-fno-use-cxa-atexit",
 ]
 
+# Enabled by bazel according to -c.
+_MODE_FLAGS = {
+    "dbg": ["-O0", "-g"],
+    "opt": ["-O3", "-DNDEBUG"],
+}
+
 _LINK_FLAGS = [
     "--specs=nano.specs",
     "--specs=nosys.specs",
@@ -89,14 +95,17 @@ def _impl(ctx):
             _feature("default_compile_flags", _COMPILE_ACTIONS, cpu_flags + _COMPILE_FLAGS),
             _feature("cxx_flags", [ACTION_NAMES.cpp_compile], _CXX_FLAGS),
             _feature("default_link_flags", _LINK_ACTIONS, cpu_flags + _LINK_FLAGS),
+        ] + [
+            _feature(mode, _COMPILE_ACTIONS, flags, enabled = False)
+            for mode, flags in _MODE_FLAGS.items()
         ],
         cxx_builtin_include_directories = ctx.attr.system_include_dirs,
     )
 
-def _feature(name, actions, flags):
+def _feature(name, actions, flags, enabled = True):
     return feature(
         name = name,
-        enabled = True,
+        enabled = enabled,
         flag_sets = [flag_set(actions = actions, flag_groups = [flag_group(flags = flags)])],
     )
 

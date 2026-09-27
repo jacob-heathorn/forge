@@ -1,5 +1,6 @@
 /.bazel/
 /.direnv/
+/.pycache
 /.claude
 /.vscode/launch.json
 /MODULE.bazel.lock

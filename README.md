@@ -67,7 +67,7 @@ scripts/package/  forge python package (SVD generator, serial terminal)
 bazel/
   copts.bzl    warning set and per-mode flags for forge-owned targets
   svd.bzl      SVD → register header codegen rule
-  firmware.bzl firmware_image: ELF, .bin and embeddable .bin.cpp built for one core
+  firmware.bzl firmware_image: a cc_binary built for one core from any configuration
   platforms/   Cortex-M core constraints and platforms
   toolchains/  arm-none-eabi-gcc cc_toolchain per core
   third_party/ BUILD files for dependencies without bazel support (ETL)
