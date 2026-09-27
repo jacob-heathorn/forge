@@ -41,7 +41,6 @@ _COMPILE_FLAGS = [
     "-ffunction-sections",
     "-fdata-sections",
     "-fno-common",
-    "-ffreestanding",
     "-fno-builtin",
 ]
 
@@ -49,6 +48,7 @@ _CXX_FLAGS = [
     "-fno-exceptions",
     "-fno-rtti",
     "-fno-use-cxa-atexit",
+    "-fno-threadsafe-statics",
 ]
 
 # Enabled by bazel according to -c.

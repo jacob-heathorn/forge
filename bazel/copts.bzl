@@ -30,8 +30,8 @@ _BASE_COPTS = [
 ]
 
 FORGE_COPTS = _BASE_COPTS + select({
-    "//bazel:dbg": ["-Og", "-ggdb"],
-    "//bazel:opt": ["-O3", "-DNDEBUG"],
+    Label("//bazel:dbg"): ["-Og", "-ggdb"],
+    Label("//bazel:opt"): ["-O3", "-DNDEBUG"],
     "//conditions:default": [],
 })
 
