@@ -70,8 +70,6 @@ _LINK_FLAGS = [
 ]
 
 def _impl(ctx):
-    if not ctx.attr.bin_dir:
-        fail("arm-none-eabi-gcc was not found on PATH")
     cpu_flags = _CPU_FLAGS[ctx.attr.core]
     return cc_common.create_cc_toolchain_config_info(
         ctx = ctx,

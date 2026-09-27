@@ -56,6 +56,7 @@ def _elf_to_bin_impl(ctx):
         executable = cc.objcopy_executable,
         arguments = ["-Obinary", ctx.file.elf.path, out.path],
         inputs = [ctx.file.elf],
+        tools = cc.all_files,
         outputs = [out],
         mnemonic = "ObjCopy",
     )
@@ -69,8 +70,8 @@ _elf_to_bin = rule(
 
 def _bin_to_cpp_impl(ctx):
     out = ctx.actions.declare_file(ctx.attr.name)
-    ctx.actions.run_shell(
-        command = 'xxd -i -n "$1" "$2" > "$3"',
+    ctx.actions.run(
+        executable = ctx.executable._bin_to_cpp,
         arguments = [ctx.attr.symbol, ctx.file.bin.path, out.path],
         inputs = [ctx.file.bin],
         outputs = [out],
@@ -78,11 +79,15 @@ def _bin_to_cpp_impl(ctx):
     )
     return [DefaultInfo(files = depset([out]))]
 
-# Emits `unsigned char <symbol>[]` and `unsigned int <symbol>_len`.
 _bin_to_cpp = rule(
     implementation = _bin_to_cpp_impl,
     attrs = {
         "bin": attr.label(allow_single_file = True, mandatory = True),
         "symbol": attr.string(mandatory = True),
+        "_bin_to_cpp": attr.label(
+            default = "//bazel/tools:bin_to_cpp",
+            executable = True,
+            cfg = "exec",
+        ),
     },
 )

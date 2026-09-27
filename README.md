@@ -50,7 +50,7 @@ git_override(module_name = "forge", remote = "https://github.com/jacob-heathorn/
 
 Firmware targets load `@forge//bazel:firmware.bzl` and build for
 `@forge//bazel/platforms:cm4` or `:cm7`; forge registers the matching
-arm-none-eabi toolchains, which it currently finds on PATH. Repos that develop
+arm-none-eabi toolchains and downloads the Arm GNU Toolchain they use. Repos that develop
 against a live forge checkout use gordion: `gor bazelrc` emits the
 `--override_module` that points bazel at the checkout.
 
