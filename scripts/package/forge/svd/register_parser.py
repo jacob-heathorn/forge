@@ -1,9 +1,6 @@
 """Parse a CMSIS-SVD file into our Peripheral / PeripheralFamily model."""
 
-import os
-import pickle
 import re
-from pathlib import Path
 from typing import Any, Optional
 
 from cmsis_svd.parser import SVDParser
@@ -11,30 +8,10 @@ from cmsis_svd.parser import SVDParser
 from .model import AddrMode, FamilyInstance, Peripheral, PeripheralFamily
 
 
-PROJECT_ROOT = Path(os.environ.get("PROJECT_ROOT", ""))
-BIN_DIR = PROJECT_ROOT / ".bin"
-
-
 def parse(svd_file: str) -> tuple[list[Peripheral], list[PeripheralFamily]]:
-  """Parse svd_file (with on-disk cache) and return (standalone, families)."""
-  device = _load_device(svd_file)
-  return _group_peripherals(device)
-
-
-def _load_device(svd_file: str) -> Any:
-  # Cache invalidation by mtime: edits to test fixtures or vendor SVDs would
-  # otherwise silently reuse a stale parse.
-  cache_path = BIN_DIR / f"{Path(svd_file).stem}.pkl"
-  if cache_path.exists() and cache_path.stat().st_mtime >= os.path.getmtime(svd_file):
-    print(f"Loading cached device from {cache_path}...")
-    with cache_path.open("rb") as f:
-      return pickle.load(f)
-  print(f"Parsing {svd_file}...")
+  """Returns (standalone, families) parsed from svd_file."""
   device = SVDParser.for_xml_file(svd_file).get_device()
-  BIN_DIR.mkdir(parents=True, exist_ok=True)
-  with cache_path.open("wb") as f:
-    pickle.dump(device, f)
-  return device
+  return _group_peripherals(device)
 
 
 def _group_peripherals(

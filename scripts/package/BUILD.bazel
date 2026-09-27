@@ -1,37 +1,45 @@
-load("@rules_python//python:defs.bzl", "py_binary", "py_library")
 load("@forge_pip//:requirements.bzl", "requirement")
+load("@rules_python//python:defs.bzl", "py_binary", "py_library")
 
-# The forge Python package. `imports = ["."]` puts this directory on
-# PYTHONPATH so `import forge` works.
 py_library(
-    name = "forge",
-    srcs = glob(["forge/**/*.py"]),
-    data = glob(["forge/**/*.jinja2"]),
+    name = "svd",
+    srcs = ["forge/__init__.py"] + glob(["forge/svd/*.py"]),
+    data = glob(["forge/svd/templates/*.jinja2"]),
     imports = ["."],
+    visibility = ["//visibility:public"],
     deps = [
         requirement("cmsis-svd"),
         requirement("jinja2"),
+    ],
+)
+
+py_library(
+    name = "forge",
+    srcs = glob(
+        ["forge/**/*.py"],
+        exclude = [
+            "forge/__init__.py",
+            "forge/svd/*.py",
+        ],
+    ),
+    imports = ["."],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":svd",
         requirement("json5"),
         requirement("pyserial"),
     ],
-    visibility = ["//visibility:public"],
 )
 
-# Build-time SVD code generator, used by //bazel:svd.bzl.
 py_binary(
     name = "svd_generate",
     srcs = ["svd_generate.py"],
-    deps = [":forge"],
     visibility = ["//visibility:public"],
+    deps = [":svd"],
 )
 
-# `rip` CLI as a runnable bazel target. Mirrors the old scripts/bin/rip
-# wrapper but routes through the bazel-managed python env. Run with:
-#   bazel run //scripts/package:rip -- <args>
 py_binary(
     name = "rip",
     srcs = ["rip.py"],
-    main = "rip.py",
     deps = [":forge"],
-    visibility = ["//visibility:public"],
 )
