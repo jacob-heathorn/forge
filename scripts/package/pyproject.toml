@@ -6,13 +6,9 @@ authors = [{name = "Jacob", email = "jacob.heathorn@gmail.com"}]
 requires-python = ">=3.12"
 dependencies = [
     "jinja2",
-    "json5",
     "cmsis-svd==0.6.0",
     "pyserial",
 ]
-
-[tool.pytest.ini_options]
-cache_dir = "../../.pycache"
 
 [build-system]
 requires = ["hatchling"]

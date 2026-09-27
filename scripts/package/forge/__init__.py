@@ -5,9 +5,6 @@ from types import ModuleType
 from typing import Any
 
 _EXPORTS = {
-    "Application": "application",
-    "NativeApplication": "application",
-    "NativeDebugger": "debugger",
     "RegisterGenerator": "svd",
     "SerialTerminal": "serial_terminal",
     "error": "helpers",

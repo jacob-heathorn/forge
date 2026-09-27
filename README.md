@@ -2,7 +2,7 @@
 
 Common tooling for embedded projects, including:
 * Forge template library (ftl)
-* Deployment and debugging tools
+* Serial terminal for flash-and-run tooling
 * SVD register generators
 * Shared bazel rules: firmware images, Cortex-M platforms, arm-none-eabi toolchain
 
@@ -63,7 +63,7 @@ firmware/
   pw_unit_test/  vendored Pigweed unit-test framework
   threadx/     header-only ThreadX wrappers (consumed by downstream embedded targets)
 test/native/   host gtest + pigweed tests, demo binaries
-scripts/package/  forge python package + rip CLI
+scripts/package/  forge python package (SVD generator, serial terminal)
 bazel/
   copts.bzl    warning set and per-mode flags for forge-owned targets
   svd.bzl      SVD → register header codegen rule

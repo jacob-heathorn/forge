@@ -26,7 +26,6 @@ py_library(
     visibility = ["//visibility:public"],
     deps = [
         ":svd",
-        requirement("json5"),
         requirement("pyserial"),
     ],
 )
@@ -36,10 +35,4 @@ py_binary(
     srcs = ["svd_generate.py"],
     visibility = ["//visibility:public"],
     deps = [":svd"],
-)
-
-py_binary(
-    name = "rip",
-    srcs = ["rip.py"],
-    deps = [":forge"],
 )

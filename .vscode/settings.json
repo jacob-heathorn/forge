@@ -1,26 +1,15 @@
 {
-  "python.defaultInterpreterPath": "./.nox/dev/bin/python",
   "[python]": {
-      "editor.defaultFormatter": "ms-python.autopep8",
-      "editor.formatOnSave": true,
-      "editor.tabSize": 2,
-      "editor.insertSpaces": true,
-      "editor.detectIndentation": false
+    "editor.defaultFormatter": "ms-python.autopep8",
+    "editor.formatOnSave": true,
+    "editor.tabSize": 2,
+    "editor.insertSpaces": true,
+    "editor.detectIndentation": false
   },
-  "autopep8.args": [
-      "--max-line-length", "100",
-      "--indent-size", "2",
-      "--aggressive"
-  ],
-  "autopep8.interpreter": ["./.nox/dev/bin/python"],
-  "flake8.args": [
-      "--indent-size", "2",
-      "--max-line-length", "100"
-  ],
-  "flake8.interpreter": ["./.nox/dev/bin/python"],
+  "autopep8.args": ["--max-line-length", "100", "--indent-size", "2", "--aggressive"],
+  "flake8.args": ["--indent-size", "2", "--max-line-length", "100"],
   "editor.tabSize": 2,
   "editor.wordWrapColumn": 100,
-  "C_Cpp.default.compileCommands": "${workspaceFolder}/.bin/native-debug/compile_commands.json",
   "files.associations": {
     "iostream": "cpp",
     "type_traits": "cpp",
@@ -105,5 +94,5 @@
             }
         }
       ]
-  },
+  }
 }
