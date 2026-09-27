@@ -11,4 +11,5 @@ build:tsan --copt=-g
 build:tsan --copt=-O1
 build:tsan --linkopt=-fsanitize=thread
 
+# Personal settings, if any.
 try-import %workspace%/user.bazelrc

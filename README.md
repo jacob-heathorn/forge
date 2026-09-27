@@ -43,15 +43,10 @@ invalidate the cached output. Example: `test/native/mmio/BUILD.bazel`.
 
 # Consuming forge
 
-```
-bazel_dep(name = "forge", version = "0.1.0")
-git_override(module_name = "forge", remote = "https://github.com/jacob-heathorn/forge.git", commit = "...")
-```
-
-Own code that should be held to forge's warnings uses `forge_cc_library`, `forge_cc_binary` and
-`forge_cc_test` from `@forge//bazel:cc.bzl`; they are `cc_library` and friends with the flags from
-`copts.bzl` filled in. Repos that develop against a live forge checkout use gordion: `gor bazelrc`
-emits the `--override_module` that points bazel at the checkout.
+Add `bazel_dep(name = "forge", version = "0.1.0")` and list forge in `gordion.yaml`; `gor bazelrc`
+points bazel at gordion's checkout. Own code that should be held to forge's warnings uses
+`forge_cc_library`, `forge_cc_binary` and `forge_cc_test` from `@forge//bazel:cc.bzl`; they are
+`cc_library` and friends with the flags from `copts.bzl` filled in.
 
 # Repo layout
 
