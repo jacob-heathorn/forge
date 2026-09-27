@@ -6,8 +6,19 @@
     "editor.insertSpaces": true,
     "editor.detectIndentation": false
   },
-  "autopep8.args": ["--max-line-length", "100", "--indent-size", "2", "--aggressive"],
-  "flake8.args": ["--indent-size", "2", "--max-line-length", "100"],
+  "autopep8.args": [
+    "--max-line-length",
+    "100",
+    "--indent-size",
+    "2",
+    "--aggressive"
+  ],
+  "flake8.args": [
+    "--indent-size",
+    "2",
+    "--max-line-length",
+    "100"
+  ],
   "editor.tabSize": 2,
   "editor.wordWrapColumn": 100,
   "files.associations": {
@@ -77,22 +88,5 @@
     "variant": "cpp",
     "unordered_set": "cpp",
     "list": "cpp"
-},
-
-  "editor.tokenColorCustomizations": {
-      "textMateRules": [
-        {
-            "scope": "command-identifier.cmake",
-            "settings": {
-                "foreground": "#DCDCAA"
-            }
-        },
-        {
-            "scope": "expression.group.cmake",
-            "settings": {
-                "foreground": "#9CDCFE"
-            }
-        }
-      ]
   }
 }
