@@ -4,7 +4,7 @@ Common tooling for embedded projects, including:
 * Forge template library (ftl)
 * Serial terminal for flash-and-run tooling
 * SVD register generators
-* Shared bazel rules: firmware images, Cortex-M platforms, arm-none-eabi toolchain
+* Shared bazel rules: forge_cc_* with forge's warning set, SVD register codegen
 
 # Setup
 
@@ -48,11 +48,10 @@ bazel_dep(name = "forge", version = "0.1.0")
 git_override(module_name = "forge", remote = "https://github.com/jacob-heathorn/forge.git", commit = "...")
 ```
 
-Firmware targets load `@forge//bazel:firmware.bzl` and build for
-`@forge//bazel/platforms:cm4` or `:cm7`; forge registers the matching
-arm-none-eabi toolchains and downloads the Arm GNU Toolchain they use. Repos that develop
-against a live forge checkout use gordion: `gor bazelrc` emits the
-`--override_module` that points bazel at the checkout.
+Own code that should be held to forge's warnings uses `forge_cc_library`, `forge_cc_binary` and
+`forge_cc_test` from `@forge//bazel:cc.bzl`; they are `cc_library` and friends with the flags from
+`copts.bzl` filled in. Repos that develop against a live forge checkout use gordion: `gor bazelrc`
+emits the `--override_module` that points bazel at the checkout.
 
 # Repo layout
 
@@ -65,11 +64,9 @@ firmware/
 test/native/   host gtest + pigweed tests, demo binaries
 scripts/package/  forge python package (SVD generator, serial terminal)
 bazel/
-  copts.bzl    warning set and per-mode flags for forge-owned targets
+  cc.bzl       forge_cc_library / forge_cc_binary / forge_cc_test
+  copts.bzl    the warning set they apply
   svd.bzl      SVD → register header codegen rule
-  firmware.bzl firmware_image: a cc_binary built for one core from any configuration
-  platforms/   Cortex-M core constraints and platforms
-  toolchains/  arm-none-eabi-gcc cc_toolchain per core
   third_party/ BUILD files for dependencies without bazel support (ETL)
 ```
 

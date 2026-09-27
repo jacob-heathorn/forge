@@ -1,7 +1,6 @@
-load("@rules_cc//cc:defs.bzl", "cc_library")
-load("//bazel:copts.bzl", "FORGE_COPTS", "FORGE_CXXOPTS")
+load("//bazel:cc.bzl", "forge_cc_library")
 
-cc_library(
+forge_cc_library(
     name = "ftl-native",
     srcs = [
         "native_ethernet_interface.cpp",
@@ -9,9 +8,8 @@ cc_library(
     ],
     hdrs = glob(["include/**/*.hpp"]),
     includes = ["include"],
-    copts = FORGE_COPTS + FORGE_CXXOPTS,
-    deps = ["//firmware/ftl"],
     visibility = ["//visibility:public"],
+    deps = ["//firmware/ftl"],
 )
 
 exports_files(["pw_ut_main.cpp"])

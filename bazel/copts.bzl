@@ -1,6 +1,6 @@
-"""Compiler flags for forge-owned targets; external deps are not held to them."""
+"""Warning flags for forge-owned code. Optimization and debug flags belong to the toolchain."""
 
-_BASE_COPTS = [
+FORGE_COPTS = [
     "-Wall",
     "-Wextra",
     "-Werror",
@@ -9,7 +9,6 @@ _BASE_COPTS = [
     "-Werror=sign-conversion",
     "-Winvalid-pch",
     "-Wmissing-format-attribute",
-    "-Wnull-dereference",
     "-Wpacked",
     "-Wpointer-arith",
     "-Wredundant-decls",
@@ -29,12 +28,4 @@ _BASE_COPTS = [
     "-fno-common",
 ]
 
-FORGE_COPTS = _BASE_COPTS + select({
-    Label("//bazel:dbg"): ["-Og", "-ggdb"],
-    Label("//bazel:opt"): ["-O3", "-DNDEBUG"],
-    "//conditions:default": [],
-})
-
-FORGE_CXXOPTS = [
-    "-Wno-interference-size",
-]
+FORGE_CXXOPTS = ["-Wno-interference-size"]
