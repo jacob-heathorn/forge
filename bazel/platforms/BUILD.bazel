@@ -1,0 +1,26 @@
+load(":cores.bzl", "CORES")
+
+package(default_visibility = ["//visibility:public"])
+
+# Cortex-M4 and Cortex-M7 are both armv7e-m; the core constraint tells them apart.
+constraint_setting(name = "core")
+
+[
+    constraint_value(
+        name = core + "_core",
+        constraint_setting = ":core",
+    )
+    for core in CORES
+]
+
+[
+    platform(
+        name = core,
+        constraint_values = [
+            "@platforms//cpu:armv7e-m",
+            "@platforms//os:none",
+            ":" + core + "_core",
+        ],
+    )
+    for core in CORES
+]

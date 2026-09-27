@@ -1,6 +1,4 @@
-# Shared C/C++ flags applied to forge-owned targets only. External deps
-# (gtest, etl) intentionally do not inherit these — they don't need to pass
-# -Werror under our warning set.
+"""Compiler flags for forge-owned targets; external deps are not held to them."""
 
 _BASE_COPTS = [
     "-Wall",
@@ -31,15 +29,12 @@ _BASE_COPTS = [
     "-fno-common",
 ]
 
-# Per-compilation-mode flags. CMake's release preset is -O3 -DNDEBUG, debug is
-# -Og -ggdb; mirror that here so `-c opt` and `-c dbg` match the old presets.
 FORGE_COPTS = _BASE_COPTS + select({
     "//bazel:dbg": ["-Og", "-ggdb"],
     "//bazel:opt": ["-O3", "-DNDEBUG"],
     "//conditions:default": [],
 })
 
-# C++-only flags (avoid passing to C compilations of any vendored .c).
 FORGE_CXXOPTS = [
     "-Wno-interference-size",
 ]
