@@ -11,7 +11,7 @@ http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "ht
 
 http_archive(
     name = "etl",
-    build_file = "//bazel/third_party:etl.BUILD",
+    build_file = "//bazel/3p:etl.BUILD",
     sha256 = "b47ca70e7394f50dd2d65dddfd088757525488ac2fd934f435705fbf3ffe6d3d",
     strip_prefix = "etl-20.40.0",
     urls = ["https://github.com/ETLCPP/etl/archive/refs/tags/20.40.0.tar.gz"],

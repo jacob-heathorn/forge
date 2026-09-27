@@ -67,7 +67,7 @@ bazel/
   cc.bzl       forge_cc_library / forge_cc_binary / forge_cc_test
   copts.bzl    the warning set they apply
   svd.bzl      SVD → register header codegen rule
-  third_party/ BUILD files for dependencies without bazel support (ETL)
+  3p/ BUILD files for dependencies without bazel support (ETL)
 ```
 
 # Copyright & Licensing
