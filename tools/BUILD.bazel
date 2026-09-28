@@ -1,0 +1,38 @@
+load("@forge_pip//:requirements.bzl", "requirement")
+load("@rules_python//python:defs.bzl", "py_binary", "py_library")
+
+py_library(
+    name = "svd",
+    srcs = ["forge/__init__.py"] + glob(["forge/svd/*.py"]),
+    data = glob(["forge/svd/templates/*.jinja2"]),
+    imports = ["."],
+    visibility = ["//visibility:public"],
+    deps = [
+        requirement("cmsis-svd"),
+        requirement("jinja2"),
+    ],
+)
+
+py_library(
+    name = "forge",
+    srcs = glob(
+        ["forge/**/*.py"],
+        exclude = [
+            "forge/__init__.py",
+            "forge/svd/*.py",
+        ],
+    ),
+    imports = ["."],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":svd",
+        requirement("pyserial"),
+    ],
+)
+
+py_binary(
+    name = "svd_generate",
+    srcs = ["svd_generate.py"],
+    visibility = ["//visibility:public"],
+    deps = [":svd"],
+)

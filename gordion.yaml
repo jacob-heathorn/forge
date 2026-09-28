@@ -1,4 +1,0 @@
-repositories:
-  etl:
-    tag: 20.40.0
-    url: https://github.com/ETLCPP/etl.git

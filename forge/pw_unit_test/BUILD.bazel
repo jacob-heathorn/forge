@@ -1,0 +1,14 @@
+load("//bazel:cc.bzl", "forge_cc_library")
+
+# Vendored Pigweed unit-test framework, a small GoogleTest-compatible runner for firmware.
+forge_cc_library(
+    name = "pw_unit_test",
+    srcs = [
+        "src/framework.cpp",
+        "src/googletest_style_event_handler.cpp",
+        "src/simple_printing_event_handler.cpp",
+    ],
+    hdrs = glob(["include/**/*.h"]),
+    includes = ["include"],
+    visibility = ["//visibility:public"],
+)

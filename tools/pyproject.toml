@@ -1,0 +1,15 @@
+[project]
+name = "forge"
+version = "0.1.0"
+description = "Embedded tooling"
+authors = [{name = "Jacob", email = "jacob.heathorn@gmail.com"}]
+requires-python = ">=3.12"
+dependencies = [
+    "jinja2",
+    "cmsis-svd==0.6.0",
+    "pyserial",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

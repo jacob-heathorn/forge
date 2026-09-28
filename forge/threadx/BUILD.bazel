@@ -1,0 +1,22 @@
+load("//bazel:cc.bzl", "forge_cc_library")
+
+package(default_visibility = ["//visibility:public"])
+
+# ftl's thread interface implemented on ThreadX. Header-only; consumers supply ThreadX itself.
+forge_cc_library(
+    name = "threadx",
+    hdrs = ["thread.hpp"],
+    deps = [
+        ":mutex",
+        "//forge/ftl",
+    ],
+)
+
+# TX_MUTEX served as "forge/ftl/mutex.hpp", the backend ftl's allocators lock with under ThreadX.
+forge_cc_library(
+    name = "mutex",
+    hdrs = ["mutex.hpp"],
+    include_prefix = "forge/ftl",
+    strip_include_prefix = ".",
+    deps = ["//forge/ftl"],
+)

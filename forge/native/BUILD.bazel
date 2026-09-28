@@ -1,0 +1,68 @@
+load("//bazel:cc.bzl", "forge_cc_library", "forge_cc_test")
+
+package(default_visibility = ["//visibility:public"])
+
+# ftl's thread and network interfaces implemented on the host with std::thread and BSD sockets.
+forge_cc_library(
+    name = "native",
+    srcs = [
+        "ethernet_interface.cpp",
+        "udp_socket.cpp",
+    ],
+    hdrs = [
+        "ethernet_interface.hpp",
+        "thread.hpp",
+        "udp_socket.hpp",
+    ],
+    deps = [
+        ":mutex",
+        "//forge/ftl",
+    ],
+)
+
+# std::mutex served as "forge/ftl/mutex.hpp", the backend ftl's allocators lock with on the host.
+forge_cc_library(
+    name = "mutex",
+    hdrs = ["mutex.hpp"],
+    include_prefix = "forge/ftl",
+    strip_include_prefix = ".",
+    deps = ["//forge/ftl"],
+)
+
+# main() for host pigweed tests.
+forge_cc_library(
+    name = "pw_ut_main",
+    srcs = ["pw_ut_main.cpp"],
+    deps = ["//forge/pw_unit_test"],
+    alwayslink = True,
+)
+
+forge_cc_test(
+    name = "native_test",
+    srcs = [
+        "mutex_test.cpp",
+        "thread_test.cpp",
+        "udp_socket_test.cpp",
+    ],
+    deps = [
+        ":native",
+        "//forge/ftl",
+        "@googletest//:gtest_main",
+    ],
+)
+
+# The same trivial test under GoogleTest and under pigweed, to check both frameworks link and run.
+forge_cc_test(
+    name = "gtest_simple_test",
+    srcs = ["simple_test.cpp"],
+    deps = ["@googletest//:gtest_main"],
+)
+
+forge_cc_test(
+    name = "pw_simple_test",
+    srcs = ["simple_test.cpp"],
+    deps = [
+        ":pw_ut_main",
+        "//forge/pw_unit_test",
+    ],
+)
