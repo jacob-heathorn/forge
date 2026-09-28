@@ -1,33 +1,26 @@
 #pragma once
 
-#include "forge/ftl/bits/i_mutex.hpp"
 #include <mutex>
+
+#include "forge/ftl/bits/lock_guard.hpp"
 
 namespace ftl {
 
-// An implementation of IMutex using std::mutex (for Linux / unit testing)
-class Mutex : public IMutex {
+// The host mutex, over std::mutex.
+class Mutex {
  public:
   Mutex() = default;
-  ~Mutex() override = default;
-
-  void lock() override {
-    mtx_.lock();
-  }
-
-  bool try_lock() override {
-    return mtx_.try_lock();
-  }
-
-  void unlock() override {
-    mtx_.unlock();
-  }
-
   Mutex(const Mutex&) = delete;
   Mutex& operator=(const Mutex&) = delete;
 
+  void lock() { mutex_.lock(); }
+  bool try_lock() { return mutex_.try_lock(); }
+  void unlock() { mutex_.unlock(); }
+
  private:
-  std::mutex mtx_;
+  std::mutex mutex_;
 };
+
+static_assert(Lockable<Mutex>);
 
 }  // namespace ftl

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "forge/ftl/bits/lockable.hpp"
+
 namespace ftl {
 
 // Tag types for LockGuard
@@ -11,7 +13,7 @@ inline constexpr defer_lock_t defer_lock{};
 inline constexpr try_to_lock_t try_to_lock{};
 inline constexpr adopt_lock_t adopt_lock{};
 
-template <class M>
+template <Lockable M>
 class LockGuard {
 private:
   M& mtx;     // Reference to the mutex

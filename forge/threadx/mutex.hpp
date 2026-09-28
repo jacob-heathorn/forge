@@ -1,50 +1,41 @@
 #pragma once
 
-#include "forge/ftl/bits/i_mutex.hpp"
 #include <cassert>
+
+#include "forge/ftl/bits/lock_guard.hpp"
 #include "tx_api.h"
 
 namespace ftl {
 
-static char kMutexName[] = "FtlMutex";
+inline char kMutexName[] = "FtlMutex";
 
-class Mutex : IMutex {
-private:
-    TX_MUTEX handle_;
-    bool initialized_;
+// The ThreadX mutex, with priority inheritance.
+class Mutex {
+ public:
+  Mutex() {
+    while (TX_SUCCESS != tx_mutex_create(&handle_, kMutexName, TX_INHERIT)) {
+    }
+  }
+  ~Mutex() { tx_mutex_delete(&handle_); }
+  Mutex(const Mutex&) = delete;
+  Mutex& operator=(const Mutex&) = delete;
 
-public:
-    Mutex() noexcept {
-        while (TX_SUCCESS != tx_mutex_create(&handle_, kMutexName, TX_INHERIT)) {}
-        initialized_ = true;
+  void lock() {
+    while (TX_SUCCESS != tx_mutex_get(&handle_, TX_WAIT_FOREVER)) {
     }
-    ~Mutex() noexcept {
-        if (initialized_) {
-            tx_mutex_delete(&handle_);
-        }
+  }
+  bool try_lock() { return tx_mutex_get(&handle_, TX_NO_WAIT) == TX_SUCCESS; }
+  void unlock() {
+    while (TX_SUCCESS != tx_mutex_put(&handle_)) {
     }
-    void lock() {
-        if (initialized_) {
-            while (TX_SUCCESS != tx_mutex_get(&handle_, TX_WAIT_FOREVER)) {}
-        }
-    }
-    bool try_lock()
-    {
-        if (!initialized_) return false;
-        return (tx_mutex_get(&handle_, TX_NO_WAIT) == TX_SUCCESS);
-    }
-    void unlock()
-    {
-        if (initialized_) {
-            while (TX_SUCCESS != tx_mutex_put(&handle_)) {}
-        }
-    }
+  }
 
-    Mutex(const Mutex&) = delete;
-    Mutex& operator=(const Mutex&) = delete;
+  TX_MUTEX* native_handle() { return &handle_; }
 
-    using native_handle_type = void*;
-    native_handle_type native_handle() { return &handle_; }
+ private:
+  TX_MUTEX handle_;
 };
 
-} // namespace ftl
+static_assert(Lockable<Mutex>);
+
+}  // namespace ftl
