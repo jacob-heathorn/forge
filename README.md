@@ -1,59 +1,36 @@
 # Forge
 
-Common tooling for embedded projects, including:
-* Forge template library (ftl)
-* Deployment and debugging tools
-* SVD register generators
-* Common nix environment
+Shared building blocks for embedded C++ projects: the ftl template library, SVD register
+codegen, and bazel rules.
 
-# Setup Instructions
-The has only been tested in Ubuntu 24.04
+## Setup
 
-1) Clone this repository: `git clone https://github.com/jacob-heathorn/forge.git`
-2) Install gordion: `pipx install gordion`
-3) Update the gordion dependencies: `gor -u`
-4) Install direnv:
-  * `sudo apt install direnv`
-  * Add the following to your .bashrc: `eval "$(direnv hook bash)"`
-  * Open a new terminal and change directory to here.
-  * `direnv allow .`
-5) Install nix:
-  * `sh <(curl -L https://nixos.org/nix/install) --daemon`
-6) Install the workspace recommended VSCode extensions.
-7) Create the dev environment: `nox -s dev`
+Tested on Ubuntu 24.04. Install bazelisk (`npm i -g @bazel/bazelisk`); bazel fetches everything
+else.
 
-# Repository tests
-`nox`
+## Test
 
-# Clean
-`rip -c`
-
-# Build
-`cmake --workflow --preset native-debug`
-`cmake --workflow --preset native-release`
-
-# Run
-`rip -r native-debug:hello-world`
-
-# Debug
-`rip -d native-debug:hello-world`
-Debug in VSCode (F5)
-
-# ctest
 ```
-cd /.bin/native-release/
-ctest
+bazel test //...
+bazel test //... --config=tsan     # under ThreadSanitizer
 ```
 
-# Hello udp
+## Run a demo
+
 ```
-cmake --workflow --preset native-debug && \
-rip -r native-debug:hello-udp
+bazel run //apps:hello_world
+bazel run //apps:hello_udp
 ```
 
-# Copyright & Licensing
+## Debug and release
 
-Copyright (c) 2025 Jacob Heathorn
+Add `-c dbg` or `-c opt` to any command for a debug or release build:
 
-This project is released under the **Academic Use License** (see [LICENSE](./LICENSE)).
-For **commercial licensing**, please contact: <jacob.heathorn@gmail.com>.
+```
+bazel test -c opt //...
+```
+
+## License
+
+Copyright (c) 2025 Jacob Heathorn. Released under the **Academic Use License**, see
+[LICENSE](./LICENSE). For commercial licensing contact <jacob.heathorn@gmail.com>.

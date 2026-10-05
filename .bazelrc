@@ -1,0 +1,15 @@
+build --incompatible_strict_action_env
+build --watchfs
+build --symlink_prefix=.bazel/
+build --cxxopt=-std=c++20
+build --host_cxxopt=-std=c++20
+build --features=external_include_paths
+test --test_output=errors
+
+build:tsan --copt=-fsanitize=thread
+build:tsan --copt=-g
+build:tsan --copt=-O1
+build:tsan --linkopt=-fsanitize=thread
+
+# Personal settings, if any.
+try-import %workspace%/user.bazelrc
